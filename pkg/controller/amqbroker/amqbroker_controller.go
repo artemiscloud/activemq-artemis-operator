@@ -129,25 +129,29 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+// newPodForCR returns an amqbroker pod with the same name/namespace as the cr
 func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
+    labels := map[string]string{
+        "AMQBroker": cr.Name,
+    }
+    userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
+    passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
+
+    return &corev1.Pod{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      cr.Name + "-pod",
+            Namespace: cr.Namespace,
+            Labels:    labels,
+        },
+        Spec: corev1.PodSpec{
+            Containers: []corev1.Container{
+                {
+                    Name:    "amq",
+                    Image:   "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest",
+                    Command: []string{"/opt/amq/bin/launch.sh", "start"},
+                    Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar},
+                },
+            },
+        },
+    }
 }
