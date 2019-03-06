@@ -9,4 +9,5 @@ if ! whoami &>/dev/null; then
   fi
 fi
 
-exec ${OPERATOR} $@
+#exec ${OPERATOR} $@
+exec /dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@
