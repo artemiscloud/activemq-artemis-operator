@@ -2,6 +2,7 @@ package amqbroker
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
 
@@ -12,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -100,19 +100,18 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
-
-	// Set AMQBroker instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Check if this Pod already exists
 	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
+		reqLogger.Info("Creating a new Pod", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+		// Define a new Pod object
+		pod := newPodForCR(instance)
+		// Set AMQBroker instance as the owner and controller
+		if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		err = r.client.Create(context.TODO(), pod)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -139,7 +138,8 @@ func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
 
     return &corev1.Pod{
         ObjectMeta: metav1.ObjectMeta{
-            Name:      cr.Name + "-pod",
+            //Name:      cr.Name + "-pod",
+			Name:      cr.Name,
             Namespace: cr.Namespace,
             Labels:    labels,
         },
@@ -147,7 +147,7 @@ func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
             Containers: []corev1.Container{
                 {
                     Name:    "amq",
-                    Image:   "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest",
+                    Image:	 cr.Spec.Image,
                     Command: []string{"/opt/amq/bin/launch.sh", "start"},
                     Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar},
                 },

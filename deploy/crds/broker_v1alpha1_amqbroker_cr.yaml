@@ -4,4 +4,5 @@ metadata:
   name: example-amqbroker
 spec:
   # Add fields here
-  size: 3
+  size: 4
+  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest

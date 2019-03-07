@@ -37,6 +37,8 @@ func printVersion() {
 }
 
 func main() {
+	log.V(5)
+
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
 	pflag.CommandLine.AddFlagSet(zap.FlagSet())
