@@ -11,8 +11,18 @@ spec:
     plural: amqbrokers
     singular: amqbroker
   scope: Namespaced
-  subresources:
-    status: {}
+    # subresources describes the subresources for custom resources.
+    subresources:
+      # status enables the status subresource.
+      status: {}
+      # scale enables the scale subresource.
+      scale:
+        # specReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
+        specReplicasPath: .spec.replicas
+        # statusReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Replicas.
+        statusReplicasPath: .status.replicas
+        # labelSelectorPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Selector.
+  labelSelectorPath: .status.labelSelector
   validation:
     openAPIV3Schema:
       properties:
