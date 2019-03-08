@@ -130,18 +130,14 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
 func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
-    labels := map[string]string{
-        "AMQBroker": cr.Name,
-    }
     userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
     passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
 
     return &corev1.Pod{
         ObjectMeta: metav1.ObjectMeta{
-            //Name:      cr.Name + "-pod",
 			Name:      cr.Name,
             Namespace: cr.Namespace,
-            Labels:    labels,
+            Labels:    cr.Labels,
         },
         Spec: corev1.PodSpec{
             Containers: []corev1.Container{

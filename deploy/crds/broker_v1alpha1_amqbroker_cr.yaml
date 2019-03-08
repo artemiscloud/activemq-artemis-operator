@@ -2,7 +2,10 @@ apiVersion: broker.amq.io/v1alpha1
 kind: AMQBroker
 metadata:
   name: example-amqbroker
+  labels:
+    AMQBroker: example-amqbroker
+    application: example-amqbroker-app
 spec:
   # Add fields here
   size: 4
-  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest
+  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
