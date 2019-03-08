@@ -16,6 +16,12 @@ ADD .. /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator
 WORKDIR /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator
 RUN go build -v -o /amq-broker-operator/amq-broker-operator /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator/cmd/manager
 
+# Get Delve from a GOPATH not from a Go Modules project
+# as we aren't using Go Modules yet
+WORKDIR /home/rkieley/go/src
+RUN go get github.com/go-delve/delve/cmd/dlv
+
+
 FROM alpine:3.8
 
 ENV OPERATOR=/amq-broker-operator/amq-broker-operator \
@@ -26,9 +32,10 @@ ENV OPERATOR=/amq-broker-operator/amq-broker-operator \
 
 WORKDIR /
 COPY --from=build-env ${OPERATOR} /amq-broker-operator/
+COPY --from=build-env /home/rkieley/go/bin/dlv /
 
 USER ${USER_UID}
 COPY bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+ENTRYPOINT ["/usr/local/bin/entrypoint_debug"]

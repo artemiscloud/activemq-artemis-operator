@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-echo "Executing entrypoint"
+echo "Executing entrypoint_debug"
 
 # This is documented here:
 # https://docs.openshift.com/container-platform/3.11/creating_images/guidelines.html#openshift-specific-guidelines
@@ -11,5 +11,5 @@ if ! whoami &>/dev/null; then
   fi
 fi
 
-echo "exec ${OPERATOR}"
-exec ${OPERATOR} $@
+echo "exec /dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@"
+exec /dlv exec --headless=true --listen=0.0.0.0:4000 --api-version=2 ${OPERATOR} $@
