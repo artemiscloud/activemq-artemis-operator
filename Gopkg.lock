@@ -151,16 +151,6 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
-  name = "github.com/google/gops"
-  packages = [
-    "agent",
-    "internal",
-    "signal"
-  ]
-  revision = "9fda3b87c7b32caeeb2974e7cc2e71e60a597fdf"
-  version = "v0.3.6"
-
-[[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
@@ -211,12 +201,6 @@
   packages = ["."]
   revision = "1624edc4454b8682399def8740d46db5e4362ba4"
   version = "v1.1.5"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  revision = "2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384"
 
 [[projects]]
   branch = "master"
@@ -782,6 +766,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "208315e8a3f2c29b92bddb02ba72a7746935bc3a00f6b028b5046aafb1dcab99"
+  inputs-digest = "2ab1e23d948faabc75a23ec0cd1c4ed3ea3a49eb27268092c882ca91d0de025a"
   solver-name = "gps-cdcl"
   solver-version = 1
