@@ -16,7 +16,7 @@ spec:
       containers:
         - name: amq-broker-operator
           # Replace this with the built image name
-          image: docker-registry.default.svc:5000/abo-1/amq-broker-operator
+          image: amq-broker-operator:latest
           command:
           - amq-broker-operator
           imagePullPolicy: Always
