@@ -22,8 +22,8 @@ git checkout 0.1.0
 
 ### Deploying the operator
 
-In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/operator.yaml#L18-L19)
+In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/operator.yaml#L18-L19)
 with the correct location for the amq-broker-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -60,7 +60,7 @@ exec /amq-broker-operator/amq-broker-operator
 ### Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'example-amqbroker' from [broker_v1alpha1_amqbroker_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml)
+resource instance for 'example-amqbroker' from [broker_v1alpha1_amqbroker_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml)
 which looks like
 
 ```$xslt
@@ -74,7 +74,7 @@ spec:
   image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker.
 
 To deploy the broker we simply execute
@@ -96,8 +96,8 @@ this point the broker is running but not yet accessible.
 
 The broker hosts its own web console at port 8161, and has a multiplexed protocol port at 61616 supporting 
 AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP. Two separate yaml service definitions have been provided to
-support access to each of these ports; [console_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/console_service.yaml)
-and [mux_protocol_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/master/deploy/mux_protocol_service.yaml)
+support access to each of these ports; [console_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/console_service.yaml)
+and [mux_protocol_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/mux_protocol_service.yaml)
 respectively.
 
 Executing these to add nodeport backed services looks like:
