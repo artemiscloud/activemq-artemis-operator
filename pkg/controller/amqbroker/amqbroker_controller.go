@@ -2,6 +2,8 @@ package amqbroker
 
 import (
 	"context"
+	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
@@ -131,6 +133,24 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 		// Probably redundant
 		err = nil
 
+		// Define the console-jolokia Service for this Pod
+		consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
+		// Call k8s create for service
+		err = r.client.Create(context.TODO(), consoleJolokiaSvc)
+		if err != nil {
+			// Add error detail for use later
+			break
+		}
+
+		// Define the console-jolokia Service for this Pod
+		muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
+		// Call k8s create for service
+		err = r.client.Create(context.TODO(), muxProtocolSvc)
+		if err != nil {
+			// Add error detail for use later
+			break
+		}
+
 		break
 	}
 
@@ -151,9 +171,54 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcileResult, err
 }
 
+// newServiceForPod returns an amqbroker service for the pod just created
+func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new " + name_suffix + " service")
+
+	labels := selectors.LabelsForAMQBroker(cr.Name)
+
+	port := corev1.ServicePort{
+		Name:		cr.Name + "-" + name_suffix + "-port",
+		Protocol:	"TCP",
+		Port:		port_number,
+		TargetPort:	intstr.FromInt(int(port_number)),
+	}
+	ports := []corev1.ServicePort{}
+	ports = append(ports, port)
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:		"Service",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Annotations: 	nil,
+			Labels: 		labels,
+			Name:			cr.Name + "-" + name_suffix + "-service",
+			Namespace:		cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: 	"LoadBalancer",
+			Ports: 	ports,
+			Selector: labels,
+		},
+	}
+
+	return svc
+}
+
+
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
 func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
-    userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
+
+	// Log where we are and what we're doing
+	reqLogger:= log.WithName(cr.Name)
+	reqLogger.Info("Creating new pod for custom resource")
+
+	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
     passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
 
     return &corev1.Pod{
