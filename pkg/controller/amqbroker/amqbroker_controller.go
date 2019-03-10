@@ -83,49 +83,72 @@ type ReconcileAMQBroker struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+
+	// Log where we are and what we're doing
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling AMQBroker")
 
-	// Fetch the AMQBroker instance
+	// Set it up
+	var err error = nil
+	var reconcileResult reconcile.Result
 	instance := &brokerv1alpha1.AMQBroker{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
-	}
-
-	// Check if this Pod already exists
 	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+
+	// Do what's needed
+	for {
+		// Fetch the AMQBroker instance
+		err = r.client.Get(context.TODO(), request.NamespacedName, instance)
+		if err != nil {
+			// Add error detail for use later
+			break
+		}
+
+		// Check if this Pod already exists
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found)
+		if err == nil {
+			// Don't do anything as the pod exists
+			break
+		}
+
+		// Pod didn't exist, create
 		// Define a new Pod object
 		pod := newPodForCR(instance)
 		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-			return reconcile.Result{}, err
+		err = controllerutil.SetControllerReference(instance, pod, r.scheme)
+		if err != nil {
+			// Add error detail for use later
+			break
 		}
 
+		// Was able to set the owner and controller, call k8s create for pod
 		err = r.client.Create(context.TODO(), pod)
 		if err != nil {
-			return reconcile.Result{}, err
+			// Add error detail for use later
+			break
 		}
 
 		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
+		// Probably redundant
+		err = nil
+
+		break
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-	return reconcile.Result{}, nil
+	// Handle error, if any
+	if err != nil {
+		if errors.IsNotFound(err) {
+			reconcileResult = reconcile.Result{}
+			reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+			// Setting err to nil to prevent requeue
+			err = nil
+		} else {
+			//log.Error(err, "AMQBroker Controller Reconcile errored")
+			reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+		}
+	}
+
+	// Single exit, return the result and error condition
+	return reconcileResult, err
 }
 
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
