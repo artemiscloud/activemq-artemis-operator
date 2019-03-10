@@ -99,15 +99,13 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	// Do what's needed
 	for {
 		// Fetch the AMQBroker instance
-		err = r.client.Get(context.TODO(), request.NamespacedName, instance)
-		if err != nil {
+		if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 			// Add error detail for use later
 			break
 		}
 
 		// Check if this Pod already exists
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found)
-		if err == nil {
+		if err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found); err == nil {
 			// Don't do anything as the pod exists
 			break
 		}
@@ -116,15 +114,13 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 		// Define a new Pod object
 		pod := newPodForCR(instance)
 		// Set AMQBroker instance as the owner and controller
-		err = controllerutil.SetControllerReference(instance, pod, r.scheme)
-		if err != nil {
+		if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
 			// Add error detail for use later
 			break
 		}
 
 		// Was able to set the owner and controller, call k8s create for pod
-		err = r.client.Create(context.TODO(), pod)
-		if err != nil {
+		if err = r.client.Create(context.TODO(), pod); err != nil {
 			// Add error detail for use later
 			break
 		}
@@ -135,18 +131,26 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 
 		// Define the console-jolokia Service for this Pod
 		consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
+		// Set AMQBroker instance as the owner and controller
+		if err = controllerutil.SetControllerReference(instance, consoleJolokiaSvc, r.scheme); err != nil {
+			// Add error detail for use later
+			break
+		}
 		// Call k8s create for service
-		err = r.client.Create(context.TODO(), consoleJolokiaSvc)
-		if err != nil {
+		if err = r.client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
 			// Add error detail for use later
 			break
 		}
 
 		// Define the console-jolokia Service for this Pod
 		muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
+		// Set AMQBroker instance as the owner and controller
+		if err = controllerutil.SetControllerReference(instance, muxProtocolSvc, r.scheme); err != nil {
+			// Add error detail for use later
+			break
+		}
 		// Call k8s create for service
-		err = r.client.Create(context.TODO(), muxProtocolSvc)
-		if err != nil {
+		if err = r.client.Create(context.TODO(), muxProtocolSvc); err != nil {
 			// Add error detail for use later
 			break
 		}
