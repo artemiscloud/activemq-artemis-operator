@@ -3,6 +3,7 @@ package amqbroker
 import (
 	"context"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -110,6 +111,20 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 			break
 		}
 
+		// Define the PersistentVolumeClaim for this Pod
+		brokerPvc := newPersistentVolumeClaimForCR(instance)
+		// Set AMQBroker instance as the owner and controller
+		if err = controllerutil.SetControllerReference(instance, brokerPvc, r.scheme); err != nil {
+			// Add error detail for use later
+			break
+		}
+
+		// Call k8s create for service
+		if err = r.client.Create(context.TODO(), brokerPvc); err != nil {
+			// Add error detail for use later
+			break
+		}
+
 		// Pod didn't exist, create
 		// Define a new Pod object
 		pod := newPodForCR(instance)
@@ -118,7 +133,6 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 			// Add error detail for use later
 			break
 		}
-
 		// Was able to set the owner and controller, call k8s create for pod
 		if err = r.client.Create(context.TODO(), pod); err != nil {
 			// Add error detail for use later
@@ -175,6 +189,38 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcileResult, err
 }
 
+func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.PersistentVolumeClaim {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new persistent volume claim")
+
+	labels := selectors.LabelsForAMQBroker(cr.Name)
+
+	pvc := &corev1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:		"PersistentVolumeClaim",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: 	nil,
+			Labels:			labels,
+			Name:			cr.Name + "-pvc",
+			Namespace:		cr.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: 	[]corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources:		corev1.ResourceRequirements{
+				Requests:	corev1.ResourceList{
+					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Gi"),
+				},
+			},
+		},
+	}
+
+	return pvc
+}
+
 // newServiceForPod returns an amqbroker service for the pod just created
 func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
 
@@ -222,10 +268,12 @@ func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
 	reqLogger:= log.WithName(cr.Name)
 	reqLogger.Info("Creating new pod for custom resource")
 
+	dataPath := "/opt/" + cr.Name + "/data"
 	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
     passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
+    dataPathEnvVar := corev1.EnvVar{ "AMQ_DATA_DIR", dataPath, nil}
 
-    return &corev1.Pod{
+    pod := &corev1.Pod{
         ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
             Namespace: cr.Namespace,
@@ -234,12 +282,32 @@ func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
         Spec: corev1.PodSpec{
             Containers: []corev1.Container{
                 {
-                    Name:    "amq",
+                    Name:    cr.Name + "-container",
                     Image:	 cr.Spec.Image,
                     Command: []string{"/opt/amq/bin/launch.sh", "start"},
-                    Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar},
+                    VolumeMounts:	[]corev1.VolumeMount{
+                    	corev1.VolumeMount{
+							Name:		cr.Name + "-data-volume",
+                    		MountPath:	dataPath,
+                    		ReadOnly:	false,
+						},
+					},
+                    Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar, dataPathEnvVar},
                 },
             },
+            Volumes: []corev1.Volume{
+            	corev1.Volume{
+            		Name: cr.Name + "-data-volume",
+            		VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: cr.Name + "-pvc",
+							ReadOnly:  false,
+						},
+					},
+				},
+			},
         },
     }
+
+    return pod
 }
