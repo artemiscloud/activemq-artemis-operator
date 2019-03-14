@@ -18,9 +18,12 @@ const (
 const (
 	None = 0
 	CreatedHeadlessService = 1 << 0
-	CreatedConsoleJolokiaService = 1 << 1
-	CreatedMuxProtocolService = 1 << 2
-	Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
+	CreatedPersistentVolumeClaim = 1 << 1
+	//CreatedConsoleJolokiaService = 1 << 1
+	//CreatedMuxProtocolService = 1 << 2
+
+	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
+	Complete = CreatedHeadlessService | CreatedPersistentVolumeClaim
 )
 
 type AMQBrokerFSM struct {

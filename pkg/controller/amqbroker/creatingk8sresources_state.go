@@ -3,6 +3,7 @@ package amqbroker
 import (
 	"context"
 	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
@@ -48,14 +49,24 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	reqLogger := log.WithValues("AMQBroker Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Entering CreateK8sResourceState")
 
+	var err error = nil
+	var retrieveError error = nil
+
 	// Check to see if the headless service already exists
-	if _, err := rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	if _, err = rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so create
-		if _, createError := rs.CreateHeadlessService(rs.parentFSM.customResource, getDefaultPorts()); createError == nil {
+		if _, retrieveError = rs.CreateHeadlessService(rs.parentFSM.customResource, getDefaultPorts()); retrieveError == nil {
 			rs.stepsComplete |= CreatedHeadlessService
 		}
 	}
 
+	// Check to see if the persistent volume claim already exists
+	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+		// err means not found, so create
+		if _, retrieveError := rs.CreatePersistentVolumeClaim(rs.parentFSM.customResource); retrieveError == nil {
+			rs.stepsComplete |= CreatedPersistentVolumeClaim
+		}
+	}
 }
 
 func (rs *CreatingK8sResourcesState) Update() {
@@ -76,26 +87,20 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 		//}
 		rs.stepsComplete &^= CreatedHeadlessService
 	}
+
+	// Check to see if the persistent volume claim already exists
+	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedPersistentVolumeClaim
+	}
 }
 
-func (rs *CreatingK8sResourcesState) CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) (*corev1.Service, error) {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
-	reqLogger.Info("Creating new " + "headless" + " service")
+// newServiceForPod returns an amqbroker service for the pod just created
+func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
 	labels := selectors.LabelsForAMQBroker(cr.Name)
 
-	//port := corev1.ServicePort{
-	//	Name:		cr.Name + "-" + "headless" + "-port",
-	//	Protocol:	"TCP",
-	//	Port:		port_number,
-	//	TargetPort:	intstr.FromInt(int(port_number)),
-	//}
-	//ports := []corev1.ServicePort{}
-	//ports = append(ports, port)
-
-	headlessSvc := &corev1.Service{
+	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:		"Service",
@@ -115,9 +120,17 @@ func (rs *CreatingK8sResourcesState) CreateHeadlessService(cr *brokerv1alpha1.AM
 		},
 	}
 
+	return svc
+}
+func (rs *CreatingK8sResourcesState) CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new " + "headless" + " service")
+
+	headlessSvc := newHeadlessServiceForCR(cr, getDefaultPorts())
+
 	// Define the headless Service for the StatefulSet
-	//headlessSvc := newHeadlessServiceForCR(instance, 5672)
-	//headlessSvc := newHeadlessServiceForCR(rs.parentFSM.customResource, getDefaultPorts())
 	// Set AMQBroker instance as the owner and controller
 	var err error = nil
 	if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, headlessSvc, rs.parentFSM.r.scheme); err != nil {
@@ -137,12 +150,12 @@ func (rs *CreatingK8sResourcesState) CreateHeadlessService(cr *brokerv1alpha1.AM
 	return headlessSvc, err
 }
 
-func (rs* CreatingK8sResourcesState) DeleteHeadlessService(instance *brokerv1alpha1.AMQBroker) {
+func (rs *CreatingK8sResourcesState) DeleteHeadlessService(instance *brokerv1alpha1.AMQBroker) {
 	// kubectl delete cleans up kubernetes resources, just need to clean up local resources if any
 }
 
 //r *ReconcileAMQBroker
-func (rs* CreatingK8sResourcesState) RetrieveHeadlessService(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, r *ReconcileAMQBroker) (*corev1.Service, error) {
+func (rs *CreatingK8sResourcesState) RetrieveHeadlessService(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, r *ReconcileAMQBroker) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
@@ -154,93 +167,88 @@ func (rs* CreatingK8sResourcesState) RetrieveHeadlessService(instance *brokerv1a
 	// Check if the headless service already exists
 	if err = r.client.Get(context.TODO(), namespacedName, headlessService); err != nil {
 		if errors.IsNotFound(err) {
-			//reconcileResult = reconcile.Result{}
 			reqLogger.Error(err, "Headless service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
-			// Setting err to nil to prevent requeue
-			//err = nil
-			//rs.headlessService = nil
 		} else {
-			//log.Error(err, "AMQBroker Controller Reconcile errored")
 			reqLogger.Error(err, "Headless service found", "Namespace", instance.Namespace, "Name", instance.Name)
-			//rs.headlessService = found
 		}
 	}
-	//// Handle error, if any
-	//if err != nil {
-	//	if errors.IsNotFound(err) {
-	//		reconcileResult = reconcile.Result{}
-	//		reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
-	//		// Setting err to nil to prevent requeue
-	//		err = nil
-	//	} else {
-	//		//log.Error(err, "AMQBroker Controller Reconcile errored")
-	//		reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
-	//	}
-	//}
-
-
-	//// Define the headless Service for the StatefulSet
-	////headlessSvc := newHeadlessServiceForCR(instance, 5672)
-	//headlessSvc := newHeadlessServiceForCR(instance, getDefaultPorts())
-	//// Set AMQBroker instance as the owner and controller
-	//if err = controllerutil.SetControllerReference(instance, headlessSvc, r.scheme); err != nil {
-	//	// Add error detail for use later
-	//	break
-	//}
-	//// Call k8s create for service
-	//if err = r.client.Create(context.TODO(), headlessSvc); err != nil {
-	//	// Add error detail for use later
-	//	break
-	//}
 
 	return headlessService, err
 }
 
-//func MakeCreatingK8sResourcesState() CreatingK8sResourcesState {
-//
-//	rs := CreatingK8sResourcesState {
-//		s: fsm.MakeState(CreatingK8sResources),
-//		stepsComplete: 0,
-//	}
-//
-//	return rs
-//}
+func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.PersistentVolumeClaim {
 
-//func MakeAMQBrokerFSM() fsm.Machine {
-//
-//	m := fsm.MakeMachine()
-//
-//	m.Add(fsm.NewState(CreatingK8sResources))
-//	m.Add(fsm.NewState(ConfiguringEnvironment))
-//	m.Add(fsm.NewState(CreatingContainer))
-//	m.Add(fsm.NewState(ContainerRunning))
-//
-//	return m
-//}
+	labels := selectors.LabelsForAMQBroker(cr.Name)
 
+	pvc := &corev1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:		"PersistentVolumeClaim",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: 	nil,
+			Labels:			labels,
+			Name:			cr.Name + "-pvc",
+			Namespace:		cr.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: 	[]corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources:		corev1.ResourceRequirements{
+				Requests:	corev1.ResourceList{
+					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Gi"),
+				},
+			},
+		},
+	}
 
+	return pvc
+}
+func (rs *CreatingK8sResourcesState) CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker) (*corev1.PersistentVolumeClaim, error) {
 
-//func MakeCreatingK8sResourcesState() fsm.State {
-//
-//	s := fsm.MakeState(CreatingK8sResources)
-//
-//	return s
-//}
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new persistent volume claim")
 
-//func MakeConfiguringEnvironmentState() fsm.State {
-//
-//	s := fsm.MakeState(ConfiguringEnvironment)
-//
-//	return s
-//}
-//
-//func MakeCreatingContainerState() fsm.State {
-//
-//	s := fsm.MakeState(CreatingContainer)
-//
-//	return s
-//}
+	var err error = nil
 
-//func (m *fsm.Machine) Update(request reconcile.Request) {
-//
-//}
+	// Define the PersistentVolumeClaim for this Pod
+	brokerPvc := newPersistentVolumeClaimForCR(cr)
+	// Set AMQBroker instance as the owner and controller
+	if err = controllerutil.SetControllerReference(cr, brokerPvc, rs.parentFSM.r.scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "persistent volume claim")
+	}
+	reqLogger.Info("Set controller reference for new " + "persistent volume claim")
+
+	// Call k8s create for service
+	if err = rs.parentFSM.r.client.Create(context.TODO(), brokerPvc); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to creating new " + "persistent volume claim")
+	}
+	reqLogger.Info("Created new " + "persistent volume claim")
+
+	return brokerPvc, err
+}
+
+func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, r *ReconcileAMQBroker) (*corev1.PersistentVolumeClaim, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger.Info("Retrieving " + "persistent volume claim")
+
+	var err error = nil
+	pvc := &corev1.PersistentVolumeClaim{}
+
+	// Check if the headless service already exists
+	if err = r.client.Get(context.TODO(), namespacedName, pvc); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "Persistent volume claim IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+		} else {
+			reqLogger.Error(err, "Persistent volume claim found", "Namespace", instance.Namespace, "Name", instance.Name)
+		}
+	}
+
+	return pvc, err
+}
+
+//func (rs *CreatingK8sResourcesState) CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) (*corev1.Service, error)

@@ -6,7 +6,6 @@ import (
 
 	//"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -372,37 +371,6 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 	return pts
 }
 
-func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.PersistentVolumeClaim {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
-	reqLogger.Info("Creating new persistent volume claim")
-
-	labels := selectors.LabelsForAMQBroker(cr.Name)
-
-	pvc := &corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:		"PersistentVolumeClaim",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: 	nil,
-			Labels:			labels,
-			Name:			cr.Name + "-pvc",
-			Namespace:		cr.Namespace,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: 	[]corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources:		corev1.ResourceRequirements{
-				Requests:	corev1.ResourceList{
-					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("2Gi"),
-				},
-			},
-		},
-	}
-
-	return pvc
-}
 
 // newServiceForPod returns an amqbroker service for the pod just created
 func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
@@ -481,47 +449,6 @@ func getDefaultPorts() *[]corev1.ServicePort {
 	return &ports
 }
 
-// newServiceForPod returns an amqbroker service for the pod just created
-func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) *corev1.Service {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
-	reqLogger.Info("Creating new " + "headless" + " service")
-
-	labels := selectors.LabelsForAMQBroker(cr.Name)
-
-
-	//port := corev1.ServicePort{
-	//	Name:		cr.Name + "-" + "headless" + "-port",
-	//	Protocol:	"TCP",
-	//	Port:		port_number,
-	//	TargetPort:	intstr.FromInt(int(port_number)),
-	//}
-	//ports := []corev1.ServicePort{}
-	//ports = append(ports, port)
-
-	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:		"Service",
-		},
-		ObjectMeta: metav1.ObjectMeta {
-			Annotations: 	nil,
-			Labels: 		labels,
-			Name:			"headless" + "-service",
-			Namespace:		cr.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: 	"ClusterIP",
-			Ports: 	*servicePorts,
-			Selector: labels,
-			ClusterIP: "None",
-			PublishNotReadyAddresses: true,
-		},
-	}
-
-	return svc
-}
 
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
 func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
