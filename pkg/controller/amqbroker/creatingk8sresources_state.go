@@ -4,6 +4,7 @@ import (
 	"context"
 	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
@@ -70,6 +71,32 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 		}
 	}
 
+	// These next two should be considered "hard coded" and temporary
+	// Define the console-jolokia Service for this Pod
+	consoleJolokiaSvc := newServiceForCR(rs.parentFSM.customResource, "console-jolokia", 8161)
+	// Set AMQBroker instance as the owner and controller
+	if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, consoleJolokiaSvc, rs.parentFSM.r.scheme); err != nil {
+		// Add error detail for use later
+
+	}
+	// Call k8s create for service
+	if err = rs.parentFSM.r.client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
+		// Add error detail for use later
+		rs.stepsComplete |= CreatedConsoleJolokiaService
+	}
+
+	// Define the console-jolokia Service for this Pod
+	muxProtocolSvc := newServiceForCR(rs.parentFSM.customResource, "mux-protocol", 61616)
+	// Set AMQBroker instance as the owner and controller
+	if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, muxProtocolSvc, rs.parentFSM.r.scheme); err != nil {
+		// Add error detail for use later
+	}
+	// Call k8s create for service
+	if err = rs.parentFSM.r.client.Create(context.TODO(), muxProtocolSvc); err != nil {
+		// Add error detail for use later
+		rs.stepsComplete |= CreatedMuxProtocolService
+	}
+
 	// Check to see if the persistent volume claim already exists
 	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so create
@@ -89,6 +116,8 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	reqLogger := log.WithValues("AMQBroker Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Exiting CreatingK8sResourceState")
 
+	var err error = nil
+
 	// Check to see if the headless service already exists
 	if _, err := rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so mark deleted
@@ -99,7 +128,7 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	}
 
 	// Check to see if the persistent volume claim already exists
-	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	if _, err = rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so mark deleted
 		rs.stepsComplete &^= CreatedPersistentVolumeClaim
 	}
@@ -178,7 +207,7 @@ func (rs *CreatingK8sResourcesState) RetrieveHeadlessService(instance *brokerv1a
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil
-	headlessService := &corev1.Service{}
+	headlessService := newHeadlessServiceForCR(instance, getDefaultPorts())//&corev1.Service{}
 
 	// Check if the headless service already exists
 	if err = r.client.Get(context.TODO(), namespacedName, headlessService); err != nil {
@@ -267,6 +296,186 @@ func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *bro
 	return pvc, err
 }
 
+// newServiceForPod returns an amqbroker service for the pod just created
+func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new " + name_suffix + " service")
+
+	labels := selectors.LabelsForAMQBroker(cr.Name)
+
+	port := corev1.ServicePort{
+		Name:		cr.Name + "-" + name_suffix + "-port",
+		Protocol:	"TCP",
+		Port:		port_number,
+		TargetPort:	intstr.FromInt(int(port_number)),
+	}
+	ports := []corev1.ServicePort{}
+	ports = append(ports, port)
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:		"Service",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Annotations: 	nil,
+			Labels: 		labels,
+			Name:			cr.Name + "-" + name_suffix + "-service",
+			Namespace:		cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: 	"LoadBalancer",
+			Ports: 	ports,
+			Selector: labels,
+		},
+	}
+
+	return svc
+}
+
+func getDefaultPorts() *[]corev1.ServicePort {
+
+	ports := []corev1.ServicePort{
+		corev1.ServicePort{
+			Name:		"mqtt",
+			Protocol:	"TCP",
+			Port:		1883,
+			TargetPort:	intstr.FromInt(int(1883)),
+		},
+		corev1.ServicePort{
+			Name:		"amqp",
+			Protocol:	"TCP",
+			Port:		5672,
+			TargetPort:	intstr.FromInt(int(5672)),
+		},
+		corev1.ServicePort{
+			Name:		"console-jolokia",
+			Protocol:	"TCP",
+			Port:		8161,
+			TargetPort:	intstr.FromInt(int(8161)),
+		},
+		corev1.ServicePort{
+			Name:		"stomp",
+			Protocol:	"TCP",
+			Port:		61613,
+			TargetPort:	intstr.FromInt(int(61613)),
+		},
+		corev1.ServicePort{
+			Name:		"all",
+			Protocol:	"TCP",
+			Port:		61616,
+			TargetPort:	intstr.FromInt(int(61616)),
+		},
+	}
+
+	return &ports
+}
+
+// newPodForCR returns an amqbroker pod with the same name/namespace as the cr
+//func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
+//
+//	// Log where we are and what we're doing
+//	reqLogger:= log.WithName(cr.Name)
+//	reqLogger.Info("Creating new pod for custom resource")
+//
+//	dataPath := "/opt/" + cr.Name + "/data"
+//	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
+//	passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
+//	dataPathEnvVar := corev1.EnvVar{ "AMQ_DATA_DIR", dataPath, nil}
+//
+//	pod := &corev1.Pod{
+//		ObjectMeta: metav1.ObjectMeta{
+//			Name:      cr.Name,
+//			Namespace: cr.Namespace,
+//			Labels:    cr.Labels,
+//		},
+//		Spec: corev1.PodSpec{
+//			Containers: []corev1.Container{
+//				{
+//					Name:    cr.Name + "-container",
+//					Image:	 cr.Spec.Image,
+//					Command: []string{"/opt/amq/bin/launch.sh", "start"},
+//					VolumeMounts:	[]corev1.VolumeMount{
+//						corev1.VolumeMount{
+//							Name:		cr.Name + "-data-volume",
+//							MountPath:	dataPath,
+//							ReadOnly:	false,
+//						},
+//					},
+//					Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar, dataPathEnvVar},
+//				},
+//			},
+//			Volumes: []corev1.Volume{
+//				corev1.Volume{
+//					Name: cr.Name + "-data-volume",
+//					VolumeSource: corev1.VolumeSource{
+//						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+//							ClaimName: cr.Name + "-pvc",
+//							ReadOnly:  false,
+//						},
+//					},
+//				},
+//			},
+//		},
+//	}
+//
+//	return pod
+//}
+
+func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpec {
+
+	// Log where we are and what we're doing
+	reqLogger:= log.WithName(cr.Name)
+	reqLogger.Info("Creating new pod template spec for custom resource")
+
+	//var pts corev1.PodTemplateSpec
+
+	dataPath := "/opt/" + cr.Name + "/data"
+	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
+	passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
+	dataPathEnvVar := corev1.EnvVar{ "AMQ_DATA_DIR", dataPath, nil}
+
+	pts := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name,
+			Namespace: cr.Namespace,
+			Labels:    cr.Labels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:    cr.Name + "-container",
+					Image:	 cr.Spec.Image,
+					Command: []string{"/opt/amq/bin/launch.sh", "start"},
+					VolumeMounts:	[]corev1.VolumeMount{
+						corev1.VolumeMount{
+							Name:		cr.Name + "-data-volume",
+							MountPath:	dataPath,
+							ReadOnly:	false,
+						},
+					},
+					Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar, dataPathEnvVar},
+				},
+			},
+			Volumes: []corev1.Volume{
+				corev1.Volume{
+					Name: cr.Name + "-data-volume",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: cr.Name + "-pvc",
+							ReadOnly:  false,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return pts
+}
+
 func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
@@ -294,7 +503,6 @@ func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 			Selector:		&metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			//Template: corev1.PodTemplateSpec{},
 			Template: newPodTemplateSpecForCR(cr),
 		},
 	}
