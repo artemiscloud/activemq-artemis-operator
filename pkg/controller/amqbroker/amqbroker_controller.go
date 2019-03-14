@@ -6,6 +6,7 @@ import (
 
 	//"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
+	//"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -23,8 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 var log = logf.Log.WithName("controller_amqbroker")
@@ -284,40 +283,40 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcileResult, err
 }
 
-func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
-
-	// Log where we are and what we're doing
-	reqLogger:= log.WithName(cr.Name)
-	reqLogger.Info("Creating new statefulset for custom resource")
-
-	var replicas int32 = 1
-
-	labels := selectors.LabelsForAMQBroker(cr.Name)
-
-	ss := &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:		"StatefulSet",
-			APIVersion:	"v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:			cr.Name + "-statefulset",
-			Namespace:		cr.Namespace,
-			Labels:			labels,
-			Annotations:	nil,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: 		&replicas,
-			ServiceName:	cr.Name + "-headless" + "-service",
-			Selector:		&metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			//Template: corev1.PodTemplateSpec{},
-			Template: newPodTemplateSpecForCR(cr),
-		},
-	}
-
-	return ss
-}
+//func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
+//
+//	// Log where we are and what we're doing
+//	reqLogger:= log.WithName(cr.Name)
+//	reqLogger.Info("Creating new statefulset for custom resource")
+//
+//	var replicas int32 = 1
+//
+//	labels := selectors.LabelsForAMQBroker(cr.Name)
+//
+//	ss := &appsv1.StatefulSet{
+//		TypeMeta: metav1.TypeMeta{
+//			Kind:		"StatefulSet",
+//			APIVersion:	"v1",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Name:			cr.Name + "-statefulset",
+//			Namespace:		cr.Namespace,
+//			Labels:			labels,
+//			Annotations:	nil,
+//		},
+//		Spec: appsv1.StatefulSetSpec{
+//			Replicas: 		&replicas,
+//			ServiceName:	cr.Name + "-headless" + "-service",
+//			Selector:		&metav1.LabelSelector{
+//				MatchLabels: labels,
+//			},
+//			//Template: corev1.PodTemplateSpec{},
+//			Template: newPodTemplateSpecForCR(cr),
+//		},
+//	}
+//
+//	return ss
+//}
 
 func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpec {
 
@@ -370,7 +369,6 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 
 	return pts
 }
-
 
 // newServiceForPod returns an amqbroker service for the pod just created
 func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
@@ -449,6 +447,47 @@ func getDefaultPorts() *[]corev1.ServicePort {
 	return &ports
 }
 
+// newServiceForPod returns an amqbroker service for the pod just created
+//func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) *corev1.Service {
+//
+//	// Log where we are and what we're doing
+//	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+//	reqLogger.Info("Creating new " + "headless" + " service")
+//
+//	labels := selectors.LabelsForAMQBroker(cr.Name)
+//
+//
+//	//port := corev1.ServicePort{
+//	//	Name:		cr.Name + "-" + "headless" + "-port",
+//	//	Protocol:	"TCP",
+//	//	Port:		port_number,
+//	//	TargetPort:	intstr.FromInt(int(port_number)),
+//	//}
+//	//ports := []corev1.ServicePort{}
+//	//ports = append(ports, port)
+//
+//	svc := &corev1.Service{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "v1",
+//			Kind:		"Service",
+//		},
+//		ObjectMeta: metav1.ObjectMeta {
+//			Annotations: 	nil,
+//			Labels: 		labels,
+//			Name:			"headless" + "-service",
+//			Namespace:		cr.Namespace,
+//		},
+//		Spec: corev1.ServiceSpec{
+//			Type: 	"ClusterIP",
+//			Ports: 	*servicePorts,
+//			Selector: labels,
+//			ClusterIP: "None",
+//			PublishNotReadyAddresses: true,
+//		},
+//	}
+//
+//	return svc
+//}
 
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
 func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {

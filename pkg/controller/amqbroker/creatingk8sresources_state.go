@@ -13,6 +13,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 
@@ -51,6 +53,14 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 
 	var err error = nil
 	var retrieveError error = nil
+
+	// Check to see if the statefulset already exists
+	if _, err := rs.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+		// err means not found, so create
+		if _, retrieveError := rs.CreateStatefulSet(rs.parentFSM.customResource); retrieveError == nil {
+			rs.stepsComplete |= CreatedStatefulSet
+		}
+	}
 
 	// Check to see if the headless service already exists
 	if _, err = rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
@@ -92,6 +102,12 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so mark deleted
 		rs.stepsComplete &^= CreatedPersistentVolumeClaim
+	}
+
+	// Check to see if the persistent volume claim already exists
+	if _, err := rs.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedStatefulSet
 	}
 }
 
@@ -251,4 +267,83 @@ func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *bro
 	return pvc, err
 }
 
-//func (rs *CreatingK8sResourcesState) CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) (*corev1.Service, error)
+func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
+
+	// Log where we are and what we're doing
+	reqLogger:= log.WithName(cr.Name)
+	reqLogger.Info("Creating new statefulset for custom resource")
+
+	var replicas int32 = 1
+
+	labels := selectors.LabelsForAMQBroker(cr.Name)
+
+	ss := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:		"StatefulSet",
+			APIVersion:	"v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:			cr.Name + "-statefulset",
+			Namespace:		cr.Namespace,
+			Labels:			labels,
+			Annotations:	nil,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: 		&replicas,
+			ServiceName:	cr.Name + "-headless" + "-service",
+			Selector:		&metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			//Template: corev1.PodTemplateSpec{},
+			Template: newPodTemplateSpecForCR(cr),
+		},
+	}
+
+	return ss
+}
+func (rs *CreatingK8sResourcesState) CreateStatefulSet(cr *brokerv1alpha1.AMQBroker) (*appsv1.StatefulSet, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new statefulset")
+
+	var err error = nil
+
+	// Define the StatefulSet
+	ss := newStatefulSetForCR(cr)
+	// Set AMQBroker instance as the owner and controller
+	if err = controllerutil.SetControllerReference(cr, ss, rs.parentFSM.r.scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "statefulset")
+	}
+	reqLogger.Info("Set controller reference for new " + "statefulset")
+
+	// Call k8s create for statefulset
+	if err = rs.parentFSM.r.client.Create(context.TODO(), ss); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to creating new " + "statefulset")
+	}
+	reqLogger.Info("Created new " + "statefulset")
+
+	return ss, err
+}
+func (rs *CreatingK8sResourcesState) RetrieveStatefulSet(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, r *ReconcileAMQBroker) (*appsv1.StatefulSet, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger.Info("Retrieving " + "statefulset")
+
+	var err error = nil
+	ss := &appsv1.StatefulSet{}
+
+	// Check if the headless service already exists
+	if err = r.client.Get(context.TODO(), namespacedName, ss); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "Statefulset claim IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+		} else {
+			reqLogger.Error(err, "Statefulset claim found", "Namespace", instance.Namespace, "Name", instance.Name)
+		}
+	}
+
+	return ss, err
+}
