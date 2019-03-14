@@ -2,15 +2,18 @@ package amqbroker
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
+
+	//"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/amq-broker-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	//"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,6 +29,8 @@ import (
 )
 
 var log = logf.Log.WithName("controller_amqbroker")
+//var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
+var namespacedNameToFSM = make(map[types.NamespacedName]*AMQBrokerFSM)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -93,130 +98,188 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling AMQBroker")
 
-	// Set it up
 	var err error = nil
 	var reconcileResult reconcile.Result
+	var namespacedNameFSM *AMQBrokerFSM = nil
+	var amqbfsm *AMQBrokerFSM = nil
+
 	instance := &brokerv1alpha1.AMQBroker{}
-	found := &corev1.Pod{}
-
-	// Do what's needed
-	for {
-		// Fetch the AMQBroker instance
-		if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-		// Check if this Pod already exists
-		if err = r.client.Get(context.TODO(), types.NamespacedName{Name: request.Name, Namespace: request.Namespace}, found); err == nil {
-			// Don't do anything as the pod exists
-			break
-		}
-
-		// Define the PersistentVolumeClaim for this Pod
-		brokerPvc := newPersistentVolumeClaimForCR(instance)
-		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, brokerPvc, r.scheme); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-		// Call k8s create for service
-		if err = r.client.Create(context.TODO(), brokerPvc); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-		// Define the console-jolokia Service for this Pod
-		consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
-		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, consoleJolokiaSvc, r.scheme); err != nil {
-			// Add error detail for use later
-			break
-		}
-		// Call k8s create for service
-		if err = r.client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-		// Define the console-jolokia Service for this Pod
-		muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
-		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, muxProtocolSvc, r.scheme); err != nil {
-			// Add error detail for use later
-			break
-		}
-		// Call k8s create for service
-		if err = r.client.Create(context.TODO(), muxProtocolSvc); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-		// Define the headless Service for the StatefulSet
-		//headlessSvc := newHeadlessServiceForCR(instance, 5672)
-		headlessSvc := newHeadlessServiceForCR(instance, getDefaultPorts())
-		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, headlessSvc, r.scheme); err != nil {
-			// Add error detail for use later
-			break
-		}
-		// Call k8s create for service
-		if err = r.client.Create(context.TODO(), headlessSvc); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-
-		//// Pod didn't exist, create
-		//// Define a new Pod object
-		//pod := newPodForCR(instance)
-		//// Set AMQBroker instance as the owner and controller
-		//if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		//	// Add error detail for use later
-		//	break
-		//}
-		//// Was able to set the owner and controller, call k8s create for pod
-		//if err = r.client.Create(context.TODO(), pod); err != nil {
-		//	// Add error detail for use later
-		//	break
-		//}
-
-		// Statefulset didn't exist, create
-		// Define a new Pod object
-		ss := newStatefulSetForCR(instance)
-		// Set AMQBroker instance as the owner and controller
-		if err = controllerutil.SetControllerReference(instance, ss, r.scheme); err != nil {
-			// Add error detail for use later
-			break
-		}
-		// Was able to set the owner and controller, call k8s create for pod
-		if err = r.client.Create(context.TODO(), ss); err != nil {
-			// Add error detail for use later
-			break
-		}
-
-
-		// Pod created successfully - don't requeue
-		// Probably redundant
-		err = nil
-
-
-		break
+	namespacedName := types.NamespacedName{
+		Name: request.Name,//"example-amqbroker",
+		Namespace: request.Namespace,//"abo-1",
 	}
 
-	// Handle error, if any
-	if err != nil {
+	// Fetch the AMQBroker instance
+	// When first creating this will have err == nil
+	// When deleting after creation this will have err NotFound
+	// When deleting before creation reconcile won't be called
+	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+
 		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
+
 			reconcileResult = reconcile.Result{}
-			reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+
+			// See if we have been tracking this NamespacedName
+			if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM != nil {
+				reqLogger.Error(err, "Removing namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
+				// If so we should no longer track it
+				//namespacedNameToFSM[namespacedName] = nil
+				amqbfsm = namespacedNameToFSM[namespacedName]
+				amqbfsm.Exit(nil)
+				delete(namespacedNameToFSM, namespacedName)
+				amqbfsm = nil
+			}
+
 			// Setting err to nil to prevent requeue
 			err = nil
 		} else {
-			//log.Error(err, "AMQBroker Controller Reconcile errored")
-			reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+			reqLogger.Error(err, "AMQBroker Controller Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
+			// Leaving err as !nil causes requeue
 		}
+
+		// Add error detail for use later
+		return reconcileResult, err
 	}
+
+	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
+	// if not, create it
+	// for the given fsm, do an update
+	// - update first level sets? what if the operator has gone away and come back? stateless?
+	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
+		amqbfsm = NewAMQBrokerFSM(instance, namespacedName, r)
+		namespacedNameFSM = amqbfsm
+		namespacedNameToFSM[namespacedName] = namespacedNameFSM
+
+		amqbfsm.Enter(nil)
+	}
+
+	//namespacedNameFSM.Update(request, r)
+
+	// Set it up
+	//var err error = nil
+	//var reconcileResult reconcile.Result
+	//instance := &brokerv1alpha1.AMQBroker{}
+	//found := &corev1.Pod{}
+	//
+	//// Do what's needed
+	//for {
+	//	// Fetch the AMQBroker instance
+	//	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//	// Check if this Pod already exists
+	//	if err = r.client.Get(context.TODO(), namespacedName, found); err == nil {
+	//		// Don't do anything as the pod exists
+	//		break
+	//	}
+	//
+	//	// Define the PersistentVolumeClaim for this Pod
+	//	brokerPvc := newPersistentVolumeClaimForCR(instance)
+	//	// Set AMQBroker instance as the owner and controller
+	//	if err = controllerutil.SetControllerReference(instance, brokerPvc, r.scheme); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//	// Call k8s create for service
+	//	if err = r.client.Create(context.TODO(), brokerPvc); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//	// Define the console-jolokia Service for this Pod
+	//	consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
+	//	// Set AMQBroker instance as the owner and controller
+	//	if err = controllerutil.SetControllerReference(instance, consoleJolokiaSvc, r.scheme); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//	// Call k8s create for service
+	//	if err = r.client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//	// Define the console-jolokia Service for this Pod
+	//	muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
+	//	// Set AMQBroker instance as the owner and controller
+	//	if err = controllerutil.SetControllerReference(instance, muxProtocolSvc, r.scheme); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//	// Call k8s create for service
+	//	if err = r.client.Create(context.TODO(), muxProtocolSvc); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//	// Define the headless Service for the StatefulSet
+	//	//headlessSvc := newHeadlessServiceForCR(instance, 5672)
+	//	headlessSvc := newHeadlessServiceForCR(instance, getDefaultPorts())
+	//	// Set AMQBroker instance as the owner and controller
+	//	if err = controllerutil.SetControllerReference(instance, headlessSvc, r.scheme); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//	// Call k8s create for service
+	//	if err = r.client.Create(context.TODO(), headlessSvc); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//
+	//	//// Pod didn't exist, create
+	//	//// Define a new Pod object
+	//	//pod := newPodForCR(instance)
+	//	//// Set AMQBroker instance as the owner and controller
+	//	//if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
+	//	//	// Add error detail for use later
+	//	//	break
+	//	//}
+	//	//// Was able to set the owner and controller, call k8s create for pod
+	//	//if err = r.client.Create(context.TODO(), pod); err != nil {
+	//	//	// Add error detail for use later
+	//	//	break
+	//	//}
+	//
+	//	// Statefulset didn't exist, create
+	//	// Define a new Pod object
+	//	ss := newStatefulSetForCR(instance)
+	//	// Set AMQBroker instance as the owner and controller
+	//	if err = controllerutil.SetControllerReference(instance, ss, r.scheme); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//	// Was able to set the owner and controller, call k8s create for pod
+	//	if err = r.client.Create(context.TODO(), ss); err != nil {
+	//		// Add error detail for use later
+	//		break
+	//	}
+	//
+	//
+	//	// Pod created successfully - don't requeue
+	//	// Probably redundant
+	//	err = nil
+	//
+	//
+	//	break
+	//}
+	//
+	//// Handle error, if any
+	//if err != nil {
+	//	if errors.IsNotFound(err) {
+	//		reconcileResult = reconcile.Result{}
+	//		reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+	//		// Setting err to nil to prevent requeue
+	//		err = nil
+	//	} else {
+	//		//log.Error(err, "AMQBroker Controller Reconcile errored")
+	//		reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+	//	}
+	//}
 
 	// Single exit, return the result and error condition
 	return reconcileResult, err
