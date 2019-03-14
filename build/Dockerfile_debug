@@ -14,7 +14,7 @@ RUN mkdir -p /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator/bi
 RUN mkdir -p /amq-broker-operator
 ADD .. /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator
 WORKDIR /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator
-RUN go build -v -o /amq-broker-operator/amq-broker-operator /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator/cmd/manager
+RUN go build -gcflags "all=-N -l" -v -o /amq-broker-operator/amq-broker-operator /home/rkieley/go/src/github.com/rh-messaging/amq-broker-operator/cmd/manager
 
 # Get Delve from a GOPATH not from a Go Modules project
 # as we aren't using Go Modules yet
