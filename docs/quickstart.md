@@ -13,17 +13,17 @@ resource.
 ### Getting the code
 
 To launch the operator you will need to clone the [amq-broker-operator](https://github.com/rh-messaging/amq-broker-operator)
-and checkout the 0.1.0 tag as per
+and checkout the 0.2.0 tag as per
 
 ```$xslt
 git clone https://github.com/rh-messaging/amq-broker-operator
-git checkout 0.1.0
+git checkout 0.2.0
 ```
 
 ### Deploying the operator
 
-In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/operator.yaml#L18-L19)
+In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.2.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/amq-broker-operator/blob/0.2.0/deploy/operator.yaml#L18-L19)
 with the correct location for the amq-broker-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -60,7 +60,7 @@ exec /amq-broker-operator/amq-broker-operator
 ### Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'example-amqbroker' from [broker_v1alpha1_amqbroker_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml)
+resource instance for 'example-amqbroker' from [broker_v1alpha1_amqbroker_cr.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml)
 which looks like
 
 ```$xslt
@@ -74,7 +74,7 @@ spec:
   image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/amq-broker-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker.
 
 To deploy the broker we simply execute
@@ -83,31 +83,57 @@ To deploy the broker we simply execute
 kubectl create -f amq-broker-operator/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml
 ```
 
-at which point you should see in the terminal
+at which point you should now see the statefulset 'example-amqbroker-statefulset' under Overview in the web console.
 
 ```$xslt
 amqbroker.broker.amq.io "example-amqbroker" created
 ```
- 
-The example-amqbroker pod should now also be visible via the OpenShift console via the Applications -> Pods sub menu. At
-this point the broker is running but not yet accessible.
- 
-### Enabling access
 
-The broker hosts its own web console at port 8161, and has a multiplexed protocol port at 61616 supporting 
-AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP. Two separate yaml service definitions have been provided to
-support access to each of these ports; [console_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/console_service.yaml)
-and [mux_protocol_service.yaml](https://github.com/rh-messaging/amq-broker-operator/blob/0.1.0/deploy/mux_protocol_service.yaml)
-respectively.
+If you expand the statefulset you should see that it has 1 pod running along with three services under 'Networking'; 
+example-amqbroker-console-jolokia-service, example-amqbroker-mux-protocol-service, and headless-service.
 
-Executing these to add nodeport backed services looks like:
+#### exampleamq-broker-console-jolokia-service
+
+The broker hosts its own web console at port 8161 and this service provides external access to it via a 
+[NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
+that provides direct access to the web console. Note that the actual port number chosen is, by default, in the range
+of 30000-32767 so you will want to click in here to get the actual port number needed to access the console.
+
+Once you have the port number using http://any.ocp.node.ip:consoleNodePortNumber should allow you to access the running
+brokers web console.
+
+
+#### exampleamq-broker-mux-protocol-service
+
+The broker has a multiplexed protocol port at 61616 supporting all protocols; AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP.
+This broker port is exposed via a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
+as is the web console. 
+
+To produce or consume messages to the broker from outside the [OCP SDN](https://docs.openshift.com/container-platform/3.11/admin_guide/sdn_troubleshooting.html)
+you should be able to produce or consume messages to protocol://://any.ocp.node.ip:muxProtocolNodePortNumber.
+
+
+#### headless-service
+
+The headless service internally exposes all broker ports: 
+- 1883: MQTT
+- 5672: AMQP
+- 8161: Web Console / Jolokia
+- 61613: STOMP
+- 61616: All protocols as above 
+
+
+#### Running pods
+
+The example-amqbroker-statefulset-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
+sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale' command as per:
 
 ```$xslt
-$ kubectl create -f amq-broker-operator/deploy/console_service.yaml                      
-service "example-amqbroker-amq-jolokia" create                                                                                                                                                                                                
-$ kubectl create -f amq-broker-operator/deploy/mux_protocol_service.yaml                                                                                                                                         
-service "example-amqbroker-amq-mux" created                                                                                                                                                                                                    
+oc scale --replicas 0 statefulset example-amqbroker-statefulset
 ```
 
-Once created the console should be available via http at port 31161 on any node in the cluster while the multiplexed multi-protocol
-port should be available at 31616 to produce or consume from.
+which would scale down the number of pods to zero. Note that you can scale the number to greater than one, however for the moment
+they share the same persistent volume claim and as such the first will be the master while subsequent pods will attempt
+to gain the lock, fail, and remain in slave mode unless the master pod is killed. This will be addressed in the next,
+0.3.0, release.
+ 
