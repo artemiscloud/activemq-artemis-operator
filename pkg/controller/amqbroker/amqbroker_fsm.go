@@ -18,14 +18,14 @@ const (
 const (
 	None = 0
 	CreatedHeadlessService = 1 << 0
-	CreatedPersistentVolumeClaim = 1 << 1
-	CreatedStatefulSet = 1 << 2
-	CreatedConsoleJolokiaService = 1 << 3
-	CreatedMuxProtocolService = 1 << 4
+	//CreatedPersistentVolumeClaim = 1 << 1
+	CreatedStatefulSet = 1 << 1
+	CreatedConsoleJolokiaService = 1 << 2
+	CreatedMuxProtocolService = 1 << 3
 
 	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
 	Complete = 	CreatedHeadlessService |
-				CreatedPersistentVolumeClaim |
+				//CreatedPersistentVolumeClaim |
 				CreatedConsoleJolokiaService |
 				CreatedMuxProtocolService |
 				CreatedStatefulSet

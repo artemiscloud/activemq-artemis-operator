@@ -98,12 +98,12 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	}
 
 	// Check to see if the persistent volume claim already exists
-	if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
-		// err means not found, so create
-		if _, retrieveError := rs.CreatePersistentVolumeClaim(rs.parentFSM.customResource); retrieveError == nil {
-			rs.stepsComplete |= CreatedPersistentVolumeClaim
-		}
-	}
+	//if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	//	// err means not found, so create
+	//	if _, retrieveError := rs.CreatePersistentVolumeClaim(rs.parentFSM.customResource); retrieveError == nil {
+	//		rs.stepsComplete |= CreatedPersistentVolumeClaim
+	//	}
+	//}
 }
 
 func (rs *CreatingK8sResourcesState) Update() {
@@ -119,7 +119,7 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	var err error = nil
 
 	// Check to see if the headless service already exists
-	if _, err := rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	if _, err = rs.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so mark deleted
 		//if _, createError := rs.CreateHeadlessService(rs.parentFSM.customResource, getDefaultPorts()); createError == nil {
 
@@ -128,13 +128,13 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	}
 
 	// Check to see if the persistent volume claim already exists
-	if _, err = rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedPersistentVolumeClaim
-	}
+	//if _, err = rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	//	// err means not found, so mark deleted
+	//	rs.stepsComplete &^= CreatedPersistentVolumeClaim
+	//}
 
 	// Check to see if the persistent volume claim already exists
-	if _, err := rs.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	if _, err = rs.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
 		// err means not found, so mark deleted
 		rs.stepsComplete &^= CreatedStatefulSet
 	}
@@ -233,7 +233,7 @@ func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Persist
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: 	nil,
 			Labels:			labels,
-			Name:			cr.Name + "-pvc",
+			Name:			cr.Name,
 			Namespace:		cr.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -247,6 +247,18 @@ func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Persist
 	}
 
 	return pvc
+}
+func newPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.AMQBroker, arrayLength int) *[]corev1.PersistentVolumeClaim {
+
+	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
+
+	var pvc *corev1.PersistentVolumeClaim = nil
+	for i := 0; i < arrayLength; i++ {
+		pvc = newPersistentVolumeClaimForCR(cr)
+		pvcArray = append(pvcArray, *pvc)
+	}
+
+	return &pvcArray
 }
 func (rs *CreatingK8sResourcesState) CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker) (*corev1.PersistentVolumeClaim, error) {
 
@@ -450,8 +462,8 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 					Image:	 cr.Spec.Image,
 					Command: []string{"/opt/amq/bin/launch.sh", "start"},
 					VolumeMounts:	[]corev1.VolumeMount{
-						corev1.VolumeMount{
-							Name:		cr.Name + "-data-volume",
+						{
+							Name:		cr.Name,
 							MountPath:	dataPath,
 							ReadOnly:	false,
 						},
@@ -460,11 +472,11 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 				},
 			},
 			Volumes: []corev1.Volume{
-				corev1.Volume{
-					Name: cr.Name + "-data-volume",
+				{
+					Name: cr.Name,
 					VolumeSource: corev1.VolumeSource{
 						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: cr.Name + "-pvc",
+							ClaimName: cr.Name,
 							ReadOnly:  false,
 						},
 					},
@@ -504,6 +516,7 @@ func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 				MatchLabels: labels,
 			},
 			Template: newPodTemplateSpecForCR(cr),
+			VolumeClaimTemplates: *newPersistentVolumeClaimArrayForCR(cr, 1),
 		},
 	}
 
