@@ -61,6 +61,13 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 		}
 	}
 
+	// Check to see if the ping service already exists
+	if _, err = svc.RetrievePingService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so create
+		if _, retrieveError = svc.CreatePingService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedPingService
+		}
+	}
 	//// These next two should be considered "hard coded" and temporary
 	//// Define the console-jolokia Service for this Pod
 	//consoleJolokiaSvc := svc.NewServiceForCR(rs.parentFSM.customResource, "console-jolokia", 8161)

@@ -32,7 +32,7 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev
 		ObjectMeta: metav1.ObjectMeta {
 			Annotations: 	nil,
 			Labels: 		labels,
-			Name:			"headless" + "-service",
+			Name:			"hs",//"headless" + "-service",
 			Namespace:		cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -86,34 +86,74 @@ func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_numb
 	return svc
 }
 
+// newServiceForPod returns an amqbroker service for the pod just created
+func newPingServiceForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Service {
+
+	// Log where we are and what we're doing
+	//reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	//reqLogger.Info("Creating new " + name_suffix + " service")
+
+	labels := selectors.LabelsForAMQBroker(cr.Name)
+
+	port := corev1.ServicePort{
+		Protocol:	"TCP",
+		Port:		8888,
+		TargetPort:	intstr.FromInt(int(8888)),
+	}
+	ports := []corev1.ServicePort{}
+	ports = append(ports, port)
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:		"Service",
+		},
+		ObjectMeta: metav1.ObjectMeta {
+			Annotations: 	nil,
+			Labels: 		labels,
+			Name:			"ping",
+			Namespace:		cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: 	"ClusterIP",
+			Ports: 	ports,
+			Selector: labels,
+			ClusterIP: "None",
+			PublishNotReadyAddresses: true,
+		},
+	}
+
+	return svc
+}
+
 func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
-		corev1.ServicePort{
+		{
 			Name:		"mqtt",
 			Protocol:	"TCP",
 			Port:		1883,
 			TargetPort:	intstr.FromInt(int(1883)),
 		},
-		corev1.ServicePort{
+		{
 			Name:		"amqp",
 			Protocol:	"TCP",
 			Port:		5672,
 			TargetPort:	intstr.FromInt(int(5672)),
 		},
-		corev1.ServicePort{
+		{
 			Name:		"console-jolokia",
 			Protocol:	"TCP",
 			Port:		8161,
 			TargetPort:	intstr.FromInt(int(8161)),
 		},
-		corev1.ServicePort{
+		{
 			Name:		"stomp",
 			Protocol:	"TCP",
 			Port:		61613,
 			TargetPort:	intstr.FromInt(int(61613)),
 		},
-		corev1.ServicePort{
+		{
 			Name:		"all",
 			Protocol:	"TCP",
 			Port:		61616,
@@ -122,6 +162,54 @@ func GetDefaultPorts() *[]corev1.ServicePort {
 	}
 
 	return &ports
+}
+
+func CreatePingService(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger.Info("Creating new " + "ping" + " service")
+
+	pingSvc := newPingServiceForCR(cr)
+
+	// Define the headless Service for the StatefulSet
+	// Set AMQBroker instance as the owner and controller
+	var err error = nil
+	if err = controllerutil.SetControllerReference(cr, pingSvc, scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "ping" + " service")
+	}
+	reqLogger.Info("Set controller reference for new " + "ping" + " service")
+
+	// Call k8s create for service
+	if err = client.Create(context.TODO(), pingSvc); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to creating new " + "ping" + " service")
+
+	}
+	reqLogger.Info("Created new " + "ping" + " service")
+
+	return pingSvc, err
+}
+func RetrievePingService(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger.Info("Retrieving " + "ping" + " service")
+
+	var err error = nil
+	pingSvc := newPingServiceForCR(instance)
+
+	// Check if the headless service already exists
+	if err = client.Get(context.TODO(), namespacedName, pingSvc); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "Ping service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+		} else {
+			reqLogger.Error(err, "Ping service found", "Namespace", instance.Namespace, "Name", instance.Name)
+		}
+	}
+
+	return pingSvc, err
 }
 
 func CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
@@ -151,6 +239,8 @@ func CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, client client.Client, s
 
 	return headlessSvc, err
 }
+
+
 
 func DeleteHeadlessService(instance *brokerv1alpha1.AMQBroker) {
 	// kubectl delete cleans up kubernetes resources, just need to clean up local resources if any

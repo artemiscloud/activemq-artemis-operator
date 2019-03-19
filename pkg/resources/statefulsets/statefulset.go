@@ -74,6 +74,149 @@ var log = logf.Log.WithName("package statefulsets")
 //	return pod
 //}
 
+func makeDataPathForCR(cr *brokerv1alpha1.AMQBroker) string {
+	return "/opt/" + cr.Name + "/data"
+}
+
+func makeEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_USER",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_PASSWORD",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_DATA_DIR",
+			makeDataPathForCR(cr),
+			nil,
+		},
+		{
+			"AMQ_ROLE",
+			"admin",
+			nil,
+		},
+		{
+			"AMQ_NAME",
+			"amq-broker",
+			nil,
+		},
+		{
+			"AMQ_TRANSPORTS",
+			"openwire,amqp,stomp,mqtt,hornetq",
+			nil,
+		},
+		{
+			"AMQ_QUEUES",
+			//"q0,q1,q2,q3",
+			"",
+			nil,
+		},
+		{
+			"AMQ_ADDRESSES",
+			//"a0,a1,a2,a3",
+			"",
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
+			"",
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE",
+			"",
+			nil,
+		},
+		{
+			"AMQ_TRUSTSTORE_PASSWORD",
+			"",
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE",
+			"",
+			nil,
+		},
+		{
+			"AMQ_KEYSTORE_PASSWORD",
+			"",
+			nil,
+		},
+		{
+			"AMQ_GLOBAL_MAX_SIZE",
+			"100 mb",
+			nil,
+		},
+		{
+			"AMQ_REQUIRE_LOGIN",
+			"",
+			nil,
+		},
+		{
+			"AMQ_EXTRA_ARGS",
+			"--no-autotune",
+			nil,
+		},
+		{
+			"AMQ_ANYCAST_PREFIX",
+			"",
+			nil,
+		},
+		{
+			"AMQ_MULTICAST_PREFIX",
+			"",
+			nil,
+		},
+		// included from p-c-ssl template
+		{
+			"AMQ_DATA_DIR_LOGGING",
+			"true",
+			nil,
+		},
+		{
+			"AMQ_CLUSTERED",
+			"true",
+			nil,
+		},
+		{
+			"AMQ_REPLICAS",
+			"0",
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_USER",
+			"clusteruser",
+			nil,
+		},
+		{
+			"AMQ_CLUSTER_PASSWORD",
+			"clusterpass",
+			nil,
+		},
+		{
+			"POD_NAMESPACE",
+			"", // Set to the field metadata.namespace in current object
+			nil,
+		},
+	}
+
+	return envVarArray
+
+
+}
+func newEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) *[]corev1.EnvVar {
+
+	envVarArray := makeEnvVarArrayForCR(cr)
+
+	return &envVarArray
+}
+
 
 func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpec {
 
@@ -83,10 +226,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 
 	//var pts corev1.PodTemplateSpec
 
-	dataPath := "/opt/" + cr.Name + "/data"
-	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
-	passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
-	dataPathEnvVar := corev1.EnvVar{ "AMQ_DATA_DIR", dataPath, nil}
+	dataPath := makeDataPathForCR(cr)
 
 	pts := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,7 +247,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 							ReadOnly:	false,
 						},
 					},
-					Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar, dataPathEnvVar},
+					Env: makeEnvVarArrayForCR(cr),
 				},
 			},
 			Volumes: []corev1.Volume{
@@ -143,14 +283,14 @@ func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 			APIVersion:	"v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:			cr.Name + "-statefulset",
+			Name:			cr.Name + "-ss",//"-statefulset",
 			Namespace:		cr.Namespace,
 			Labels:			labels,
 			Annotations:	nil,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: 		&replicas,
-			ServiceName:	cr.Name + "-headless" + "-service",
+			ServiceName:	"hs",//cr.Name + "-headless" + "-service",
 			Selector:		&metav1.LabelSelector{
 				MatchLabels: labels,
 			},
