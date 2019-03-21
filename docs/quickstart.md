@@ -12,7 +12,7 @@ resource.
 
 ### Getting the code
 
-To launch the operator you will need to clone the [amq-broker-operator](https://github.com/rh-messaging/activemq-artemis-operator)
+To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
 and checkout the 0.2.0 tag as per
 
 ```$xslt
@@ -22,9 +22,9 @@ git checkout 0.2.0
 
 ### Deploying the operator
 
-In the amq-broker-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/operator.yaml)
+In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/operator.yaml)
 within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/operator.yaml#L18-L19)
-with the correct location for the amq-broker-operator container image that you either pulled or [built](building.md).
+with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
 deploy the operator via:
@@ -37,16 +37,16 @@ $ kubectl create -f deploy/role.yaml
 $ kubectl create -f deploy/role_binding.yaml
 # Setup the CRD
 $ kubectl create -f deploy/crds/broker_v1alpha1_amqbroker_crd.yaml
-# Deploy the amq-broker-operator
+# Deploy the activemq-artemis-operator
 $ kubectl create -f deploy/operator.yaml
 ```
 
-At this point in your project namespace you should see the amq-broker-operator
+At this point in your project namespace you should see the activemq-artemis-operator
 starting up and if you check the logs you should see something like
 
 ```$xslt
 Executing entrypoint
-exec /amq-broker-operator/amq-broker-operator
+exec /activemq-artemis-operator/activemq-artemis-operator
 {"level":"info","ts":1552055596.8029804,"logger":"cmd","msg":"Go Version: go1.11.5"}
 {"level":"info","ts":1552055596.803102,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
 {"level":"info","ts":1552055596.8031216,"logger":"cmd","msg":"Version of operator-sdk: v0.5.0"}
@@ -80,7 +80,7 @@ which identifies the container image to use to launch the AMQ Broker.
 To deploy the broker we simply execute
 
 ```$xslt
-kubectl create -f amq-broker-operator/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml
+kubectl create -f activemq-artemis-operator/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml
 ```
 
 at which point you should now see the statefulset 'example-amqbroker-statefulset' under Overview in the web console.

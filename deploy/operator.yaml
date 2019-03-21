@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: amq-broker-operator
+  name: activemq-artemis-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: amq-broker-operator
+      name: activemq-artemis-operator
   template:
     metadata:
       labels:
-        name: amq-broker-operator
+        name: activemq-artemis-operator
     spec:
-      serviceAccountName: amq-broker-operator
+      serviceAccountName: activemq-artemis-operator
       containers:
-        - name: amq-broker-operator
+        - name: activemq-artemis-operator
           # Replace this with the built image name
-          image: amq-broker-operator:latest
+          image: activemq-artemis-operator:latest
           command:
           - /usr/local/bin/entrypoint
           imagePullPolicy: Always
@@ -30,4 +30,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "amq-broker-operator"
+              value: "activemq-artemis-operator"

@@ -3,11 +3,11 @@
 - [imagebuilder](https://github.com/openshift/imagebuilder)
 
 ```$xslt
-imagebuilder -t amq-broker-operator:latest -f amq-broker-operator/build/Dockerfile amq-broker-operator/build
+imagebuilder -t activemq-artemis-operator:latest -f activemq-artemis-operator/build/Dockerfile activemq-artemis-operator/build
 ```
 
 or
 
 ```$xslt
-imagebuilder -t amq-broker-operator:latest-debug -f amq-broker-operator/build/Dockerfile_debug amq-broker-operator/build
+imagebuilder -t activemq-artemis-operator:latest-debug -f activemq-artemis-operator/build/Dockerfile_debug activemq-artemis-operator/build
 ```
