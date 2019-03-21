@@ -6,7 +6,7 @@ import (
 
 	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
+	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 

@@ -13,9 +13,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBroker":       schema_pkg_apis_broker_v1alpha1_AMQBroker(ref),
-		"github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec":   schema_pkg_apis_broker_v1alpha1_AMQBrokerSpec(ref),
-		"github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus": schema_pkg_apis_broker_v1alpha1_AMQBrokerStatus(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBroker":       schema_pkg_apis_broker_v1alpha1_AMQBroker(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec":   schema_pkg_apis_broker_v1alpha1_AMQBrokerSpec(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus": schema_pkg_apis_broker_v1alpha1_AMQBrokerStatus(ref),
 	}
 }
 
@@ -46,19 +46,19 @@ func schema_pkg_apis_broker_v1alpha1_AMQBroker(ref common.ReferenceCallback) com
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec"),
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus"),
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec", "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

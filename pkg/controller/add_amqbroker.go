@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/rh-messaging/amq-broker-operator/pkg/controller/amqbroker"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller/amqbroker"
 )
 
 func init() {

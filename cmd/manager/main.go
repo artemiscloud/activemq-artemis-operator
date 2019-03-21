@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/rh-messaging/amq-broker-operator/pkg/apis"
-	"github.com/rh-messaging/amq-broker-operator/pkg/controller"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"

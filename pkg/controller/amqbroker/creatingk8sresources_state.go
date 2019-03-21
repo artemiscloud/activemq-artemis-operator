@@ -1,10 +1,10 @@
 package amqbroker
 
 import (
-	svc "github.com/rh-messaging/amq-broker-operator/pkg/resources/services"
-	ss "github.com/rh-messaging/amq-broker-operator/pkg/resources/statefulsets"
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 
-	"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 )
 

@@ -1,8 +1,8 @@
 package amqbroker
 
 import (
-	brokerv1alpha1 "github.com/rh-messaging/amq-broker-operator/pkg/apis/broker/v1alpha1"
-	"github.com/rh-messaging/amq-broker-operator/pkg/utils/fsm"
+	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 )
 
