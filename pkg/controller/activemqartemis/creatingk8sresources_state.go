@@ -1,4 +1,4 @@
-package amqbroker
+package activemqartemis
 
 import (
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"

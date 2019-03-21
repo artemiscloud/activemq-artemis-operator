@@ -26,7 +26,7 @@ type ActiveMQArtemisStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ActiveMQArtemis is the Schema for the amqbrokers API
+// ActiveMQArtemis is the Schema for the activemqartemises API
 // +k8s:openapi-gen=true
 type ActiveMQArtemis struct {
 	metav1.TypeMeta   `json:",inline"`

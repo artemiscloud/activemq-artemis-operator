@@ -1,4 +1,4 @@
-package amqbroker
+package activemqartemis
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-var log = logf.Log.WithName("controller_amqbroker")
+var log = logf.Log.WithName("controller_activemqartemis")
 //var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
@@ -46,7 +46,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("amqbroker-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("activemqartemis-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 
 	instance := &brokerv1alpha1.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
-		Name: request.Name,//"example-amqbroker",
+		Name: request.Name,//"example-activemqartemis",
 		Namespace: request.Namespace,//"abo-1",
 	}
 

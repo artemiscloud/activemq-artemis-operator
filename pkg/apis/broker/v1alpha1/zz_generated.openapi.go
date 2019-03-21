@@ -23,7 +23,7 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemis(ref common.ReferenceCallbac
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ActiveMQArtemis is the Schema for the amqbrokers API",
+				Description: "ActiveMQArtemis is the Schema for the activemqartemises API",
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{

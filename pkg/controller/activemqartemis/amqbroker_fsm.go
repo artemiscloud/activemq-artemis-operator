@@ -1,4 +1,4 @@
-package amqbroker
+package activemqartemis
 
 import (
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"

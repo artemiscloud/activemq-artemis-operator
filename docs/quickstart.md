@@ -36,7 +36,7 @@ $ kubectl create -f deploy/service_account.yaml
 $ kubectl create -f deploy/role.yaml
 $ kubectl create -f deploy/role_binding.yaml
 # Setup the CRD
-$ kubectl create -f deploy/crds/broker_v1alpha1_amqbroker_crd.yaml
+$ kubectl create -f deploy/crds/broker_v1alpha1_activemqartemis_crd.yaml
 # Deploy the activemq-artemis-operator
 $ kubectl create -f deploy/operator.yaml
 ```
@@ -54,43 +54,43 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 {"level":"info","ts":1552055597.0208154,"logger":"leader","msg":"Found existing lock with my name. I was likely restarted."}
 {"level":"info","ts":1552055597.0208917,"logger":"leader","msg":"Continuing as the leader."}
 {"level":"info","ts":1552055597.159428,"logger":"cmd","msg":"Registering Components."}
-{"level":"info","ts":1552055597.160093,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"amqbroker-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1552055597.160093,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
 ```
 
 ### Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'example-amqbroker' from [broker_v1alpha1_amqbroker_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml)
+resource instance for 'example-activemqartemis' from [broker_v1alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
 apiVersion: broker.amq.io/v1alpha1
 kind: ActiveMQArtemis
 metadata:
-  name: example-amqbroker
+  name: example-activemqartemis
 spec:
   # Add fields here
   size: 4
   image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.2.0/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker.
 
 To deploy the broker we simply execute
 
 ```$xslt
-kubectl create -f activemq-artemis-operator/deploy/crds/broker_v1alpha1_amqbroker_cr.yaml
+kubectl create -f activemq-artemis-operator/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml
 ```
 
-at which point you should now see the statefulset 'example-amqbroker-statefulset' under Overview in the web console.
+at which point you should now see the statefulset 'example-activemqartemis-statefulset' under Overview in the web console.
 
 ```$xslt
-amqbroker.broker.amq.io "example-amqbroker" created
+activemqartemis.broker.amq.io "example-activemqartemis" created
 ```
 
 If you expand the statefulset you should see that it has 1 pod running along with three services under 'Networking'; 
-example-amqbroker-console-jolokia-service, example-amqbroker-mux-protocol-service, and headless-service.
+example-activemqartemis-console-jolokia-service, example-activemqartemis-mux-protocol-service, and headless-service.
 
 #### exampleamq-broker-console-jolokia-service
 
@@ -125,11 +125,11 @@ The headless service internally exposes all broker ports:
 
 #### Running pods
 
-The example-amqbroker-statefulset-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
+The example-activemqartemis-statefulset-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
 sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale' command as per:
 
 ```$xslt
-oc scale --replicas 0 statefulset example-amqbroker-statefulset
+oc scale --replicas 0 statefulset example-activemqartemis-statefulset
 ```
 
 which would scale down the number of pods to zero. Note that you can scale the number to greater than one, however for the moment

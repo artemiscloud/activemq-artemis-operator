@@ -23,7 +23,7 @@ var log = logf.Log.WithName("package statefulsets")
 
 
 
-// newPodForCR returns an amqbroker pod with the same name/namespace as the cr
+// newPodForCR returns an activemqartemis pod with the same name/namespace as the cr
 //func newPodForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Pod {
 //
 //	// Log where we are and what we're doing

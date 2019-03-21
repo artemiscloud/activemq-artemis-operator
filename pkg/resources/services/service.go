@@ -19,7 +19,7 @@ import (
 var log = logf.Log.WithName("package services")
 
 
-// newServiceForPod returns an amqbroker service for the pod just created
+// newServiceForPod returns an activemqartemis service for the pod just created
 func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
 	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
@@ -47,7 +47,7 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[
 	return svc
 }
 
-// newServiceForPod returns an amqbroker service for the pod just created
+// newServiceForPod returns an activemqartemis service for the pod just created
 func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, port_number int32) *corev1.Service {
 
 	// Log where we are and what we're doing
@@ -86,7 +86,7 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 	return svc
 }
 
-// newServiceForPod returns an amqbroker service for the pod just created
+// newServiceForPod returns an activemqartemis service for the pod just created
 func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 
 	// Log where we are and what we're doing
