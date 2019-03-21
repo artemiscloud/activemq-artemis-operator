@@ -7,18 +7,18 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// AMQBrokerSpec defines the desired state of AMQBroker
+// ActiveMQArtemisSpec defines the desired state of ActiveMQArtemis
 // +k8s:openapi-gen=true
-type AMQBrokerSpec struct {
+type ActiveMQArtemisSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	Image				string			`json:"image"`
 }
 
-// AMQBrokerStatus defines the observed state of AMQBroker
+// ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
 // +k8s:openapi-gen=true
-type AMQBrokerStatus struct {
+type ActiveMQArtemisStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
@@ -26,25 +26,25 @@ type AMQBrokerStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// AMQBroker is the Schema for the amqbrokers API
+// ActiveMQArtemis is the Schema for the amqbrokers API
 // +k8s:openapi-gen=true
-type AMQBroker struct {
+type ActiveMQArtemis struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AMQBrokerSpec   `json:"spec,omitempty"`
-	Status AMQBrokerStatus `json:"status,omitempty"`
+	Spec   ActiveMQArtemisSpec   `json:"spec,omitempty"`
+	Status ActiveMQArtemisStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// AMQBrokerList contains a list of AMQBroker
-type AMQBrokerList struct {
+// ActiveMQArtemisList contains a list of ActiveMQArtemis
+type ActiveMQArtemisList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []AMQBroker `json:"items"`
+	Items           []ActiveMQArtemis `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&AMQBroker{}, &AMQBrokerList{})
+	SchemeBuilder.Register(&ActiveMQArtemis{}, &ActiveMQArtemisList{})
 }

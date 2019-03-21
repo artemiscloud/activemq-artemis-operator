@@ -19,9 +19,9 @@ import (
 var log = logf.Log.WithName("package persistentvolumeclaims")
 
 
-func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.PersistentVolumeClaim {
+func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
 
-	labels := selectors.LabelsForAMQBroker(cr.Name)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -46,7 +46,7 @@ func newPersistentVolumeClaimForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Persist
 
 	return pvc
 }
-func NewPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.AMQBroker, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
 
@@ -59,17 +59,17 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv1alpha1.AMQBroker, arrayLengt
 	return &pvcArray
 }
 
-func CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
+func CreatePersistentVolumeClaim(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new persistent volume claim")
 
 	var err error = nil
 
 	// Define the PersistentVolumeClaim for this Pod
 	brokerPvc := newPersistentVolumeClaimForCR(cr)
-	// Set AMQBroker instance as the owner and controller
+	// Set ActiveMQArtemis instance as the owner and controller
 	if err = controllerutil.SetControllerReference(cr, brokerPvc, scheme); err != nil {
 		// Add error detail for use later
 		reqLogger.Info("Failed to set controller reference for new " + "persistent volume claim")
@@ -88,11 +88,11 @@ func CreatePersistentVolumeClaim(cr *brokerv1alpha1.AMQBroker, client client.Cli
 
 
 
-//func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, r *ReconcileAMQBroker) (*corev1.PersistentVolumeClaim, error) {
-func RetrievePersistentVolumeClaim(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, client client.Client) (*corev1.PersistentVolumeClaim, error) {
+//func (rs *CreatingK8sResourcesState) RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) (*corev1.PersistentVolumeClaim, error) {
+func RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.PersistentVolumeClaim, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
 	reqLogger.Info("Retrieving " + "persistent volume claim")
 
 	var err error = nil

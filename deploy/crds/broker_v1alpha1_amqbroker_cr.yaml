@@ -1,9 +1,9 @@
 apiVersion: broker.amq.io/v1alpha1
-kind: AMQBroker
+kind: ActiveMQArtemis
 metadata:
   name: example-amqbroker
   labels:
-    AMQBroker: example-amqbroker
+    ActiveMQArtemis: example-amqbroker
     application: example-amqbroker-app
 spec:
   # Add fields here

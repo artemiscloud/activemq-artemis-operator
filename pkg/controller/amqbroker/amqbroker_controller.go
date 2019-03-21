@@ -25,14 +25,14 @@ import (
 
 var log = logf.Log.WithName("controller_amqbroker")
 //var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
-var namespacedNameToFSM = make(map[types.NamespacedName]*AMQBrokerFSM)
+var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
 * business logic.  Delete these comments after modifying this file.*
  */
 
-// Add creates a new AMQBroker Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new ActiveMQArtemis Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -40,7 +40,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileAMQBroker{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileActiveMQArtemis{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -51,26 +51,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource AMQBroker
-	err = c.Watch(&source.Kind{Type: &brokerv1alpha1.AMQBroker{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource ActiveMQArtemis
+	err = c.Watch(&source.Kind{Type: &brokerv1alpha1.ActiveMQArtemis{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner AMQBroker
+	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv1alpha1.AMQBroker{},
+		OwnerType:    &brokerv1alpha1.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to secondary resource Pods and requeue the owner AMQBroker
+	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv1alpha1.AMQBroker{},
+		OwnerType:    &brokerv1alpha1.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
@@ -79,48 +79,48 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileAMQBroker{}
+var _ reconcile.Reconciler = &ReconcileActiveMQArtemis{}
 
-// ReconcileAMQBroker reconciles a AMQBroker object
-type ReconcileAMQBroker struct {
+// ReconcileActiveMQArtemis reconciles a ActiveMQArtemis object
+type ReconcileActiveMQArtemis struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a AMQBroker object and makes changes based on the state read
-// and what is in the AMQBroker.Spec
+// Reconcile reads that state of the cluster for a ActiveMQArtemis object and makes changes based on the state read
+// and what is in the ActiveMQArtemis.Spec
 // TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
 // a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling AMQBroker")
+	reqLogger.Info("Reconciling ActiveMQArtemis")
 
 	var err error = nil
 	var reconcileResult reconcile.Result
-	var namespacedNameFSM *AMQBrokerFSM = nil
-	var amqbfsm *AMQBrokerFSM = nil
+	var namespacedNameFSM *ActiveMQArtemisFSM = nil
+	var amqbfsm *ActiveMQArtemisFSM = nil
 
-	instance := &brokerv1alpha1.AMQBroker{}
+	instance := &brokerv1alpha1.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
 		Name: request.Name,//"example-amqbroker",
 		Namespace: request.Namespace,//"abo-1",
 	}
 
-	// Fetch the AMQBroker instance
+	// Fetch the ActiveMQArtemis instance
 	// When first creating this will have err == nil
 	// When deleting after creation this will have err NotFound
 	// When deleting before creation reconcile won't be called
 	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
+			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
 
 			reconcileResult = reconcile.Result{}
 
@@ -138,7 +138,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 			// Setting err to nil to prevent requeue
 			err = nil
 		} else {
-			reqLogger.Error(err, "AMQBroker Controller Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
+			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
 			// Leaving err as !nil causes requeue
 		}
 
@@ -151,7 +151,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	// for the given fsm, do an update
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
-		amqbfsm = NewAMQBrokerFSM(instance, namespacedName, r)
+		amqbfsm = NewActiveMQArtemisFSM(instance, namespacedName, r)
 		namespacedNameFSM = amqbfsm
 		namespacedNameToFSM[namespacedName] = namespacedNameFSM
 
@@ -163,12 +163,12 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	// Set it up
 	//var err error = nil
 	//var reconcileResult reconcile.Result
-	//instance := &brokerv1alpha1.AMQBroker{}
+	//instance := &brokerv1alpha1.ActiveMQArtemis{}
 	//found := &corev1.Pod{}
 	//
 	//// Do what's needed
 	//for {
-	//	// Fetch the AMQBroker instance
+	//	// Fetch the ActiveMQArtemis instance
 	//	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -182,7 +182,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//
 	//	// Define the PersistentVolumeClaim for this Pod
 	//	brokerPvc := newPersistentVolumeClaimForCR(instance)
-	//	// Set AMQBroker instance as the owner and controller
+	//	// Set ActiveMQArtemis instance as the owner and controller
 	//	if err = controllerutil.SetControllerReference(instance, brokerPvc, r.scheme); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -196,7 +196,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//
 	//	// Define the console-jolokia Service for this Pod
 	//	consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
-	//	// Set AMQBroker instance as the owner and controller
+	//	// Set ActiveMQArtemis instance as the owner and controller
 	//	if err = controllerutil.SetControllerReference(instance, consoleJolokiaSvc, r.scheme); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -209,7 +209,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//
 	//	// Define the console-jolokia Service for this Pod
 	//	muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
-	//	// Set AMQBroker instance as the owner and controller
+	//	// Set ActiveMQArtemis instance as the owner and controller
 	//	if err = controllerutil.SetControllerReference(instance, muxProtocolSvc, r.scheme); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -223,7 +223,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//	// Define the headless Service for the StatefulSet
 	//	//headlessSvc := newHeadlessServiceForCR(instance, 5672)
 	//	headlessSvc := newHeadlessServiceForCR(instance, getDefaultPorts())
-	//	// Set AMQBroker instance as the owner and controller
+	//	// Set ActiveMQArtemis instance as the owner and controller
 	//	if err = controllerutil.SetControllerReference(instance, headlessSvc, r.scheme); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -238,7 +238,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//	//// Pod didn't exist, create
 	//	//// Define a new Pod object
 	//	//pod := newPodForCR(instance)
-	//	//// Set AMQBroker instance as the owner and controller
+	//	//// Set ActiveMQArtemis instance as the owner and controller
 	//	//if err = controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
 	//	//	// Add error detail for use later
 	//	//	break
@@ -252,7 +252,7 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//	// Statefulset didn't exist, create
 	//	// Define a new Pod object
 	//	ss := newStatefulSetForCR(instance)
-	//	// Set AMQBroker instance as the owner and controller
+	//	// Set ActiveMQArtemis instance as the owner and controller
 	//	if err = controllerutil.SetControllerReference(instance, ss, r.scheme); err != nil {
 	//		// Add error detail for use later
 	//		break
@@ -276,12 +276,12 @@ func (r *ReconcileAMQBroker) Reconcile(request reconcile.Request) (reconcile.Res
 	//if err != nil {
 	//	if errors.IsNotFound(err) {
 	//		reconcileResult = reconcile.Result{}
-	//		reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+	//		reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
 	//		// Setting err to nil to prevent requeue
 	//		err = nil
 	//	} else {
-	//		//log.Error(err, "AMQBroker Controller Reconcile errored")
-	//		reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+	//		//log.Error(err, "ActiveMQArtemis Controller Reconcile errored")
+	//		reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
 	//	}
 	//}
 

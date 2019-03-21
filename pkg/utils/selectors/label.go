@@ -7,19 +7,19 @@ import (
 const (
 	LabelAppKey = "application"
 
-	LabelResourceKey = "AMQBroker"
+	LabelResourceKey = "ActiveMQArtemis"
 )
 
 // Set labels in a map
-func LabelsForAMQBroker(name string) map[string]string {
+func LabelsForActiveMQArtemis(name string) map[string]string {
 	return map[string]string{
 		LabelAppKey:      name + "-app",
 		LabelResourceKey: name,
 	}
 }
 
-// return a selector that matches resources for a AMQBroker resource
-func ResourcesByAMQBrokerName(name string) labels.Selector {
+// return a selector that matches resources for a ActiveMQArtemis resource
+func ResourcesByActiveMQArtemisName(name string) labels.Selector {
 	set := map[string]string{
 		LabelAppKey:      name,
 		//LabelResourceKey: name,

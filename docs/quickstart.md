@@ -65,7 +65,7 @@ which looks like
 
 ```$xslt
 apiVersion: broker.amq.io/v1alpha1
-kind: AMQBroker
+kind: ActiveMQArtemis
 metadata:
   name: example-amqbroker
 spec:

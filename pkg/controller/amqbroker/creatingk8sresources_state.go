@@ -13,11 +13,11 @@ type CreatingK8sResourcesState struct {
 
 	s				fsm.State
 	namespacedName  types.NamespacedName
-	parentFSM		*AMQBrokerFSM
+	parentFSM		*ActiveMQArtemisFSM
 	stepsComplete 	uint8
 }
 
-func MakeCreatingK8sResourcesState(_parentFSM *AMQBrokerFSM, _namespacedName types.NamespacedName) CreatingK8sResourcesState{
+func MakeCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) CreatingK8sResourcesState{
 
 	rs := CreatingK8sResourcesState{
 		s: fsm.MakeState(CreatingK8sResources),
@@ -29,7 +29,7 @@ func MakeCreatingK8sResourcesState(_parentFSM *AMQBrokerFSM, _namespacedName typ
 	return rs
 }
 
-func NewCreatingK8sResourcesState(_parentFSM *AMQBrokerFSM, _namespacedName types.NamespacedName) *CreatingK8sResourcesState{
+func NewCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) *CreatingK8sResourcesState{
 
 	rs := MakeCreatingK8sResourcesState(_parentFSM, _namespacedName)
 
@@ -39,7 +39,7 @@ func NewCreatingK8sResourcesState(_parentFSM *AMQBrokerFSM, _namespacedName type
 func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", rs.parentFSM.customResource.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Entering CreateK8sResourceState")
 
 	var err error = nil
@@ -71,7 +71,7 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	//// These next two should be considered "hard coded" and temporary
 	//// Define the console-jolokia Service for this Pod
 	//consoleJolokiaSvc := svc.NewServiceForCR(rs.parentFSM.customResource, "console-jolokia", 8161)
-	//// Set AMQBroker instance as the owner and controller
+	//// Set ActiveMQArtemis instance as the owner and controller
 	//if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, consoleJolokiaSvc, rs.parentFSM.r.scheme); err != nil {
 	//	// Add error detail for use later
 	//
@@ -84,7 +84,7 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	//
 	//// Define the console-jolokia Service for this Pod
 	//muxProtocolSvc := svc.NewServiceForCR(rs.parentFSM.customResource, "mux-protocol", 61616)
-	//// Set AMQBroker instance as the owner and controller
+	//// Set ActiveMQArtemis instance as the owner and controller
 	//if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, muxProtocolSvc, rs.parentFSM.r.scheme); err != nil {
 	//	// Add error detail for use later
 	//}
@@ -110,7 +110,7 @@ func (rs *CreatingK8sResourcesState) Update() {
 func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", rs.parentFSM.customResource.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Exiting CreatingK8sResourceState")
 
 	var err error = nil

@@ -6,8 +6,8 @@ metadata:
 spec:
   group: broker.amq.io
   names:
-    kind: AMQBroker
-    listKind: AMQBrokerList
+    kind: ActiveMQArtemis
+    listKind: ActiveMQArtemisList
     plural: amqbrokers
     singular: amqbroker
   scope: Namespaced

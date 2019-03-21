@@ -24,7 +24,7 @@ var log = logf.Log.WithName("package statefulsets")
 
 
 // newPodForCR returns an amqbroker pod with the same name/namespace as the cr
-//func newPodForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Pod {
+//func newPodForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Pod {
 //
 //	// Log where we are and what we're doing
 //	reqLogger:= log.WithName(cr.Name)
@@ -74,11 +74,11 @@ var log = logf.Log.WithName("package statefulsets")
 //	return pod
 //}
 
-func makeDataPathForCR(cr *brokerv1alpha1.AMQBroker) string {
+func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
 	return "/opt/" + cr.Name + "/data"
 }
 
-func makeEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) []corev1.EnvVar {
+func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -210,7 +210,7 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) []corev1.EnvVar {
 
 
 }
-func newEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) *[]corev1.EnvVar {
+func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
 
 	envVarArray := makeEnvVarArrayForCR(cr)
 
@@ -218,7 +218,7 @@ func newEnvVarArrayForCR(cr *brokerv1alpha1.AMQBroker) *[]corev1.EnvVar {
 }
 
 
-func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpec {
+func newPodTemplateSpecForCR(cr *brokerv1alpha1.ActiveMQArtemis) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
 	reqLogger:= log.WithName(cr.Name)
@@ -267,7 +267,7 @@ func newPodTemplateSpecForCR(cr *brokerv1alpha1.AMQBroker) corev1.PodTemplateSpe
 	return pts
 }
 
-func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
+func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
 	reqLogger:= log.WithName(cr.Name)
@@ -275,7 +275,7 @@ func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 
 	var replicas int32 = 1
 
-	labels := selectors.LabelsForAMQBroker(cr.Name)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	ss := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -301,17 +301,17 @@ func newStatefulSetForCR(cr *brokerv1alpha1.AMQBroker) *appsv1.StatefulSet {
 
 	return ss
 }
-func CreateStatefulSet(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
+func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new statefulset")
 
 	var err error = nil
 
 	// Define the StatefulSet
 	ss := newStatefulSetForCR(cr)
-	// Set AMQBroker instance as the owner and controller
+	// Set ActiveMQArtemis instance as the owner and controller
 	if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
 		// Add error detail for use later
 		reqLogger.Info("Failed to set controller reference for new " + "statefulset")
@@ -327,10 +327,10 @@ func CreateStatefulSet(cr *brokerv1alpha1.AMQBroker, client client.Client, schem
 
 	return ss, err
 }
-func RetrieveStatefulSet(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
+func RetrieveStatefulSet(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
 	reqLogger.Info("Retrieving " + "statefulset")
 
 	var err error = nil

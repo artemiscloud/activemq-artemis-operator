@@ -13,17 +13,17 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBroker":       schema_pkg_apis_broker_v1alpha1_AMQBroker(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec":   schema_pkg_apis_broker_v1alpha1_AMQBrokerSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus": schema_pkg_apis_broker_v1alpha1_AMQBrokerStatus(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemis":       schema_pkg_apis_broker_v1alpha1_ActiveMQArtemis(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisSpec":   schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref),
+		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisStatus": schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisStatus(ref),
 	}
 }
 
-func schema_pkg_apis_broker_v1alpha1_AMQBroker(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemis(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "AMQBroker is the Schema for the amqbrokers API",
+				Description: "ActiveMQArtemis is the Schema for the amqbrokers API",
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -46,27 +46,27 @@ func schema_pkg_apis_broker_v1alpha1_AMQBroker(ref common.ReferenceCallback) com
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec"),
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus"),
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.AMQBrokerStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1.ActiveMQArtemisStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
-func schema_pkg_apis_broker_v1alpha1_AMQBrokerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "AMQBrokerSpec defines the desired state of AMQBroker",
+				Description: "ActiveMQArtemisSpec defines the desired state of ActiveMQArtemis",
 				Properties:  map[string]spec.Schema{},
 			},
 		},
@@ -74,11 +74,11 @@ func schema_pkg_apis_broker_v1alpha1_AMQBrokerSpec(ref common.ReferenceCallback)
 	}
 }
 
-func schema_pkg_apis_broker_v1alpha1_AMQBrokerStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "AMQBrokerStatus defines the observed state of AMQBroker",
+				Description: "ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis",
 				Properties:  map[string]spec.Schema{},
 			},
 		},

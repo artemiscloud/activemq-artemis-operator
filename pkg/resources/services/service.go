@@ -20,9 +20,9 @@ var log = logf.Log.WithName("package services")
 
 
 // newServiceForPod returns an amqbroker service for the pod just created
-func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev1.ServicePort) *corev1.Service {
+func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
-	labels := selectors.LabelsForAMQBroker(cr.Name)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -48,13 +48,13 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.AMQBroker, servicePorts *[]corev
 }
 
 // newServiceForPod returns an amqbroker service for the pod just created
-func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_number int32) *corev1.Service {
+func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, port_number int32) *corev1.Service {
 
 	// Log where we are and what we're doing
-	//reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	//reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	//reqLogger.Info("Creating new " + name_suffix + " service")
 
-	labels := selectors.LabelsForAMQBroker(cr.Name)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	port := corev1.ServicePort{
 		Name:		cr.Name + "-" + name_suffix + "-port",
@@ -87,13 +87,13 @@ func newServiceForCR(cr *brokerv1alpha1.AMQBroker, name_suffix string, port_numb
 }
 
 // newServiceForPod returns an amqbroker service for the pod just created
-func newPingServiceForCR(cr *brokerv1alpha1.AMQBroker) *corev1.Service {
+func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 
 	// Log where we are and what we're doing
-	//reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	//reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	//reqLogger.Info("Creating new " + name_suffix + " service")
 
-	labels := selectors.LabelsForAMQBroker(cr.Name)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 
 	port := corev1.ServicePort{
 		Protocol:	"TCP",
@@ -164,16 +164,16 @@ func GetDefaultPorts() *[]corev1.ServicePort {
 	return &ports
 }
 
-func CreatePingService(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "ping" + " service")
 
 	pingSvc := newPingServiceForCR(cr)
 
 	// Define the headless Service for the StatefulSet
-	// Set AMQBroker instance as the owner and controller
+	// Set ActiveMQArtemis instance as the owner and controller
 	var err error = nil
 	if err = controllerutil.SetControllerReference(cr, pingSvc, scheme); err != nil {
 		// Add error detail for use later
@@ -191,10 +191,10 @@ func CreatePingService(cr *brokerv1alpha1.AMQBroker, client client.Client, schem
 
 	return pingSvc, err
 }
-func RetrievePingService(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrievePingService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
 	reqLogger.Info("Retrieving " + "ping" + " service")
 
 	var err error = nil
@@ -212,16 +212,16 @@ func RetrievePingService(instance *brokerv1alpha1.AMQBroker, namespacedName type
 	return pingSvc, err
 }
 
-func CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func CreateHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "headless" + " service")
 
 	headlessSvc := newHeadlessServiceForCR(cr, GetDefaultPorts())
 
 	// Define the headless Service for the StatefulSet
-	// Set AMQBroker instance as the owner and controller
+	// Set ActiveMQArtemis instance as the owner and controller
 	var err error = nil
 	if err = controllerutil.SetControllerReference(cr, headlessSvc, scheme); err != nil {
 		// Add error detail for use later
@@ -242,15 +242,15 @@ func CreateHeadlessService(cr *brokerv1alpha1.AMQBroker, client client.Client, s
 
 
 
-func DeleteHeadlessService(instance *brokerv1alpha1.AMQBroker) {
+func DeleteHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis) {
 	// kubectl delete cleans up kubernetes resources, just need to clean up local resources if any
 }
 
-//r *ReconcileAMQBroker
-func RetrieveHeadlessService(instance *brokerv1alpha1.AMQBroker, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+//r *ReconcileActiveMQArtemis
+func RetrieveHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("AMQBroker Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil

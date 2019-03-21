@@ -34,19 +34,19 @@ const (
 
 )
 
-type AMQBrokerFSM struct {
+type ActiveMQArtemisFSM struct {
 	m 				fsm.IMachine
 	namespacedName 	types.NamespacedName
-	customResource 	*brokerv1alpha1.AMQBroker
-	r 				*ReconcileAMQBroker
+	customResource 	*brokerv1alpha1.ActiveMQArtemis
+	r 				*ReconcileActiveMQArtemis
 }
 
 // Need to deep-copy the instance?
-func MakeAMQBrokerFSM(instance *brokerv1alpha1.AMQBroker, _namespacedName types.NamespacedName, r *ReconcileAMQBroker) AMQBrokerFSM {
+func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
 
 	var someIState		fsm.IState
 
-	amqbfsm := AMQBrokerFSM{
+	amqbfsm := ActiveMQArtemisFSM{
 		m: fsm.NewMachine(),
 	}
 
@@ -62,21 +62,21 @@ func MakeAMQBrokerFSM(instance *brokerv1alpha1.AMQBroker, _namespacedName types.
 	return amqbfsm
 }
 
-func NewAMQBrokerFSM(instance *brokerv1alpha1.AMQBroker, _namespacedName types.NamespacedName, r *ReconcileAMQBroker) *AMQBrokerFSM {
-	amqbfsm := MakeAMQBrokerFSM(instance, _namespacedName, r)
+func NewActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+	amqbfsm := MakeActiveMQArtemisFSM(instance, _namespacedName, r)
 	return &amqbfsm
 }
-func (amqbfsm *AMQBrokerFSM) Add(s *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Add(s *fsm.IState) {
 
 	amqbfsm.m.Add(s)
 }
 
-func (amqbfsm *AMQBrokerFSM) Remove(s *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Remove(s *fsm.IState) {
 
 	amqbfsm.m.Remove(s)
 }
 
-func (amqbfsm *AMQBrokerFSM) Enter(stateFrom *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Enter(stateFrom *fsm.IState) {
 
 	// For the moment sequentially set stuff up
 	// k8s resource creation and broker environment configuration can probably be done concurrently later
@@ -85,33 +85,33 @@ func (amqbfsm *AMQBrokerFSM) Enter(stateFrom *fsm.IState) {
 	amqbfsm.m.Enter(stateFrom)
 }
 
-func (amqbfsm *AMQBrokerFSM) Update() {
+func (amqbfsm *ActiveMQArtemisFSM) Update() {
 
 	// Update == Reconcile
 }
 
-func (amqbfsm *AMQBrokerFSM) Exit(stateFrom *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Exit(stateFrom *fsm.IState) {
 
 	// Exit == Teardown
 	amqbfsm.m.Exit(stateFrom)
 }
 
 
-//func (amqbfsm *AMQBrokerFSM) Update(request reconcile.Request, r *ReconcileAMQBroker) (reconcile.Result, error) {
+//func (amqbfsm *ActiveMQArtemisFSM) Update(request reconcile.Request, r *ReconcileActiveMQArtemis) (reconcile.Result, error) {
 //
 //	// Log where we are and what we're doing
 //	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-//	reqLogger.Info("Executing AMQBrokerFSM Update")
+//	reqLogger.Info("Executing ActiveMQArtemisFSM Update")
 //
 //	// Set it up
 //	var err error = nil
 //	var reconcileResult reconcile.Result
-//	instance := &brokerv1alpha1.AMQBroker{}
+//	instance := &brokerv1alpha1.ActiveMQArtemis{}
 //	found := &corev1.Pod{}
 //
 //	// Do what's needed
 //	for {
-//		// Fetch the AMQBroker instance
+//		// Fetch the ActiveMQArtemis instance
 //		if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 //			// Add error detail for use later
 //			break
@@ -134,12 +134,12 @@ func (amqbfsm *AMQBrokerFSM) Exit(stateFrom *fsm.IState) {
 //	if err != nil {
 //		if errors.IsNotFound(err) {
 //			reconcileResult = reconcile.Result{}
-//			reqLogger.Error(err, "AMQBroker Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+//			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
 //			// Setting err to nil to prevent requeue
 //			err = nil
 //		} else {
-//			//log.Error(err, "AMQBroker Controller Reconcile errored")
-//			reqLogger.Error(err, "AMQBroker Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
+//			//log.Error(err, "ActiveMQArtemis Controller Reconcile errored")
+//			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
 //		}
 //	}
 //
