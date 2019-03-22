@@ -80,6 +80,7 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 			Type: 	"LoadBalancer",
 			Ports: 	ports,
 			Selector: labels,
+			SessionAffinity: "ClientIP",
 		},
 	}
 
@@ -162,6 +163,103 @@ func GetDefaultPorts() *[]corev1.ServicePort {
 	}
 
 	return &ports
+}
+
+func CreateConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Creating new " + "console-jolokia" + " service")
+
+	// These next two should be considered "hard coded" and temporary
+	// Define the console-jolokia Service for this Pod
+	consoleJolokiaSvc := newServiceForCR(cr, "console-jolokia", 8161)
+
+	var err error = nil
+	// Set ActiveMQArtemis instance as the owner and controller
+	if err = controllerutil.SetControllerReference(cr, consoleJolokiaSvc, scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "console-jolokia" + " service")
+	}
+	reqLogger.Info("Set controller reference for new " + "console-jolokia" + " service")
+
+	// Call k8s create for service
+	if err = client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
+		// Add error detail for use later
+		//rs.stepsComplete |= CreatedConsoleJolokiaService
+		reqLogger.Info("Failed to creating new " + "console-jolokia" + " service")
+	}
+	reqLogger.Info("Created new " + "console-jolokia" + " service")
+
+	return consoleJolokiaSvc, err
+}
+func RetrieveConsoleJolokiaService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger.Info("Retrieving " + "console-jolokia" + " service")
+
+	var err error = nil
+	consoleJolokiaSvc := newServiceForCR(instance,"console-jolokia", 8161)
+
+	// Check if the headless service already exists
+	if err = client.Get(context.TODO(), namespacedName, consoleJolokiaSvc); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "Console Jolokia service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+		} else {
+			reqLogger.Error(err, "Console Jolokia service found", "Namespace", instance.Namespace, "Name", instance.Name)
+		}
+	}
+
+	return consoleJolokiaSvc, err
+}
+
+func CreateMuxProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Creating new " + "mux-protocol" + " service")
+
+	// Define the console-jolokia Service for this Pod
+	muxProtocolSvc := newServiceForCR(cr, "mux-protocol", 61616)
+
+	var err error = nil
+	// Set ActiveMQArtemis instance as the owner and controller
+	if err = controllerutil.SetControllerReference(cr, muxProtocolSvc, scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "mux-protocol" + " service")
+	}
+	reqLogger.Info("Set controller reference for new " + "mux-protocol" + " service")
+
+	// Call k8s create for service
+	if err = client.Create(context.TODO(), muxProtocolSvc); err != nil {
+		// Add error detail for use later
+		//rs.stepsComplete |= CreatedMuxProtocolService
+		reqLogger.Info("Failed to creating new " + "mux-protocol" + " service")
+	}
+	reqLogger.Info("Created new " + "mux-protocol" + " service")
+
+	return muxProtocolSvc, err
+}
+func RetrieveMuxProtocolService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger.Info("Retrieving " + "mux-protocol" + " service")
+
+	var err error = nil
+	muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
+
+	// Check if the headless service already exists
+	if err = client.Get(context.TODO(), namespacedName, muxProtocolSvc); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Error(err, "Mux Protocol service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+		} else {
+			reqLogger.Error(err, "Mux Protocol service found", "Namespace", instance.Namespace, "Name", instance.Name)
+		}
+	}
+
+	return muxProtocolSvc, err
 }
 
 func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {

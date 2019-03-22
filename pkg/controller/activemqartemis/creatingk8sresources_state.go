@@ -68,31 +68,22 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 			rs.stepsComplete |= CreatedPingService
 		}
 	}
-	//// These next two should be considered "hard coded" and temporary
-	//// Define the console-jolokia Service for this Pod
-	//consoleJolokiaSvc := svc.NewServiceForCR(rs.parentFSM.customResource, "console-jolokia", 8161)
-	//// Set ActiveMQArtemis instance as the owner and controller
-	//if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, consoleJolokiaSvc, rs.parentFSM.r.scheme); err != nil {
-	//	// Add error detail for use later
-	//
-	//}
-	//// Call k8s create for service
-	//if err = rs.parentFSM.r.client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
-	//	// Add error detail for use later
-	//	rs.stepsComplete |= CreatedConsoleJolokiaService
-	//}
-	//
-	//// Define the console-jolokia Service for this Pod
-	//muxProtocolSvc := svc.NewServiceForCR(rs.parentFSM.customResource, "mux-protocol", 61616)
-	//// Set ActiveMQArtemis instance as the owner and controller
-	//if err = controllerutil.SetControllerReference(rs.parentFSM.customResource, muxProtocolSvc, rs.parentFSM.r.scheme); err != nil {
-	//	// Add error detail for use later
-	//}
-	//// Call k8s create for service
-	//if err = rs.parentFSM.r.client.Create(context.TODO(), muxProtocolSvc); err != nil {
-	//	// Add error detail for use later
-	//	rs.stepsComplete |= CreatedMuxProtocolService
-	//}
+
+	// Check to see if the console-jolokia service already exists
+	if _, err = svc.RetrieveConsoleJolokiaService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so create
+		if _, retrieveError = svc.CreateConsoleJolokiaService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedConsoleJolokiaService
+		}
+	}
+
+	// Check to see if the mux-protocol service already exists
+	if _, err = svc.RetrieveMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so create
+		if _, retrieveError = svc.CreateMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedMuxProtocolService
+		}
+	}
 
 	// Check to see if the persistent volume claim already exists
 	//if _, err := rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
@@ -118,10 +109,31 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	// Check to see if the headless service already exists
 	if _, err = svc.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found, so mark deleted
-		//if _, createError := rs.CreateHeadlessService(rs.parentFSM.customResource, getDefaultPorts()); createError == nil {
-
-		//}
 		rs.stepsComplete &^= CreatedHeadlessService
+	}
+
+	// Check to see if the persistent volume claim already exists
+	if _, err = ss.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedStatefulSet
+	}
+
+	// Check to see if the ping service already exists
+	if _, err = svc.RetrievePingService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedPingService
+	}
+
+	// Check to see if the console-jolokia service already exists
+	if _, err = svc.RetrieveConsoleJolokiaService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedConsoleJolokiaService
+	}
+
+	// Check to see if the mux-protocol service already exists
+	if _, err = svc.RetrieveMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so mark deleted
+		rs.stepsComplete &^= CreatedMuxProtocolService
 	}
 
 	// Check to see if the persistent volume claim already exists
@@ -129,11 +141,5 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	//	// err means not found, so mark deleted
 	//	rs.stepsComplete &^= CreatedPersistentVolumeClaim
 	//}
-
-	// Check to see if the persistent volume claim already exists
-	if _, err = ss.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedStatefulSet
-	}
 }
 
