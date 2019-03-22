@@ -1,6 +1,6 @@
-# AMQ Broker Operator
+# ActiveMQ Artemis Operator
 
-This project is the Kubernetes operator to manage Red Hat AMQ Broker 7.
+This project is the Kubernetes operator to manage ActiveMQ Artemis
 
 ## Status
 At the moment the operator version should be considered`0.3.0-SNAPSHOT and the Kube API are v1alphav1
