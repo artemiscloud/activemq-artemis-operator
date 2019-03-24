@@ -42,5 +42,6 @@ rules:
   - broker.amq.io
   resources:
   - '*'
+  - activemqartemisaddresses
   verbs:
   - '*'

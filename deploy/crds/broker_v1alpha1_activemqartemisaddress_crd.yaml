@@ -2,19 +2,16 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  name: activemqartemises.broker.amq.io
+  name: activemqartemisaddresses.broker.amq.io
 spec:
   group: broker.amq.io
   names:
-    kind: ActiveMQArtemis
-    listKind: ActiveMQArtemisList
-    plural: activemqartemis
-    singular: activemqartemis
+    kind: ActiveMQArtemisAddress
+    listKind: ActiveMQArtemisAddressList
+    plural: activemqartemisaddresses
+    singular: activemqartemisaddress
   scope: Namespaced
   subresources:
-    scale:
-      specReplicasPath: .spec.replicas
-      statusReplicasPath: .status.replicas
     status: {}
   validation:
     openAPIV3Schema:
@@ -27,10 +24,13 @@ spec:
           type: object
         spec:
           properties:
-            image:
+            statefulsetName:
+              type: string
+            queueName:
               type: string
           required:
-          - image
+            - statefulsetName
+            - queueName
           type: object
         status:
           type: object

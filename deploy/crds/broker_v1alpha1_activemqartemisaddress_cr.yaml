@@ -1,0 +1,12 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: example-activemqartemisaddress
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+spec:
+  # Add fields here
+  statefulsetName: example-activemqartemis
+  #sname: example-activemqartemis
+  queueName: myQueue0
