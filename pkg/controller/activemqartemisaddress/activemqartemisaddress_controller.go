@@ -2,12 +2,14 @@ package activemqartemisaddress
 
 import (
 	"context"
-
+	"fmt"
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
-
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	mgmt "github.com/roddiekieley/activemq-artemis-management"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -15,10 +17,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strconv"
 )
 
 var log = logf.Log.WithName("controller_activemqartemisaddress")
-
+var namespacedNameToAddressName = make(map[types.NamespacedName]brokerv1alpha1.ActiveMQArtemisAddress)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -89,15 +92,136 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 	instance := &brokerv1alpha1.ActiveMQArtemisAddress{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
+		// Delete action
+		addressInstance, lookupSucceeded := namespacedNameToAddressName[request.NamespacedName]
+		if lookupSucceeded {
+			err = deleteQueue(&addressInstance, request, r.client)
+			delete(namespacedNameToAddressName, request.NamespacedName)
+		}
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
+
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	} else {
+		err = createQueue(instance, request, r.client)
+		if nil == err {
+			namespacedNameToAddressName[request.NamespacedName] = *instance//.Spec.QueueName
+		}
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func createQueue(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reconcile.Request, client client.Client) error {
+
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Creating ActiveMQArtemisAddress")
+
+	var err error = nil
+	artemisArray := getPodBrokers(instance, request, client)
+	if nil != artemisArray {
+		for _, a := range artemisArray {
+			if nil == a {
+				reqLogger.Info("Creating ActiveMQArtemisAddress artemisArray had a nil!")
+				continue
+			}
+			_, err := a.CreateQueue(instance.Spec.AddressName, instance.Spec.QueueName, instance.Spec.RoutingType)
+			if nil != err {
+				reqLogger.Info("Creating ActiveMQArtemisAddress error for " + instance.Spec.QueueName)
+				break
+			} else {
+				reqLogger.Info("Created ActiveMQArtemisAddress for " + instance.Spec.QueueName)
+			}
+		}
+	}
+
+	return err
+}
+
+func deleteQueue(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reconcile.Request, client client.Client) error {
+
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Deleting ActiveMQArtemisAddress")
+
+	var err error = nil
+	artemisArray := getPodBrokers(instance, request, client)
+	if nil != artemisArray {
+		for _, a := range artemisArray {
+			_, err := a.DeleteQueue(instance.Spec.QueueName)
+			if nil != err {
+				reqLogger.Info("Deleting ActiveMQArtemisAddress error for " + instance.Spec.QueueName)
+				break
+			} else {
+				reqLogger.Info("Deleted ActiveMQArtemisAddress for " + instance.Spec.QueueName)
+				reqLogger.Info("Checking parent address for bindings " + instance.Spec.AddressName)
+				bindingsData, err := a.ListBindingsForAddress(instance.Spec.AddressName)
+				if nil == err {
+					if "" == bindingsData.Value {
+						reqLogger.Info("No bindings found removing " + instance.Spec.AddressName)
+						a.DeleteAddress(instance.Spec.AddressName)
+					} else {
+						reqLogger.Info("Bindings found, not removing " + instance.Spec.AddressName)
+					}
+				}
+			}
+		}
+	}
+
+	return err
+}
+
+func getPodBrokers(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reconcile.Request, client client.Client) []*mgmt.Artemis {
+
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Getting Pod Brokers")
+
+	var artemisArray []*mgmt.Artemis = nil
+	var err error = nil
+
+	// Check to see if the statefulset already exists
+	ssNamespacedName := types.NamespacedName{
+		Name: instance.Spec.StatefulsetName,
+		Namespace: request.Namespace,
+	}
+
+	statefulset, err := ss.RetrieveStatefulSet(instance.Spec.StatefulsetName, ssNamespacedName, client)
+	if nil != err {
+		reqLogger.Info("Statefulset: " + instance.Spec.StatefulsetName + " not found")
+	} else {
+		reqLogger.Info("Statefulset: " + instance.Spec.StatefulsetName + " found")
+		fmt.Printf("%v+", statefulset)
+
+		pod := &corev1.Pod{}
+		podNamespacedName := types.NamespacedName{
+			Name:      instance.Spec.StatefulsetName + "-0",
+			Namespace: request.Namespace,
+		}
+
+		// For each of the replicas
+		var i int = 0
+		var replicas int = int(*statefulset.Spec.Replicas)
+		artemisArray = make([]*mgmt.Artemis, 0, replicas)
+		for i = 0; i < replicas; i++ {
+			s := instance.Spec.StatefulsetName + "-" + strconv.Itoa(i)
+			podNamespacedName.Name = s
+			if err = client.Get(context.TODO(), podNamespacedName, pod); err != nil {
+				if errors.IsNotFound(err) {
+					reqLogger.Error(err, "Pod IsNotFound", "Namespace", request.Namespace, "Name", request.Name)
+				} else {
+					reqLogger.Error(err, "Pod lookup error", "Namespace", request.Namespace, "Name", request.Name)
+				}
+			} else {
+				reqLogger.Error(err, "Pod found", "Namespace", request.Namespace, "Name", request.Name)
+				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker")
+				artemisArray = append(artemisArray, artemis)
+			}
+		}
+	}
+
+	return artemisArray
 }

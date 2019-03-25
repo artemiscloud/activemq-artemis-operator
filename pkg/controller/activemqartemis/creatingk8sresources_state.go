@@ -46,7 +46,7 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	var retrieveError error = nil
 
 	// Check to see if the statefulset already exists
-	if _, err := ss.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if _, err := ss.RetrieveStatefulSet(rs.parentFSM.customResource.Name + "-ss", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found, so create
 		if _, retrieveError := ss.CreateStatefulSet(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
@@ -113,7 +113,7 @@ func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
 	}
 
 	// Check to see if the persistent volume claim already exists
-	if _, err = ss.RetrieveStatefulSet(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	if _, err = ss.RetrieveStatefulSet("", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 		// err means not found, so mark deleted
 		rs.stepsComplete &^= CreatedStatefulSet
 	}

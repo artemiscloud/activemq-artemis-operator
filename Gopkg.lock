@@ -311,6 +311,15 @@
   revision = "bbced9601137e764853b2fad7ec3e2dc4c504e02"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/roddiekieley/activemq-artemis-management"
+  packages = [
+    ".",
+    "jolokia"
+  ]
+  revision = "31171f8862de21e136654bdf47ac46a58bc8c8d7"
+
+[[projects]]
   name = "github.com/rogpeppe/go-internal"
   packages = [
     "modfile",
@@ -766,6 +775,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dff2e9fa2ded578fa388f848c4bab7304518352ab793f073c8f11cd42246369a"
+  inputs-digest = "f2891dcef52c6aecd3d934b62966372f612f19cf07316bc5254506348876e7bb"
   solver-name = "gps-cdcl"
   solver-version = 1

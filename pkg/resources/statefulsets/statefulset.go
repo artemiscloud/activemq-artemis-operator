@@ -327,21 +327,40 @@ func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client,
 
 	return ss, err
 }
-func RetrieveStatefulSet(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
+func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, client client.Client) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	reqLogger.Info("Retrieving " + "statefulset")
 
 	var err error = nil
-	ss := &appsv1.StatefulSet{}
+	//ss := &appsv1.StatefulSet{
+	//	TypeMeta: metav1.TypeMeta{},
+	//	ObjectMeta: metav1.ObjectMeta {
+	//		Name: statefulsetName,
+	//	},
+	//}
 
+	labels := selectors.LabelsForActiveMQArtemis("example-activemqartemis")
+
+	ss := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "StatefulSet",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        statefulsetName,
+			Namespace:   namespacedName.Namespace,
+			Labels:      labels,
+			Annotations: nil,
+		},
+	}
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, ss); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Statefulset claim IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Statefulset claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
-			reqLogger.Error(err, "Statefulset claim found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Statefulset claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		}
 	}
 

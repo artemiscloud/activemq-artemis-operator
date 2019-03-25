@@ -26,11 +26,17 @@ spec:
           properties:
             statefulsetName:
               type: string
+            addressName:
+              type: string
             queueName:
               type: string
+            routingType:
+              type: string
           required:
-            - statefulsetName
+            - addressName
             - queueName
+            - routingType
+            - statefulsetName
           type: object
         status:
           type: object
