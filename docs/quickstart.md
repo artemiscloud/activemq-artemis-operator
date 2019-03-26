@@ -8,9 +8,9 @@ installed requires cluster-admin level privileges. Once installed, a regular
 user should be able to install ActiveMQ Artemis via the provided custom
 resource.
 
-## Quick Start
+# Quick Start
 
-### Getting the code
+## Getting the code
 
 To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
 and checkout the 0.3.1 tag as per
@@ -20,7 +20,7 @@ git clone https://github.com/rh-messaging/activemq-artemis-operator
 git checkout 0.3.1
 ```
 
-### Deploying the operator
+## Deploying the operator
 
 In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.3.1/deploy/operator.yaml)
 within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.3.1/deploy/operator.yaml#L18-L19)
@@ -57,7 +57,7 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 {"level":"info","ts":1552055597.160093,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
 ```
 
-### Deploying the broker
+## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
 resource instance for 'example-activemqartemis' from [broker_v1alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.3.1/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml)
@@ -75,7 +75,7 @@ spec:
 ```  
 
 Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.3.1/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml#L8)
-which identifies the container image to use to launch the AMQ Broker.
+which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
 
@@ -100,7 +100,7 @@ the moment the [session affinity](https://kubernetes.io/docs/concepts/services-n
 sticky to the client ip so that as you navigate through the console each click doesn't go to a separate broker.
 This is an area that requires further development.
 
-#### headless-service
+### headless-service
 
 The headless service internally exposes all broker ports: 
 - 1883: MQTT
@@ -109,11 +109,11 @@ The headless service internally exposes all broker ports:
 - 61613: STOMP
 - 61616: All protocols as above 
 
-#### ping
+### ping
 
 The ping service, used internally by the brokers for clustering themselves, internally exposes the 8888 port.
 
-#### example-activemqartemis-console-jolokia-service
+### example-activemqartemis-console-jolokia-service
 
 The broker hosts its own web console at port 8161 and this service provides external access to it via a 
 [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
@@ -123,7 +123,7 @@ of 30000-32767 so you will want to click in here to get the actual port number n
 Once you have the port number using http://any.ocp.node.ip:consoleNodePortNumber should allow you to access the running
 brokers web console.
 
-#### example-activemqartemis-mux-protocol-service
+### example-activemqartemis-mux-protocol-service
 
 The broker has a multiplexed protocol port at 61616 supporting all protocols; AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP.
 This broker port is exposed via a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
@@ -132,7 +132,7 @@ as is the web console.
 To produce or consume messages to the broker from outside the [OCP SDN](https://docs.openshift.com/container-platform/3.11/admin_guide/sdn_troubleshooting.html)
 you should be able to produce or consume messages to protocol://://any.ocp.node.ip:muxProtocolNodePortNumber.
 
-### Scaling
+## Scaling
 
 The example-activemqartemis-ss-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
 sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale' 
@@ -152,9 +152,77 @@ oc scale --replicas 2 statefulset example-activemqartemis-ss
 One important caveat here is that upon scaledown the persistent
 volume claim remains associated with the stable name of the broker pod that no longer exists. While that particular broker
 pod is down the data in its journal files remains safe, but will only become accessible again once that particular broker
-pod ordinal is up. 
+pod ordinal is up.
 
-#### Clustering
+### Accessing more than one broker externally
+
+An OpenShift specific solution to this problem is to [enable wildcard routing](https://docs.openshift.com/container-platform/3.11/install_config/router/default_haproxy_router.html#using-wildcard-routes)
+on the openshift router and then use a wildcarded route on the headless service to access each broker pod individually
+by DNS name. An example of such a wild card enabled route that has been used during development is:
+
+```$xslt
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+  labels:
+    ActiveMQArtemis: example-activemqartemis
+    application: example-activemqartemis-app
+  name: wildconsole-jolokia
+  namespace: abo-2
+spec:
+  host: star.console-jolokia-abo-2.apps-ocp311.kieley.ca
+  port:
+    targetPort: console-jolokia
+  to:
+    kind: Service
+    name: hs
+    weight: 100
+  wildcardPolicy: Subdomain
+```
+
+In particular the wildcardPolicy of Subdomain and the host: which has star as the prefix. When successfully deployed
+and viewed through the OpenShift web console the 'star' will be seen as '*', indicating wildcard routing for everything
+.console-jolokia-abo-2.apps-ocp311.kieley.ca. Note also the specific target port of 'console-jolokia' which is port
+8161 in the headless service which is the port the web console and jolokia are served from.
+
+### Usage
+
+```$xslt
+[rkieley@i7t450s ~]$ curl  http://admin:admin@example-activemqartemis-ss-0.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current 
+                                 Dload  Upload   Total   Spent    Left  Speed                                                                                                                
+100   191    0   191    0     0   4897      0 --:--:-- --:--:-- --:--:--  4897 
+{                                                                                                   
+  "request": {                                                                
+    "mbean": "org.apache.activemq.artemis:broker=\"amq-broker\"",                                                                                                                                
+    "attribute": "NodeID",                                                     
+    "type": "read"                                                                                          
+  },                                                                                                                              
+  "value": "e0709987-4cc3-11e9-b53b-0a580a810099",                                               
+  "timestamp": 1553533881,                                                                                             
+  "status": 200                                                                                                     
+}                                                                                                            
+[rkieley@i7t450s ~]$ curl  http://admin:admin@example-activemqartemis-ss-1.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current                              
+                                 Dload  Upload   Total   Spent    Left  Speed                                          
+100   191    0   191    0     0   5617      0 --:--:-- --:--:-- --:--:--  5617                                                                                                                                                                 
+{                                                                               
+  "request": {                                                                                                                   
+    "mbean": "org.apache.activemq.artemis:broker=\"amq-broker\"",                                
+    "attribute": "NodeID",                                        
+    "type": "read"                                                                                  
+  },                                                                                                        
+  "value": "958a8ea9-4cc3-11e9-b153-0a580a820085",                                                                                                                                                
+  "timestamp": 1553533884,                                                                                             
+  "status": 200                                                                                                       
+}
+```
+
+To access those DNS names properly via a browser such as Firefox you may need to set the proxy to be the
+openshift-router IP and port if you receive a 503.
+
+### Clustering
 
 If broker pods are scaled to more than two then the broker pods form a broker
 [cluster](https://activemq.apache.org/artemis/docs/2.6.0/clusters.html), meaning connect to each other and
@@ -170,7 +238,7 @@ broker 1
 >
 > 2019-03-22 16:59:46,668 INFO [org.apache.activemq.artemis.core.server] AMQ221027: Bridge ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl (identity=(Cluster-connection-bridge::ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]]::ClusterConnectionImpl@104716441[nodeUUID=e0709987-4cc3-11e9-b53b-0a580a810099, connector=TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-1-hs-abo-2-svc-cluster-local, address=, server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099])) [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]] is connected
 
-### Undeploying the broker
+## Undeploying the broker
 
 To undeploy the broker we simply execute
 
@@ -183,4 +251,58 @@ On the command line you should see:
 
 ```$xslt
 activemqartemis.broker.amq.io "example-activemqartemis" deleted
+```
+
+## Managing Queues
+
+### Overview
+
+Very basic, non-robust, functionality for adding and removing queues via custom resource definitions has been added. Of interest are two
+additional yaml files, [broker_v1alpha1_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml)
+which provides the custom resource definition for an ActiveMQArtemisAddress and an example implementation of a custom
+resource based on this crd, [broker_v1alpha1_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml)
+
+In the implemented custom resource you will note the following of interest:
+
+```$xslt
+spec:
+  # Add fields here
+  statefulsetName: example-activemqartemis-ss
+  addressName: myAddress0
+  queueName: myQueue0
+  routingType: anycast
+```
+
+Note that for the moment in this initial implementation each of the four fields; statefulsetName, addressName, queueName,
+and routingType are required as per the [crd](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml#L35-L39).
+This will possibly be relaxed in the future when the feature is more mature.
+
+### Deploying the ActiveMQArtemisAddress crd
+
+To deploy the crd itself, first ensure the operator is running, then execute
+
+```$xslt
+kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml
+```
+
+### Creating a queue across the running broker cluster
+
+To actually deploy an ActiveMQArtemisAddress successfully at this point requires the broker cluster to be deployed
+via the operator FIRST. With the running broker cluster you can utilize the included custom resource example to
+create an address on every RUNNING broker via:
+
+```$xslt
+kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml
+```
+
+This will create an address 'myAddress0' with an 'anycast' routed queue named 'myQueue0' on every RUNNING broker. NOTE
+that if at a later point you 'oc scale' the broker cluster up the newly added broker won't have this address added by
+the operator. This requires further development.
+
+### Deleting a queue across the running broker cluster
+
+Deleting a queue deployed via an ActiveMQArtemisAddress custom resource is straightforward:
+
+```$xslt
+kubectl delete -f deploy/crds/broker_v1alpha1_activemqartemisaddress_cr.yaml
 ```
