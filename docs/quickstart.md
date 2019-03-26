@@ -27,7 +27,7 @@ within which you will want to update the [spec.containers.image](https://github.
 with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
-deploy the operator via:
+prepare the project namespace to receive the operator:
 
 ```$xslt
 # Setup Service Account
@@ -35,26 +35,47 @@ $ kubectl create -f deploy/service_account.yaml
 # Setup RBAC
 $ kubectl create -f deploy/role.yaml
 $ kubectl create -f deploy/role_binding.yaml
-# Setup the CRD
+# Setup the ActiveMQArtemis CRD
 $ kubectl create -f deploy/crds/broker_v1alpha1_activemqartemis_crd.yaml
-# Deploy the activemq-artemis-operator
+# Setup the ActiveMQArtemisAddress CRD
+$ kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml
+```
+
+Note that the CRDs should be installed before the operator starts, if not the operator will log messages informing
+you to do so.
+
+Now build the source according to the [building](building.md) instructions, tag, and push it into your project
+namespace. Then update the deploy/operator.yaml to reference the built image and once done you can deploy the
+built activemq-artemis-operator via:
+
+```$xslt
 $ kubectl create -f deploy/operator.yaml
 ```
 
-At this point in your project namespace you should see the activemq-artemis-operator
-starting up and if you check the logs you should see something like
+At this point in your project namespace you should see the activemq-artemis-operator starting up and if you check the
+logs you should see something like
 
 ```$xslt
 Executing entrypoint
 exec /activemq-artemis-operator/activemq-artemis-operator
-{"level":"info","ts":1552055596.8029804,"logger":"cmd","msg":"Go Version: go1.11.5"}
-{"level":"info","ts":1552055596.803102,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
-{"level":"info","ts":1552055596.8031216,"logger":"cmd","msg":"Version of operator-sdk: v0.5.0"}
-{"level":"info","ts":1552055596.8044093,"logger":"leader","msg":"Trying to become the leader."}
-{"level":"info","ts":1552055597.0208154,"logger":"leader","msg":"Found existing lock with my name. I was likely restarted."}
-{"level":"info","ts":1552055597.0208917,"logger":"leader","msg":"Continuing as the leader."}
-{"level":"info","ts":1552055597.159428,"logger":"cmd","msg":"Registering Components."}
-{"level":"info","ts":1552055597.160093,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.0707157,"logger":"cmd","msg":"Go Version: go1.11.5"}
+{"level":"info","ts":1553619035.0708382,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
+{"level":"info","ts":1553619035.070858,"logger":"cmd","msg":"Version of operator-sdk: v0.5.0"}
+{"level":"info","ts":1553619035.0715153,"logger":"leader","msg":"Trying to become the leader."}
+{"level":"info","ts":1553619035.3516414,"logger":"leader","msg":"No pre-existing lock was found."}
+{"level":"info","ts":1553619035.363638,"logger":"leader","msg":"Became the leader."}
+{"level":"info","ts":1553619035.526576,"logger":"cmd","msg":"Registering Components."}
+{"level":"info","ts":1553619035.5271027,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.5276275,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.527945,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemis-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.5283449,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemisaddress-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.5286813,"logger":"kubebuilder.controller","msg":"Starting EventSource","controller":"activemqartemisaddress-controller","source":"kind source: /, Kind="}
+{"level":"info","ts":1553619035.729491,"logger":"metrics","msg":"Metrics Service object already exists","name":"activemq-artemis-operator"}
+{"level":"info","ts":1553619035.7295585,"logger":"cmd","msg":"Starting the Cmd."}
+{"level":"info","ts":1553619035.8302743,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"activemqartemisaddress-controller"}
+{"level":"info","ts":1553619035.830541,"logger":"kubebuilder.controller","msg":"Starting Controller","controller":"activemqartemis-controller"}
+{"level":"info","ts":1553619035.9306898,"logger":"kubebuilder.controller","msg":"Starting workers","controller":"activemqartemisaddress-controller","worker count":1}
+{"level":"info","ts":1553619035.9311671,"logger":"kubebuilder.controller","msg":"Starting workers","controller":"activemqartemis-controller","worker count":1}
 ```
 
 ## Deploying the broker
@@ -181,10 +202,13 @@ spec:
   wildcardPolicy: Subdomain
 ```
 
-In particular the wildcardPolicy of Subdomain and the host: which has star as the prefix. When successfully deployed
-and viewed through the OpenShift web console the 'star' will be seen as '*', indicating wildcard routing for everything
-.console-jolokia-abo-2.apps-ocp311.kieley.ca. Note also the specific target port of 'console-jolokia' which is port
-8161 in the headless service which is the port the web console and jolokia are served from.
+In particular the wildcardPolicy of Subdomain and the host: which has star as the prefix. As well note that both the
+namespace and host in the example are specific to the environment in which it was tested.
+
+When successfully deployedand viewed through the OpenShift web console the 'star' will be seen as '*', indicating
+wildcard routing for everything '.console-jolokia-abo-2.apps-ocp311.kieley.ca'. Note also the specific target port
+of 'console-jolokia' which is port 8161 in the headless service which is the port the web console and jolokia are
+served from.
 
 ### Usage
 
@@ -279,7 +303,7 @@ This will possibly be relaxed in the future when the feature is more mature.
 
 ### Deploying the ActiveMQArtemisAddress crd
 
-To deploy the crd itself, first ensure the operator is running, then execute
+To deploy the crd itself, prior to starting the operator execute:
 
 ```$xslt
 kubectl create -f deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml
