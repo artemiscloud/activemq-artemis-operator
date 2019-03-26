@@ -8,7 +8,7 @@ spec:
   names:
     kind: ActiveMQArtemis
     listKind: ActiveMQArtemisList
-    plural: activemqartemis
+    plural: activemqartemises
     singular: activemqartemis
   scope: Namespaced
   subresources:
