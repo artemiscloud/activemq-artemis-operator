@@ -6,7 +6,7 @@ else
     CATALOG_NS=${1}
 fi
 
-CSV=`cat deploy/catalog_resources/redhat/activemq-artemis-operator.v1.0.0.clusterserviceversion.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
+CSV=`cat deploy/catalog_resources/redhat/activemq-artemis-operator.v0.4.0.clusterserviceversion.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 CRD=`cat deploy/crds/broker_v1alpha1_activemqartemis_crd.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 CRDActivemqartemisaddress=`cat deploy/crds/broker_v1alpha1_activemqartemisaddress_crd.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
 PKG=`cat deploy/catalog_resources/redhat/activemq-artemis.package.yaml | sed -e 's/^/          /' | sed '0,/ /{s/          /        - /}'`
@@ -18,7 +18,7 @@ items:
   - apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: activemq-resources
+      name: activemq-artemis-resources
       namespace: ${CATALOG_NS}
     data:
       clusterServiceVersions: |
@@ -32,15 +32,15 @@ ${PKG}
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
-      name: activemq-resources
+      name: activemq-artemis-resources
       namespace: ${CATALOG_NS}
     spec:
-      configMap: activemq-resources
+      configMap: activemq-artemis-resources
       displayName: ActiveMQ Artemis Operator
       publisher: Red Hat
       sourceType: internal
     status:
       configMapReference:
-        name: activemq-resources
+        name: activemq-artemis-resources
         namespace: ${CATALOG_NS}
 EOF

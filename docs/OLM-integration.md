@@ -13,7 +13,7 @@ make
 e.g.
 
 ```bash
-docker push quay.io/<repo>/activemq-artemis-operator:<version>
+docker push localhost.localdomain:5000/<repo>/activemq-artemis-operator:<version>
 ```
 
 ## Deploy to OpenShift using OLM
@@ -27,8 +27,8 @@ As cluster-admin and an OCP 3.11+ cluster with OLM installed, issue the followin
 # If using a different namespace for OLM
 ./hack/catalog-redhat.sh <namespace>
 
-configmap/activemq-resources created
-catalogsource.operators.coreos.com/activemq-resources created
+configmap/activemq-artemis-resources created
+catalogsource.operators.coreos.com/activemq-artemis-resources created
 
 
 ```

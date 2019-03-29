@@ -6,7 +6,7 @@ else
     CATALOG_NS=${1}
 fi
 
-CSV=`cat deploy/catalog_resources/community/amqbroker-operator.v1.0.0.clusterserviceversion.yaml | sed -e 's/^/      /' | sed '0,/ /{s/      /    - /}'`
+CSV=`cat deploy/catalog_resources/community/amqbroker-operator.v0.4.0.clusterserviceversion.yaml | sed -e 's/^/      /' | sed '0,/ /{s/      /    - /}'`
 CRD=`cat deploy/crds/broker_v1alpha1_amqbroker_crd.yaml | sed -e 's/^/      /' | sed '0,/ /{s/      /    - /}'`
 PKG=`cat deploy/catalog_resources/community/amqbroker.package.yaml | sed -e 's/^/      /' | sed '0,/ /{s/      /    - /}'`
 
