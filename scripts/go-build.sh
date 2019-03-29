@@ -6,7 +6,7 @@ CFLAGS="--redhat --build-tech-preview"
 
 go generate ./...
 if [[ -z ${CI} ]]; then
-    ./hack/go-test.sh
+    ./scripts/go-test.sh
     operator-sdk build ${REGISTRY}/${IMAGE}:${TAG}
    
 else

@@ -19,11 +19,11 @@ all: build
 
 .PHONY: dep
 dep:
-	./hack/go-dep.sh
+	./scripts/go-dep.sh
 
 .PHONY: format
 format:
-	./hack/go-fmt.sh
+	./scripts/go-fmt.sh
 
 .PHONY: go-generate
 go-generate: dep
@@ -35,21 +35,21 @@ sdk-generate: dep
 
 .PHONY: vet
 vet:
-	./hack/go-vet.sh
+	./scripts/go-vet.sh
 
 .PHONY: test
 test:
-	./hack/go-test.sh
+	./scripts/go-test.sh
 
 .PHONY: lint
 lint:
 	# Temporarily disabled
-	# ./hack/go-lint.sh
-	# ./hack/yaml-lint.sh
+	# ./scripts/go-lint.sh
+	# ./scripts/yaml-lint.sh
 
 .PHONY: build
 build:
-	./hack/go-build.sh
+	./scripts/go-build.sh
 
 
 .PHONY: clean
@@ -62,18 +62,18 @@ clean:
 # test/ci-ansible: test/e2e/ansible
 
 # test/sanity:
-# 	./hack/tests/sanity-check.sh
+# 	./scripts/tests/sanity-check.sh
 
 # test/unit:
-# 	./hack/tests/unit.sh
+# 	./scripts/tests/unit.sh
 
 # test/subcommand:
-# 	./hack/tests/test-subcommand.sh
+# 	./scripts/tests/test-subcommand.sh
 
 # test/e2e: test/e2e/go test/e2e/ansible
 
 # test/e2e/go:
-# 	./hack/tests/e2e-go.sh
+# 	./scripts/tests/e2e-go.sh
 
 # test/e2e/ansible:
-# 	./hack/tests/e2e-ansible.sh
+# 	./scripts/tests/e2e-ansible.sh

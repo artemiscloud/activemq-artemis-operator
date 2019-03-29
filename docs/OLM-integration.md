@@ -22,10 +22,10 @@ As cluster-admin and an OCP 3.11+ cluster with OLM installed, issue the followin
 
 ```bash
 # If using the default OLM namespace "operator-lifecycle-manager"
-./hack/catalog-redhat.sh
+./scripts/catalog-redhat.sh
 
 # If using a different namespace for OLM
-./hack/catalog-redhat.sh <namespace>
+./scripts/catalog-redhat.sh <namespace>
 
 configmap/activemq-artemis-resources created
 catalogsource.operators.coreos.com/activemq-artemis-resources created
