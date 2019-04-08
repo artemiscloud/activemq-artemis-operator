@@ -29,8 +29,8 @@ spec:
           properties:
             image:
               type: string
-              sslEnabled:
-                type: boolean
+            sslEnabled:
+              type: boolean
             sslConfig:
               type: object
               description: Configuration of the AMQ SSL deployment

@@ -9,7 +9,7 @@ spec:
   # Add fields here
   size: 4
   image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
-  sslEnabled: true
+  sslEnabled: false
   sslConfig:
     secretName: amq-app-secret
     trustStoreFilename: broker.ts
