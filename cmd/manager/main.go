@@ -9,6 +9,7 @@ import (
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -38,6 +39,18 @@ func printVersion() {
 
 func main() {
 	log.V(5)
+
+	isOpenshift, err1 := env.DetectOpenshift()
+	if err1 != nil {
+		log.Error(err1, "Failed to get env")
+		os.Exit(1)
+	}
+
+	if isOpenshift {
+		log.Info("evnironment is openshift")
+	} else {
+		log.Info("environment is not openshift")
+	}
 
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
