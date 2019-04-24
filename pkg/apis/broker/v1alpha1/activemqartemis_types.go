@@ -17,6 +17,7 @@ type ActiveMQArtemisSpec struct {
 	Image      string    `json:"image"`
 	SSLEnabled bool      `json:"sslEnabled"`
 	SSLConfig  SSLConfig `json:"sslConfig,omitempty"`
+	CredentialConfig CredentialConfig `json:"credentialConfig,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
@@ -33,6 +34,13 @@ type SSLConfig struct {
 	TrustStorePassword string `json:"trustStorePassword,omitempty"`
 	KeystoreFilename   string `json:"keystoreFilename,omitempty"`
 	KeyStorePassword   string `json:"keyStorePassword,omitempty"`
+}
+
+type CredentialConfig struct {
+	AMQUserName	string `json:"amqUserName,omitempty"`
+	AMQPassword string `json:"amqPassword,omitempty"`
+	AMQClusterUser string `json:"amqClusterUser,omitempty"`
+	AMQClusterPassword string `json:"amqClusterPassword,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

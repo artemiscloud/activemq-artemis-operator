@@ -50,6 +50,22 @@ spec:
                 keyStorePassword:
                   type: string
                   description:  Password for accessing SSL keystore
+            credentialConfig:
+              type: object
+              description: Configuration of credentials for broker
+              properties:
+                amqUserName:
+                  type: string
+                  description: User name
+                amqPassword:
+                  type: string
+                  description: Password for the user
+                amqClusterUser:
+                  type: string
+                  description: Cluster user name
+                amqClusterPassword:
+                  type: string
+                  description: Password for the cluster user
           required:
           - image
           type: object

@@ -16,3 +16,8 @@ spec:
     trustStorePassword: changeit
     keystoreFilename: broker.ks
     keyStorePassword: changeit
+  credentialConfig:
+    amqUserName: testamquser
+    amqPassword: testamqpass
+    amqClusterUser: testclusteruser
+    amqClusterPassword: testclusterpass

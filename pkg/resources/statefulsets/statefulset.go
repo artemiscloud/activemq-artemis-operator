@@ -164,13 +164,50 @@ func makeSSLCRVlMnt(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 }
 
 func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+	return makeEnvVarArrayForBasicCR(cr)
+}
 
-	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
-		return makeEnvVarArrayForSSLCR(cr)
-	} else {
-		return makeEnvVarArrayForBasicCR(cr)
+func getPropertyForCR (propName string, cr *brokerv1alpha1.ActiveMQArtemis, defaultValue string) string {
+	result := defaultValue;
+	switch propName {
+		case "AMQ_USER":
+			if len(cr.Spec.CredentialConfig.AMQUserName) > 0 {
+				result = cr.Spec.CredentialConfig.AMQUserName
+			}
+		case "AMQ_PASSWORD":
+			if len(cr.Spec.CredentialConfig.AMQPassword) > 0 {
+				result = cr.Spec.CredentialConfig.AMQPassword
+			}
+		case "AMQ_CLUSTER_USER":
+			if len(cr.Spec.CredentialConfig.AMQClusterUser) > 0 {
+				result = cr.Spec.CredentialConfig.AMQClusterUser
+			}
+		case "AMQ_CLUSTER_PASSWORD":
+			if len(cr.Spec.CredentialConfig.AMQClusterPassword) > 0 {
+				result = cr.Spec.CredentialConfig.AMQClusterPassword
+			}
+		case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
+			if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+			result = "/etc/amq-secret-volume"
+		    }
+		case "AMQ_TRUSTSTORE":
+			if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.TrustStoreFilename
+			}
+		case "AMQ_TRUSTSTORE_PASSWORD":
+			if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.TrustStorePassword
+			}
+		case "AMQ_KEYSTORE":
+			if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.KeystoreFilename
+			}
+		case "AMQ_KEYSTORE_PASSWORD":
+			if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.KeyStorePassword
+			}
 	}
-
+	return result;
 }
 
 func makeEnvVarArrayForBasicCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
@@ -178,120 +215,120 @@ func makeEnvVarArrayForBasicCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvV
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_USER",
-			"admin",
+			getPropertyForCR("AMQ_USER", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_PASSWORD",
-			"admin",
+			getPropertyForCR("AMQ_PASSWORD", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_DATA_DIR",
-			makeDataPathForCR(cr),
+			getPropertyForCR("AMQ_DATA_DIR", cr, "/opt/" + cr.Name + "/data"),
 			nil,
 		},
 		{
 			"AMQ_ROLE",
-			"admin",
+			getPropertyForCR("AMQ_ROLE", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_NAME",
-			"amq-broker",
+			getPropertyForCR("AMQ_NAME", cr, "amq-broker"),
 			nil,
 		},
 		{
 			"AMQ_TRANSPORTS",
-			"openwire,amqp,stomp,mqtt,hornetq",
+			getPropertyForCR("AMQ_TRANSPORTS", cr, "openwire,amqp,stomp,mqtt,hornetq"),
 			nil,
 		},
 		{
 			"AMQ_QUEUES",
 			//"q0,q1,q2,q3",
-			"",
+			getPropertyForCR("AMQ_QUEUES", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_ADDRESSES",
 			//"a0,a1,a2,a3",
-			"",
+			getPropertyForCR("AMQ_ADDRESSES", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
-			"",
+			getPropertyForCR("AMQ_KEYSTORE_TRUSTSTORE_DIR", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_TRUSTSTORE",
-			"",
+			getPropertyForCR("AMQ_TRUSTSTORE", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_TRUSTSTORE_PASSWORD",
-			"",
+			getPropertyForCR("AMQ_TRUSTSTORE_PASSWORD", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_KEYSTORE",
-			"",
+			getPropertyForCR("AMQ_KEYSTORE", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_KEYSTORE_PASSWORD",
-			"",
+			getPropertyForCR("AMQ_KEYSTORE_PASSWORD", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_GLOBAL_MAX_SIZE",
-			"100 mb",
+			getPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
 			nil,
 		},
 		{
 			"AMQ_REQUIRE_LOGIN",
-			"",
+			getPropertyForCR("AMQ_REQUIRE_LOGIN", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_EXTRA_ARGS",
-			"--no-autotune",
+			getPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
 			nil,
 		},
 		{
 			"AMQ_ANYCAST_PREFIX",
-			"",
+			getPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_MULTICAST_PREFIX",
-			"",
+			getPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
 			nil,
 		},
 		// included from p-c-ssl template
 		{
 			"AMQ_DATA_DIR_LOGGING",
-			"true",
+			getPropertyForCR("AMQ_DATA_DIR_LOGGING", cr, "true"),
 			nil,
 		},
 		{
 			"AMQ_CLUSTERED",
-			"true",
+			getPropertyForCR("AMQ_CLUSTERED", cr, "true"),
 			nil,
 		},
 		{
 			"AMQ_REPLICAS",
-			"0",
+			getPropertyForCR("AMQ_REPLICAS", cr, "0"),
 			nil,
 		},
 		{
 			"AMQ_CLUSTER_USER",
-			"clusteruser",
+			getPropertyForCR("AMQ_CLUSTER_USER", cr, "clusteruser"),
 			nil,
 		},
 		{
 			"AMQ_CLUSTER_PASSWORD",
-			"clusterpass",
+			getPropertyForCR("AMQ_CLUSTER_PASSWORD", cr, "clusterpass"),
 			nil,
 		},
 		{
@@ -302,139 +339,6 @@ func makeEnvVarArrayForBasicCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvV
 	}
 
 	return envVarArray
-
-}
-
-func makeEnvVarArrayForSSLCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
-
-	envVarArray := []corev1.EnvVar{
-		{
-			"AMQ_USER",
-			"admin",
-			nil,
-		},
-		{
-			"AMQ_PASSWORD",
-			"admin",
-			nil,
-		},
-		{
-			"AMQ_DATA_DIR",
-			makeDataPathForCR(cr),
-			nil,
-		},
-		{
-			"AMQ_ROLE",
-			"admin",
-			nil,
-		},
-		{
-			"AMQ_NAME",
-			"amq-broker",
-			nil,
-		},
-		{
-			"AMQ_TRANSPORTS",
-			"openwire,amqp,stomp,mqtt,hornetq",
-			nil,
-		},
-		{
-			"AMQ_QUEUES",
-			//"q0,q1,q2,q3",
-			"",
-			nil,
-		},
-		{
-			"AMQ_ADDRESSES",
-			//"a0,a1,a2,a3",
-			"",
-			nil,
-		},
-		{
-			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
-			"/etc/amq-secret-volume",
-			nil,
-		},
-		{
-			"AMQ_TRUSTSTORE",
-			cr.Spec.SSLConfig.TrustStoreFilename,
-			nil,
-		},
-		{
-			"AMQ_TRUSTSTORE_PASSWORD",
-			cr.Spec.SSLConfig.TrustStorePassword,
-			nil,
-		},
-		{
-			"AMQ_KEYSTORE",
-			cr.Spec.SSLConfig.KeystoreFilename,
-			nil,
-		},
-		{
-			"AMQ_KEYSTORE_PASSWORD",
-			cr.Spec.SSLConfig.KeyStorePassword,
-			nil,
-		},
-		{
-			"AMQ_GLOBAL_MAX_SIZE",
-			"100 mb",
-			nil,
-		},
-		{
-			"AMQ_REQUIRE_LOGIN",
-			"",
-			nil,
-		},
-		{
-			"AMQ_EXTRA_ARGS",
-			"--no-autotune",
-			nil,
-		},
-		{
-			"AMQ_ANYCAST_PREFIX",
-			"",
-			nil,
-		},
-		{
-			"AMQ_MULTICAST_PREFIX",
-			"",
-			nil,
-		},
-		// included from p-c-ssl template
-		{
-			"AMQ_DATA_DIR_LOGGING",
-			"true",
-			nil,
-		},
-		{
-			"AMQ_CLUSTERED",
-			"true",
-			nil,
-		},
-		{
-			"AMQ_REPLICAS",
-			"0",
-			nil,
-		},
-		{
-			"AMQ_CLUSTER_USER",
-			"clusteruser",
-			nil,
-		},
-		{
-			"AMQ_CLUSTER_PASSWORD",
-			"clusterpass",
-			nil,
-		},
-		{
-			"POD_NAMESPACE",
-			"", // Set to the field metadata.namespace in current object
-			nil,
-		},
-	}
-
-	return envVarArray
-
 }
 
 func newEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.EnvVar {
