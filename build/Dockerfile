@@ -23,7 +23,7 @@ ENV OPERATOR=/activemq-artemis-operator/activemq-artemis-operator \
 ENV HOME=/home/${USER_NAME}
 
 COPY --from=build-env ${OPERATOR} /activemq-artemis-operator/
-COPY --from=build-env ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/build/bin /usr/local/bin
+COPY --from=build-env ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/build/bin /home/activemq-artemis-operator/bin
 
 RUN mkdir -p ${HOME} && \
     chown -R ${USER_UID}:0 ${HOME} && \
@@ -31,4 +31,4 @@ RUN mkdir -p ${HOME} && \
 USER ${USER_UID}
 WORKDIR ${HOME}
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+ENTRYPOINT ["/home/activemq-artemis-operator/bin/entrypoint"]
