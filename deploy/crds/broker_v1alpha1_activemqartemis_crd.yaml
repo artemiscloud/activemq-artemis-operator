@@ -33,10 +33,6 @@ spec:
               type: string
             persistent:
               type: boolean
-            sslEnabled:
-              type: boolean
-            clusterEnabled:
-              type: boolean
             sslConfig:
               type: object
               description: Configuration of the AMQ SSL deployment

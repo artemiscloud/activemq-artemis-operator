@@ -10,17 +10,21 @@ import (
 	"testing"
 )
 
-var crNameMap = map[string]string {
-	"activemqartemis_cr.yaml": 			"broker_v1alpha1_activemqartemis_crd.yaml",
-	"activemqartemisaddress_cr.yaml": 	"broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"address-queue-create.yaml": 		"broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"amq-basic-deployment.yaml": 		"broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-deployment.yaml": 			"broker_v1alpha1_activemqartemis_crd.yaml",
+var crNameMap = map[string]string{
+	"activemqartemis_cr.yaml":                     "broker_v1alpha1_activemqartemis_crd.yaml",
+	"activemqartemisaddress_cr.yaml":              "broker_v1alpha1_activemqartemisaddress_crd.yaml",
+	"address-queue-create.yaml":                   "broker_v1alpha1_activemqartemisaddress_crd.yaml",
+	"amq-basic-deployment.yaml":                   "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-deployment.yaml":                     "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-cluster-deployment.yaml":                 "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-presistance-deployment.yaml":             "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-presistance-cluster-deployment.yaml": "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-presistance-deployment.yaml":         "broker_v1alpha1_activemqartemis_crd.yaml",
 }
 
-var crdTypeMap = map[string]interface{} {
-	"broker_v1alpha1_activemqartemis_crd.yaml":			&brokerv1alpha1.ActiveMQArtemis{},
-	"broker_v1alpha1_activemqartemisaddress_crd.yaml": 	&brokerv1alpha1.ActiveMQArtemisAddress{},
+var crdTypeMap = map[string]interface{}{
+	"broker_v1alpha1_activemqartemis_crd.yaml":        &brokerv1alpha1.ActiveMQArtemis{},
+	"broker_v1alpha1_activemqartemisaddress_crd.yaml": &brokerv1alpha1.ActiveMQArtemisAddress{},
 }
 
 func TestCRDSchemas(t *testing.T) {
@@ -107,4 +111,3 @@ func getSchema(t *testing.T, crdFile string) validation.Schema {
 
 	return schema
 }
-

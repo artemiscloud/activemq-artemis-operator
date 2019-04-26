@@ -132,7 +132,7 @@ func GetDefaultPorts(cr *brokerv1alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
 	basicPorts := SetBasicPorts()
 	ports = append(ports, basicPorts...)
 
-	if cr.Spec.SSLEnabled && len(cr.Spec.SSLConfig.SecretName) > 0 {
+	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
 		sslPorts := SetSSLPorts()
 		ports = append(ports, sslPorts...)
 

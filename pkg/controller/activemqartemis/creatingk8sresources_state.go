@@ -1,9 +1,10 @@
 package activemqartemis
 
 import (
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -80,6 +81,21 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 		// err means not found, so create
 		if _, retrieveError = svc.CreateMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
 			rs.stepsComplete |= CreatedMuxProtocolService
+		}
+	}
+
+	// Check to see if the routes already exists
+	if _, err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so create routes
+		if _, retrieveError = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedRouteOrIngress
+		}
+	}
+
+	if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+		// err means not found, so create routes
+		if _, retrieveError = ingresses.CreateNewIngress(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); retrieveError == nil {
+			rs.stepsComplete |= CreatedRouteOrIngress
 		}
 	}
 

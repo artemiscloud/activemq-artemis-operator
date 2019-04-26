@@ -23,6 +23,7 @@ const (
 	CreatedConsoleJolokiaService = 1 << 2
 	CreatedMuxProtocolService    = 1 << 3
 	CreatedPingService           = 1 << 4
+	CreatedRouteOrIngress                = 1 << 5
 
 	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
 	Complete = CreatedHeadlessService |
@@ -30,7 +31,8 @@ const (
 		CreatedConsoleJolokiaService |
 		CreatedMuxProtocolService |
 		CreatedStatefulSet |
-		CreatedPingService
+		CreatedPingService |
+		CreatedRouteOrIngress
 )
 
 type ActiveMQArtemisFSM struct {

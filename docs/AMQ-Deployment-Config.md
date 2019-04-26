@@ -1,6 +1,9 @@
-# Deploying an ActiveMQ Artemis broker with SSL enabled
 
-## Procedure:
+## Deployment Configuration for ActiveMQ Artemis broker 
+ 
+#### Deploying an ActiveMQ Artemis broker with SSL 
+
+#### Procedure:
 
 1. Deploy the ActiveMQ Artemis operator in a project namespace.
 
@@ -20,7 +23,6 @@ e.g.
 
    ```yaml
 
-        sslEnabled: true
           sslConfig:
             secretName: amq-app-secret
             trustStoreFilename: broker.ts
@@ -28,6 +30,32 @@ e.g.
             keystoreFilename: broker.ks
             keyStorePassword: changeit
     
+ ```
+
+
+ 
+#### Deploying an ActiveMQ Artemis broker with Persistent
+
+ Add persistent flag true in the custom resource file:
+ 
+e.g.
+
+```yaml
+
+          persistent: true
+    
+ ```
+
+#### Deploying an ActiveMQ Artemis broker with Clustering
+
+Add below configuration in custom resource file:
+ 
+e.g.
+
+```yaml
+  clusterConfig:
+    clusterUserName: clusteruser
+    clusterPassword: clusterpass
  ```
 
 ## Trigger a ActiveMQ Artemis deployment

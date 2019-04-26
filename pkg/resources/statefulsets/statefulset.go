@@ -81,7 +81,7 @@ func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		persistentCRVlMnt := makePersistentVolumeMount(cr)
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
 	}
-	if cr.Spec.SSLEnabled {
+	if checkSSLEnabled(cr) {
 		sslCRVlMnt := makeSSLVolumeMount(cr)
 		volumeMounts = append(volumeMounts, sslCRVlMnt...)
 	}
@@ -96,7 +96,7 @@ func makeVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 		basicCRVolume := makePersistentVolume(cr)
 		volume = append(volume, basicCRVolume...)
 	}
-	if cr.Spec.SSLEnabled {
+	if checkSSLEnabled(cr) {
 		sslCRVolume := makeSSLSecretVolume(cr)
 		volume = append(volume, sslCRVolume...)
 	}
@@ -169,7 +169,7 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	envVarArrayForBasic := addEnvVarForBasic(cr)
 	envVar = append(envVar, envVarArrayForBasic...)
 
-	if cr.Spec.SSLEnabled {
+	if checkSSLEnabled(cr) {
 		envVarArrayForSSL := addEnvVarForSSL(cr)
 		envVar = append(envVar, envVarArrayForSSL...)
 	}
@@ -177,7 +177,7 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		envVarArrayForPresistent := addEnvVarForPersistent(cr)
 		envVar = append(envVar, envVarArrayForPresistent...)
 	}
-	if cr.Spec.ClusterEnabled {
+	if checkClusterEnabled(cr) {
 		envVarArrayForCluster := addEnvVarForCluster(cr)
 		envVar = append(envVar, envVarArrayForCluster...)
 	}
@@ -429,74 +429,48 @@ func newStatefulSetForCR(cr *brokerv1alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 	return ss
 }
 
-type ErrMissingField string
-
-func (e ErrMissingField) Error() string {
-
-	return string(e) + " is Required Field"
-}
-
-func validateCRConfig(cr *brokerv1alpha1.ActiveMQArtemis) error {
+func checkSSLEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
 	reqLogger := log.WithName(cr.Name)
-	var err error = nil
-
-	if cr.Spec.SSLEnabled {
-		reqLogger.Info("SSL Enabled ")
-		if len(cr.Spec.SSLConfig.SecretName) == 0 {
-			reqLogger.Error(ErrMissingField("SecretName"), " SSL Deployment Failed ")
-			err = error(ErrMissingField("SecretName"))
-		} else if len(cr.Spec.SSLConfig.KeyStorePassword) == 0 {
-			reqLogger.Error(ErrMissingField("KeyStorePassword"), " SSL Deployment Failed ")
-			err = error(ErrMissingField("KeyStorePassword"))
-		} else if len(cr.Spec.SSLConfig.KeystoreFilename) == 0 {
-			reqLogger.Error(ErrMissingField("KeystoreFilename"), " SSL Deployment Failed ")
-			err = error(ErrMissingField("KeystoreFilename"))
-		} else if len(cr.Spec.SSLConfig.TrustStorePassword) == 0 {
-			reqLogger.Error(ErrMissingField("TrustStorePassword"), " SSL Deployment Failed ")
-			err = error(ErrMissingField("TrustStorePassword"))
-		} else if len(cr.Spec.SSLConfig.TrustStoreFilename) == 0 {
-			reqLogger.Error(ErrMissingField("TrustStoreFilename"), " SSL Deployment Failed ")
-			err = error(ErrMissingField("TrustStoreFilename"))
-		}
-
-	} else if cr.Spec.ClusterEnabled {
-		reqLogger.Info("clustering enabled ")
-		if len(cr.Spec.ClusterConfig.ClusterUserName) == 0 {
-			reqLogger.Error(ErrMissingField("ClusterUserName"), "Cluster Deployment Failed ")
-			err = error(ErrMissingField("ClusterUserName"))
-		} else if len(cr.Spec.ClusterConfig.ClusterPassword) == 0 {
-			reqLogger.Error(ErrMissingField("ClusterPassword"), "Cluster Deployment Failed")
-			err = error(ErrMissingField("ClusterPassword"))
-		}
+	var sslEnabled = false
+	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+		reqLogger.Info("SSL enabled and SSLConfig Section Provided")
+		sslEnabled = true
 	}
-	return err
+	return sslEnabled
 }
+func checkClusterEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
+	reqLogger := log.WithName(cr.Name)
+	var clusterEnabled = false
+	if len(cr.Spec.ClusterConfig.ClusterUserName) != 0 && len(cr.Spec.ClusterConfig.ClusterPassword) != 0 {
+		reqLogger.Info("clustering enabled ")
+		clusterEnabled = true
+	}
+	return clusterEnabled
+}
+
 func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new statefulset")
-	ss := &appsv1.StatefulSet{}
 	var err error = nil
-	if err = validateCRConfig(cr); err == nil {
 
-		// Define the StatefulSet
-		ss = newStatefulSetForCR(cr)
+	// Define the StatefulSet
+	ss := newStatefulSetForCR(cr)
 
-		// Set ActiveMQArtemis instance as the owner and controller
-		if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
-			// Add error detail for use later
-			reqLogger.Info("Failed to set controller reference for new " + "statefulset")
-		}
-		reqLogger.Info("Set controller reference for new " + "statefulset")
-
-		// Call k8s create for statefulset
-		if err = client.Create(context.TODO(), ss); err != nil {
-			// Add error detail for use later
-			reqLogger.Info("Failed to creating new " + "statefulset")
-		}
-		reqLogger.Info("Created new " + "statefulset")
+	// Set ActiveMQArtemis instance as the owner and controller
+	if err = controllerutil.SetControllerReference(cr, ss, scheme); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to set controller reference for new " + "statefulset")
 	}
+	reqLogger.Info("Set controller reference for new " + "statefulset")
+
+	// Call k8s create for statefulset
+	if err = client.Create(context.TODO(), ss); err != nil {
+		// Add error detail for use later
+		reqLogger.Info("Failed to creating new " + "statefulset")
+	}
+	reqLogger.Info("Created new " + "statefulset")
 
 	return ss, err
 }
