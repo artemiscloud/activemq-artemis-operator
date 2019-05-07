@@ -71,11 +71,12 @@ var log = logf.Log.WithName("package statefulsets")
 //	return pod
 //}
 
-func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
-	return "/opt/" + cr.Name + "/data"
-}
+//func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
+	//return "/opt/" + cr.Name + "/data"
+//}
 
 func makeVolumeMounts(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
+
 	volumeMounts := []corev1.VolumeMount{}
 	if cr.Spec.Persistent {
 		persistentCRVlMnt := makePersistentVolumeMount(cr)
@@ -101,10 +102,10 @@ func makeVolumes(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 		volume = append(volume, sslCRVolume...)
 	}
 	return volume
-
 }
 
 func makePersistentVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+
 	volume := []corev1.Volume{
 		{
 			Name: cr.Name,
@@ -121,6 +122,7 @@ func makePersistentVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 }
 
 func makeSSLSecretVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
+
 	volume := []corev1.Volume{
 		{
 			Name: "broker-secret-volume",
@@ -136,7 +138,8 @@ func makeSSLSecretVolume(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volume {
 }
 
 func makePersistentVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
-	dataPath := makeDataPathForCR(cr)
+
+	dataPath := getPropertyForCR("AMQ_DATA_DIR", cr, "/opt/" + cr.Name + "/data")
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      cr.Name,
@@ -145,7 +148,6 @@ func makePersistentVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.Volu
 		},
 	}
 	return volumeMounts
-
 }
 
 func makeSSLVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount {
@@ -158,7 +160,6 @@ func makeSSLVolumeMount(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.VolumeMount
 		},
 	}
 	return volumeMounts
-
 }
 
 func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
@@ -183,7 +184,54 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	}
 
 	return envVar
+}
 
+//func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
+	//return makeEnvVarArrayForBasicCR(cr)
+//}
+
+func getPropertyForCR (propName string, cr *brokerv1alpha1.ActiveMQArtemis, defaultValue string) string {
+
+	result := defaultValue;
+	switch propName {
+		case "AMQ_USER":
+			if len(cr.Spec.CommonConfig.AMQAdminUserName) > 0 {
+				result = cr.Spec.CommonConfig.AMQAdminUserName
+			}
+		case "AMQ_PASSWORD":
+			if len(cr.Spec.CommonConfig.AMQAdminPassword) > 0 {
+				result = cr.Spec.CommonConfig.AMQAdminPassword
+			}
+		case "AMQ_CLUSTER_USER":
+			if len(cr.Spec.ClusterConfig.ClusterUserName) > 0 {
+				result = cr.Spec.ClusterConfig.ClusterUserName
+			}
+		case "AMQ_CLUSTER_PASSWORD":
+			if len(cr.Spec.ClusterConfig.ClusterPassword) > 0 {
+				result = cr.Spec.ClusterConfig.ClusterPassword
+			}
+		case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
+			if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+			result = "/etc/amq-secret-volume"
+		    }
+		case "AMQ_TRUSTSTORE":
+			if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.TrustStoreFilename
+			}
+		case "AMQ_TRUSTSTORE_PASSWORD":
+			if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.TrustStorePassword
+			}
+		case "AMQ_KEYSTORE":
+			if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.KeystoreFilename
+			}
+		case "AMQ_KEYSTORE_PASSWORD":
+			if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
+				result = cr.Spec.SSLConfig.KeyStorePassword
+			}
+	}
+	return result;
 }
 
 func addEnvVarForBasic(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
@@ -191,69 +239,64 @@ func addEnvVarForBasic(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_USER",
-			cr.Spec.CommonConfig.AMQAdminUserName,
+			getPropertyForCR("AMQ_USER", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_PASSWORD",
-			cr.Spec.CommonConfig.AMQAdminPassword,
+			getPropertyForCR("AMQ_PASSWORD", cr, "admin"),
 			nil,
 		},
-
 		{
 			"AMQ_ROLE",
-			"admin",
+			getPropertyForCR("AMQ_ROLE", cr, "admin"),
 			nil,
 		},
 		{
 			"AMQ_NAME",
-			"amq-broker",
+			getPropertyForCR("AMQ_NAME", cr, "amq-broker"),
 			nil,
 		},
 		{
 			"AMQ_TRANSPORTS",
-			"openwire,amqp,stomp,mqtt,hornetq",
+			getPropertyForCR("AMQ_TRANSPORTS", cr, "openwire,amqp,stomp,mqtt,hornetq"),
 			nil,
 		},
 		{
 			"AMQ_QUEUES",
-			//"q0,q1,q2,q3",
-			"",
+			getPropertyForCR("AMQ_QUEUES", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_ADDRESSES",
-			//"a0,a1,a2,a3",
-			"",
+			getPropertyForCR("AMQ_ADDRESSES", cr, ""),
 			nil,
 		},
-
 		{
 			"AMQ_GLOBAL_MAX_SIZE",
-			"100 mb",
+			getPropertyForCR("AMQ_GLOBAL_MAX_SIZE", cr, "100 mb"),
 			nil,
 		},
 		{
 			"AMQ_REQUIRE_LOGIN",
-			"",
+			getPropertyForCR("AMQ_REQUIRE_LOGIN", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_EXTRA_ARGS",
-			"--no-autotune",
+			getPropertyForCR("AMQ_EXTRA_ARGS", cr, "--no-autotune"),
 			nil,
 		},
 		{
 			"AMQ_ANYCAST_PREFIX",
-			"",
+			getPropertyForCR("AMQ_ANYCAST_PREFIX", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_MULTICAST_PREFIX",
-			"",
+			getPropertyForCR("AMQ_MULTICAST_PREFIX", cr, ""),
 			nil,
 		},
-
 		{
 			"POD_NAMESPACE",
 			"", // Set to the field metadata.namespace in current object
@@ -262,7 +305,6 @@ func addEnvVarForBasic(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	}
 
 	return envVarArray
-
 }
 
 func addEnvVarForPersistent(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
@@ -270,47 +312,45 @@ func addEnvVarForPersistent(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar 
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_DATA_DIR",
-			makeDataPathForCR(cr),
+			getPropertyForCR("AMQ_DATA_DIR", cr, "/opt/" + cr.Name + "/data"),
 			nil,
 		},
 		{
 			"AMQ_DATA_DIR_LOGGING",
-			"true",
+			getPropertyForCR("AMQ_DATA_DIR_LOGGING", cr, "true"),
 			nil,
 		},
 	}
 
 	return envVarArray
-
 }
 
 func addEnvVarForSSL(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
-
 		{
 			"AMQ_KEYSTORE_TRUSTSTORE_DIR",
-			"/etc/amq-secret-volume",
+            getPropertyForCR("AMQ_KEYSTORE_TRUSTSTORE_DIR", cr, "/etc/amq-secret-volume"),
 			nil,
 		},
 		{
 			"AMQ_TRUSTSTORE",
-			cr.Spec.SSLConfig.TrustStoreFilename,
+			getPropertyForCR("AMQ_TRUSTSTORE", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_TRUSTSTORE_PASSWORD",
-			cr.Spec.SSLConfig.TrustStorePassword,
+			getPropertyForCR("AMQ_TRUSTSTORE_PASSWORD", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_KEYSTORE",
-			cr.Spec.SSLConfig.KeystoreFilename,
+			getPropertyForCR("AMQ_KEYSTORE", cr, ""),
 			nil,
 		},
 		{
 			"AMQ_KEYSTORE_PASSWORD",
-			cr.Spec.SSLConfig.KeyStorePassword,
+			getPropertyForCR("AMQ_KEYSTORE_PASSWORD", cr, ""),
 			nil,
 		},
 	}
@@ -324,23 +364,22 @@ func addEnvVarForCluster(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
 		{
 			"AMQ_CLUSTERED",
-			"true",
+			getPropertyForCR("AMQ_CLUSTERED", cr, "true"),
 			nil,
 		},
 		{
 			"AMQ_REPLICAS",
-			"0",
+			getPropertyForCR("AMQ_REPLICAS", cr, "0"),
 			nil,
 		},
 		{
 			"AMQ_CLUSTER_USER",
-			cr.Spec.ClusterConfig.ClusterUserName,
+			getPropertyForCR("AMQ_CLUSTER_USER", cr, "clusteruser"),
 			nil,
 		},
 		{
 			"AMQ_CLUSTER_PASSWORD",
-			cr.Spec.ClusterConfig.ClusterPassword,
-
+			getPropertyForCR("AMQ_CLUSTER_PASSWORD", cr, "clusterpass"),
 			nil,
 		},
 	}

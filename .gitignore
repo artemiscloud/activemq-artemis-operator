@@ -76,3 +76,6 @@ tags
 *.iml
 *.ipr
 *.iws
+
+# Eclipse IDE files
+.project
