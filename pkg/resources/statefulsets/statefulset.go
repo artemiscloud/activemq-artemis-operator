@@ -195,12 +195,12 @@ func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defau
 	result := defaultValue
 	switch propName {
 	case "AMQ_USER":
-		if len(cr.Spec.CommonConfig.AMQAdminUserName) > 0 {
-			result = cr.Spec.CommonConfig.AMQAdminUserName
+		if len(cr.Spec.CommonConfig.UserName) > 0 {
+			result = cr.Spec.CommonConfig.UserName
 		}
 	case "AMQ_PASSWORD":
-		if len(cr.Spec.CommonConfig.AMQAdminPassword) > 0 {
-			result = cr.Spec.CommonConfig.AMQAdminPassword
+		if len(cr.Spec.CommonConfig.Password) > 0 {
+			result = cr.Spec.CommonConfig.Password
 		}
 	case "AMQ_CLUSTER_USER":
 		if len(cr.Spec.ClusterConfig.ClusterUserName) > 0 {

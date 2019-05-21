@@ -22,8 +22,8 @@ type ActiveMQArtemisSpec struct {
 }
 
 type CommonConfig struct {
-	AMQAdminUserName string `json:"amqAdminUserName,omitempty"`
-	AMQAdminPassword string `json:"amqAdminPassword,omitempty"`
+	UserName string `json:"userName,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis

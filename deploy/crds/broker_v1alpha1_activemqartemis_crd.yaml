@@ -75,13 +75,13 @@ spec:
               type: object
               description: Common configuration of the AMQ
               required:
-                - amqAdminUserName
-                - amqAdminPassword
+                - userName
+                - password
               properties:
-                amqAdminUserName:
+                userName:
                   type: string
                   description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
-                amqAdminPassword:
+                password:
                   type: string
                   description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
           required:

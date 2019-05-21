@@ -17,9 +17,9 @@ var crNameMap = map[string]string{
 	"amq-basic-deployment.yaml":                   "broker_v1alpha1_activemqartemis_crd.yaml",
 	"amq-ssl-deployment.yaml":                     "broker_v1alpha1_activemqartemis_crd.yaml",
 	"amq-cluster-deployment.yaml":                 "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-presistance-deployment.yaml":             "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-presistance-cluster-deployment.yaml": "broker_v1alpha1_activemqartemis_crd.yaml",
-	"amq-ssl-presistance-deployment.yaml":         "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-persistence-deployment.yaml":             "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-persistence-cluster-deployment.yaml": "broker_v1alpha1_activemqartemis_crd.yaml",
+	"amq-ssl-persistence-deployment.yaml":         "broker_v1alpha1_activemqartemis_crd.yaml",
 }
 
 var crdTypeMap = map[string]interface{}{

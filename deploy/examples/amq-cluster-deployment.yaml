@@ -13,6 +13,6 @@ spec:
     clusterUserName: clusteruser
     clusterPassword: clusterpass
   commonConfig:
-    amqAdminUserName: admin
-    amqAdminPassword: admin
+    userName: admin
+    password: admin
 

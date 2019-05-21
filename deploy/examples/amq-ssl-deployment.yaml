@@ -16,6 +16,6 @@ spec:
     keystoreFilename: broker.ks
     keyStorePassword: changeit
   commonConfig:
-    amqAdminUserName: admin
-    amqAdminPassword: admin
+    userName: admin
+    password: admin
 
