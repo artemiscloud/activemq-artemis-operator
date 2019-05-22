@@ -108,6 +108,6 @@ spec:
     clusterUserName: clusterpoduser
     clusterPassword: clusterpodpassword
   commonConfig:
-    amqAdminUserName: admin
-    amqAdminPassword: admin
+    userName: admin
+    password: admin
 
