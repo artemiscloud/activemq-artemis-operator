@@ -378,11 +378,6 @@ func addEnvVarForCluster(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 			nil,
 		},
 		{
-			"AMQ_REPLICAS",
-			getPropertyForCR("AMQ_REPLICAS", cr, "0"),
-			nil,
-		},
-		{
 			"AMQ_CLUSTER_USER",
 			getPropertyForCR("AMQ_CLUSTER_USER", cr, "clusteruser"),
 			nil,

@@ -14,6 +14,16 @@ const (
 	ContainerRunning       = "running"
 )
 
+// IDs of states
+const (
+	InvalidState				= -1
+	CreatingK8sResourcesID   	= 0
+	//ConfiguringEnvironment = "configuring_broker_environment"
+	//CreatingContainer      = "creating_container"
+	ContainerRunningID       	= 1
+	NumActiveMQArtemisFSMStates = 2
+)
+
 // Completion of CreatingK8sResources state
 const (
 	None                   = 0
@@ -35,6 +45,11 @@ const (
 		CreatedRouteOrIngress
 )
 
+// Machine id
+const (
+	ActiveMQArtemisFSMID = 0
+)
+
 type ActiveMQArtemisFSM struct {
 	m              fsm.IMachine
 	namespacedName types.NamespacedName
@@ -45,7 +60,8 @@ type ActiveMQArtemisFSM struct {
 // Need to deep-copy the instance?
 func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
 
-	var someIState fsm.IState
+	var creatingK8sResourceIState fsm.IState
+	var containerRunningIState fsm.IState
 
 	amqbfsm := ActiveMQArtemisFSM{
 		m: fsm.NewMachine(),
@@ -56,9 +72,13 @@ func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespace
 	amqbfsm.r = r
 
 	// TODO: Fix disconnect here between passing the parent and being added later as adding implies parenthood
-	someRS := MakeCreatingK8sResourcesState(&amqbfsm, _namespacedName)
-	someIState = &someRS
-	amqbfsm.Add(&someIState)
+	creatingK8sResourceState := MakeCreatingK8sResourcesState(&amqbfsm, _namespacedName)
+	creatingK8sResourceIState = &creatingK8sResourceState
+	amqbfsm.Add(&creatingK8sResourceIState)
+
+	containerRunningState := MakeContainerRunningState(&amqbfsm, _namespacedName)
+	containerRunningIState = &containerRunningState
+	amqbfsm.Add(&containerRunningIState)
 
 	return amqbfsm
 }
@@ -77,77 +97,32 @@ func (amqbfsm *ActiveMQArtemisFSM) Remove(s *fsm.IState) {
 	amqbfsm.m.Remove(s)
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Enter(stateFrom *fsm.IState) error {
+func ID() int {
+	return ActiveMQArtemisFSMID
+}
+
+func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
 
 	// For the moment sequentially set stuff up
 	// k8s resource creation and broker environment configuration can probably be done concurrently later
 
 	// Enter == Setup
-	err := amqbfsm.m.Enter(stateFrom)
+	err := amqbfsm.m.Enter(CreatingK8sResourcesID)
 	return err
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Update() error {
+func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
+
+	// Was the current state complete?
 
 	// Update == Reconcile
-	err := amqbfsm.m.Update()
-	return err
+	err, nextStateID := amqbfsm.m.Update()
+	return err, nextStateID
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Exit(stateTo *fsm.IState) error {
+func (amqbfsm *ActiveMQArtemisFSM) Exit() error {
 
 	// Exit == Teardown
-	err := amqbfsm.m.Exit(stateTo)
+	err := amqbfsm.m.Exit()
 	return err
 }
-
-//func (amqbfsm *ActiveMQArtemisFSM) Update(request reconcile.Request, r *ReconcileActiveMQArtemis) (reconcile.Result, error) {
-//
-//	// Log where we are and what we're doing
-//	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-//	reqLogger.Info("Executing ActiveMQArtemisFSM Update")
-//
-//	// Set it up
-//	var err error = nil
-//	var reconcileResult reconcile.Result
-//	instance := &brokerv1alpha1.ActiveMQArtemis{}
-//	found := &corev1.Pod{}
-//
-//	// Do what's needed
-//	for {
-//		// Fetch the ActiveMQArtemis instance
-//		if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
-//			// Add error detail for use later
-//			break
-//		}
-//
-//		// Check to see if the k8s resources exist, if not that's our state
-//		// Lets assume we are installing for the first time for the moment...
-//
-//
-//		// Check if this Pod already exists
-//		if err = r.client.Get(context.TODO(), amqbfsm.namespacedName, found); err == nil {
-//			// Don't do anything as the pod exists
-//			break
-//		}
-//
-//		break
-//	}
-//
-//	// Handle error, if any
-//	if err != nil {
-//		if errors.IsNotFound(err) {
-//			reconcileResult = reconcile.Result{}
-//			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, preventing request requeue", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
-//			// Setting err to nil to prevent requeue
-//			err = nil
-//		} else {
-//			//log.Error(err, "ActiveMQArtemis Controller Reconcile errored")
-//			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile errored, requeuing request", "Pod.Namespace", request.Namespace, "Pod.Name", request.Name)
-//		}
-//	}
-//
-//	// Single exit, return the result and error condition
-//	return reconcileResult, err
-//
-//}

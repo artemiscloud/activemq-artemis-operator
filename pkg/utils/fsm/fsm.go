@@ -1,42 +1,50 @@
 package fsm
 
 type IState interface {
-	Enter(stateFrom *IState) error
-	Update() error
-	Exit(stateTo *IState) error
+	ID() int
+	Enter(previousStateID int) error
+	Update() (error, int)
+	Exit() error
 }
 
 type State struct {
-	name   string
-	active bool
+	name   	string
+	id		int
+	active 	bool
 }
 
-func MakeState(n string) State {
+func MakeState(n string, i int) State {
 	return State{
 		name: n,
+		id: i,
+		active: false,
 	}
 }
 
-func NewState(n string) *State {
-	s := MakeState(n)
+func NewState(n string, i int) *State {
+	s := MakeState(n, i)
 	return &s
 }
 
 type IMachine interface {
 	Add(s *IState)
 	Remove(s *IState)
-	Enter(stateFrom *IState) error
-	Update() error
-	Exit(stateTo *IState) error
+//	ID() int
+	Enter(previousStateID int) error
+	Update() (error, int)
+	Transition() error
+	Exit() error
 }
 
 type Machine struct {
-	currentStateIndex  int
-	nextStateIndex     int
-	previousStateIndex int
-	numStates          int
-	active             bool
-	states             []*IState
+	//id					int
+	currentStateID  	int
+	nextStateID     	int
+	previousStateID 	int
+	numStates          	int
+	active             	bool
+	states             	[]*IState
+	currentState		IState
 }
 
 func MakeMachine() Machine {
@@ -51,13 +59,7 @@ func NewMachine() *Machine {
 }
 
 func (m *Machine) Add(s *IState) {
-	//if m.numStates >= len(m.states) {
-	//newStatesLen := m.numStates+2
-	//m.states = make([]*State, newStatesLen, 10)
 	m.states = append(m.states, s)
-	//}
-
-	//m.states[m.numStates] = s
 	m.numStates++
 }
 
@@ -70,18 +72,38 @@ func (m *Machine) Remove(s *IState) {
 	}
 }
 
-func (m *Machine) Enter(stateFrom *IState) error {
-	var s IState = *m.states[m.currentStateIndex]
-	err := s.Enter(stateFrom)
+//func (m *Machine) ID() int {
+//	return -1 // i.e. not set
+//}
+
+func (m *Machine) Enter(startStateID int) error {
+	m.previousStateID = -1
+	m.currentStateID = startStateID
+	m.nextStateID = m.currentStateID
+	m.currentState = *m.states[m.currentStateID]
+	err := m.currentState.Enter(m.previousStateID)
 	return err
 }
 
-func (m *Machine) Update() error {
-	return nil
+func (m *Machine) Update() (error, int) {
+	m.currentStateID = m.currentState.ID()
+	var err error
+	err, m.nextStateID = m.currentState.Update()
+	if m.nextStateID != m.currentStateID {
+		m.Transition()
+	}
+	return err, m.nextStateID
 }
 
-func (m *Machine) Exit(stateTo *IState) error {
-	var s IState = *m.states[m.currentStateIndex]
-	err := s.Exit(stateTo)
+func (m *Machine) Transition() error {
+	m.currentState.Exit()
+	m.previousStateID = m.currentStateID
+	m.currentState = *m.states[m.nextStateID]
+	err := m.currentState.Enter(m.previousStateID)
+	return err
+}
+
+func (m *Machine) Exit() error {
+	err := m.currentState.Exit()
 	return err
 }

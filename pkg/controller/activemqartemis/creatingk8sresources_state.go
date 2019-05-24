@@ -1,13 +1,16 @@
 package activemqartemis
 
 import (
+	"context"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 type CreatingK8sResourcesState struct {
@@ -20,7 +23,7 @@ type CreatingK8sResourcesState struct {
 func MakeCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedName types.NamespacedName) CreatingK8sResourcesState {
 
 	rs := CreatingK8sResourcesState{
-		s:              fsm.MakeState(CreatingK8sResources),
+		s:              fsm.MakeState(CreatingK8sResources, CreatingK8sResourcesID),
 		namespacedName: _namespacedName,
 		parentFSM:      _parentFSM,
 		stepsComplete:  None,
@@ -36,7 +39,11 @@ func NewCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedNam
 	return &rs
 }
 
-func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) error {
+func (rs *CreatingK8sResourcesState) ID() int {
+	return CreatingK8sResourcesID
+}
+
+func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
@@ -88,7 +95,7 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) error {
 	isOpenshift, err1 := env.DetectOpenshift()
 	if err1 != nil {
 		log.Error(err1, "Failed to get env")
-		return
+		return err1
 	}
 
 	if isOpenshift {
@@ -125,12 +132,44 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) error {
 	return nil
 }
 
-func (rs *CreatingK8sResourcesState) Update() error {
+func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
-	return nil
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger.Info("Updating CreatingK8sResourcesState")
+
+	found := &appsv1.StatefulSet{}
+	err := rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: rs.parentFSM.customResource.Name + "-ss", Namespace: rs.parentFSM.customResource.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+		//return reconcile.Result{Requeue: true}, nil
+		return nil, CreatingK8sResourcesID
+	}
+
+	// Ensure the StatefulSet size is the same as the spec
+	size := rs.parentFSM.customResource.Spec.Size
+	//if *found.Spec.Replicas != size {
+	//	found.Spec.Replicas = &size
+	//	err = rs.parentFSM.r.client.Update(context.TODO(), found)
+	//	if err != nil {
+	//		reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+	//		//return reconcile.Result{}, err
+	//		return err
+	//	}
+	//	// Spec updated - return and requeue
+	//	//return reconcile.Result{Requeue: true}, nil
+	//	return nil
+	//}
+
+	if found.Status.ReadyReplicas == size {
+		// go to next state
+		return nil, ContainerRunningID
+	}
+
+	return nil, CreatingK8sResourcesID
 }
 
-func (rs *CreatingK8sResourcesState) Exit(stateTo *fsm.IState) error {
+func (rs *CreatingK8sResourcesState) Exit() error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)

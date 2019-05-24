@@ -104,15 +104,15 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	reqLogger.Info("Reconciling ActiveMQArtemis")
 
 	var err error = nil
-	var reconcileResult reconcile.Result
 	var namespacedNameFSM *ActiveMQArtemisFSM = nil
 	var amqbfsm *ActiveMQArtemisFSM = nil
 
 	instance := &brokerv1alpha1.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
-		Name:      request.Name,      //"example-activemqartemis",
-		Namespace: request.Namespace, //"abo-1",
+		Name:      request.Name,
+		Namespace: request.Namespace,
 	}
+	reconcileResult := reconcile.Result{Requeue:false}
 
 	// Fetch the ActiveMQArtemis instance
 	// When first creating this will have err == nil
@@ -122,15 +122,12 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		if errors.IsNotFound(err) {
 			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
 
-			reconcileResult = reconcile.Result{}
-
 			// See if we have been tracking this NamespacedName
 			if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM != nil {
 				reqLogger.Error(err, "Removing namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
 				// If so we should no longer track it
-				//namespacedNameToFSM[namespacedName] = nil
 				amqbfsm = namespacedNameToFSM[namespacedName]
-				amqbfsm.Exit(nil)
+				amqbfsm.Exit()
 				delete(namespacedNameToFSM, namespacedName)
 				amqbfsm = nil
 			}
@@ -152,14 +149,14 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
 		amqbfsm = NewActiveMQArtemisFSM(instance, namespacedName, r)
-		namespacedNameFSM = amqbfsm
-		namespacedNameToFSM[namespacedName] = namespacedNameFSM
+		namespacedNameToFSM[namespacedName] = amqbfsm
 
 		// Enter the first state; atm CreatingK8sResourcesState
-		amqbfsm.Enter(nil)
+		amqbfsm.Enter(CreatingK8sResourcesID)
 	} else {
 		amqbfsm = namespacedNameFSM
-		err = amqbfsm.Update()
+		*amqbfsm.customResource = *instance
+		err, _ = amqbfsm.Update()
 		// if err need reconcile result as before
 	}
 
