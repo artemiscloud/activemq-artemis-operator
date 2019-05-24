@@ -77,24 +77,28 @@ func (amqbfsm *ActiveMQArtemisFSM) Remove(s *fsm.IState) {
 	amqbfsm.m.Remove(s)
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Enter(stateFrom *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Enter(stateFrom *fsm.IState) error {
 
 	// For the moment sequentially set stuff up
 	// k8s resource creation and broker environment configuration can probably be done concurrently later
 
 	// Enter == Setup
-	amqbfsm.m.Enter(stateFrom)
+	err := amqbfsm.m.Enter(stateFrom)
+	return err
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Update() {
+func (amqbfsm *ActiveMQArtemisFSM) Update() error {
 
 	// Update == Reconcile
+	err := amqbfsm.m.Update()
+	return err
 }
 
-func (amqbfsm *ActiveMQArtemisFSM) Exit(stateFrom *fsm.IState) {
+func (amqbfsm *ActiveMQArtemisFSM) Exit(stateTo *fsm.IState) error {
 
 	// Exit == Teardown
-	amqbfsm.m.Exit(stateFrom)
+	err := amqbfsm.m.Exit(stateTo)
+	return err
 }
 
 //func (amqbfsm *ActiveMQArtemisFSM) Update(request reconcile.Request, r *ReconcileActiveMQArtemis) (reconcile.Result, error) {

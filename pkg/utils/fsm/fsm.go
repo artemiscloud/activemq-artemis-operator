@@ -1,9 +1,9 @@
 package fsm
 
 type IState interface {
-	Enter(stateFrom *IState)
-	Update()
-	Exit(stateTo *IState)
+	Enter(stateFrom *IState) error
+	Update() error
+	Exit(stateTo *IState) error
 }
 
 type State struct {
@@ -25,9 +25,9 @@ func NewState(n string) *State {
 type IMachine interface {
 	Add(s *IState)
 	Remove(s *IState)
-	Enter(stateFrom *IState)
-	Update()
-	Exit(stateTo *IState)
+	Enter(stateFrom *IState) error
+	Update() error
+	Exit(stateTo *IState) error
 }
 
 type Machine struct {
@@ -70,17 +70,18 @@ func (m *Machine) Remove(s *IState) {
 	}
 }
 
-func (m *Machine) Enter(stateFrom *IState) {
-
+func (m *Machine) Enter(stateFrom *IState) error {
 	var s IState = *m.states[m.currentStateIndex]
-	s.Enter(stateFrom)
+	err := s.Enter(stateFrom)
+	return err
 }
 
-func (m *Machine) Update() {
-
+func (m *Machine) Update() error {
+	return nil
 }
 
-func (m *Machine) Exit(stateTo *IState) {
+func (m *Machine) Exit(stateTo *IState) error {
 	var s IState = *m.states[m.currentStateIndex]
-	s.Exit(stateTo)
+	err := s.Exit(stateTo)
+	return err
 }

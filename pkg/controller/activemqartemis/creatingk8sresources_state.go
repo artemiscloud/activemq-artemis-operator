@@ -36,7 +36,7 @@ func NewCreatingK8sResourcesState(_parentFSM *ActiveMQArtemisFSM, _namespacedNam
 	return &rs
 }
 
-func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
+func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
@@ -121,77 +121,82 @@ func (rs *CreatingK8sResourcesState) Enter(stateFrom *fsm.IState) {
 	//		rs.stepsComplete |= CreatedPersistentVolumeClaim
 	//	}
 	//}
+
+	return nil
 }
 
-func (rs *CreatingK8sResourcesState) Update() {
+func (rs *CreatingK8sResourcesState) Update() error {
 
+	return nil
 }
 
-func (rs *CreatingK8sResourcesState) Exit(stateFrom *fsm.IState) {
+func (rs *CreatingK8sResourcesState) Exit(stateTo *fsm.IState) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Exiting CreatingK8sResourceState")
 
-	var err error = nil
-
-	// Check to see if the headless service already exists
-	if _, err = svc.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedHeadlessService
-	}
-
-	// Check to see if the persistent volume claim already exists
-	if _, err = ss.RetrieveStatefulSet("", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedStatefulSet
-	}
-
-	// Check to see if the ping service already exists
-	if _, err = svc.RetrievePingService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedPingService
-	}
-
-	// Check to see if the console-jolokia service already exists
-	if _, err = svc.RetrieveConsoleJolokiaService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedConsoleJolokiaService
-	}
-
-	// Check to see if the mux-protocol service already exists
-	if _, err = svc.RetrieveMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-		// err means not found, so mark deleted
-		rs.stepsComplete &^= CreatedMuxProtocolService
-	}
-
-	isOpenshift, err1 := env.DetectOpenshift()
-	if err1 != nil {
-		log.Error(err1, "Failed to get env")
-		return
-	}
-
-	if isOpenshift {
-		log.Info("Evnironment is OpenShift, checking for created route")
-		if _, err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-			// err means not found, so mark deleted
-			rs.stepsComplete &^= CreatedRouteOrIngress
-		}
-	} else {
-		log.Info("Environment is not OpenShift, checking for created ingress")
-
-		if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
-			// err means not found, so mark deleted
-			rs.stepsComplete &^= CreatedRouteOrIngress
-		}
-
-		// Check to see if the routes already exists
-
-	}
-
-	// Check to see if the persistent volume claim already exists
-	//if _, err = rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	//var err error = nil
+	//
+	//// Check to see if the headless service already exists
+	//if _, err = svc.RetrieveHeadlessService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
 	//	// err means not found, so mark deleted
-	//	rs.stepsComplete &^= CreatedPersistentVolumeClaim
+	//	rs.stepsComplete &^= CreatedHeadlessService
 	//}
+	//
+	//// Check to see if the persistent volume claim already exists
+	//if _, err = ss.RetrieveStatefulSet("", rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//	// err means not found, so mark deleted
+	//	rs.stepsComplete &^= CreatedStatefulSet
+	//}
+	//
+	//// Check to see if the ping service already exists
+	//if _, err = svc.RetrievePingService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//	// err means not found, so mark deleted
+	//	rs.stepsComplete &^= CreatedPingService
+	//}
+	//
+	//// Check to see if the console-jolokia service already exists
+	//if _, err = svc.RetrieveConsoleJolokiaService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//	// err means not found, so mark deleted
+	//	rs.stepsComplete &^= CreatedConsoleJolokiaService
+	//}
+	//
+	//// Check to see if the mux-protocol service already exists
+	//if _, err = svc.RetrieveMuxProtocolService(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//	// err means not found, so mark deleted
+	//	rs.stepsComplete &^= CreatedMuxProtocolService
+	//}
+	//
+	//isOpenshift, err1 := env.DetectOpenshift()
+	//if err1 != nil {
+	//	log.Error(err1, "Failed to get env")
+	//	return
+	//}
+	//
+	//if isOpenshift {
+	//	log.Info("Evnironment is OpenShift, checking for created route")
+	//	if _, err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//		// err means not found, so mark deleted
+	//		rs.stepsComplete &^= CreatedRouteOrIngress
+	//	}
+	//} else {
+	//	log.Info("Environment is not OpenShift, checking for created ingress")
+	//
+	//	if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	//		// err means not found, so mark deleted
+	//		rs.stepsComplete &^= CreatedRouteOrIngress
+	//	}
+	//
+	//	// Check to see if the routes already exists
+	//
+	//}
+	//
+	//// Check to see if the persistent volume claim already exists
+	////if _, err = rs.RetrievePersistentVolumeClaim(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r); err != nil {
+	////	// err means not found, so mark deleted
+	////	rs.stepsComplete &^= CreatedPersistentVolumeClaim
+	////}
+
+	return nil
 }
