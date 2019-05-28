@@ -15,6 +15,8 @@ const (
 	statefulSetSSLConfigUpdated     = 1 << 2
 )
 
+// This is the state we should be in whenever kubernetes
+// resources are stable and only configuration is changing
 type ContainerRunningState struct {
 	s              fsm.State
 	namespacedName types.NamespacedName
@@ -49,6 +51,10 @@ func (rs *ContainerRunningState) Enter(previousStateID int) error {
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Entering ContainerRunningState")
 
+	// TODO: Clear up ambiguity in usage between container and pod
+	// Check to see how many pods are running atm
+
+
 	return nil
 }
 
@@ -76,6 +82,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 		if *currentStatefulSet.Spec.Replicas != size {
 			currentStatefulSet.Spec.Replicas = &size
 			statefulSetUpdates |= statefulSetSizeUpdated
+			nextStateID = CreatingK8sResourcesID
 		}
 
 		if rs.clusterConfigSyncCausedUpdateOn(currentStatefulSet) {
@@ -84,11 +91,14 @@ func (rs *ContainerRunningState) Update() (error, int) {
 
 		if rs.sslConfigSyncCausedUpdateOn(currentStatefulSet) {
 			statefulSetUpdates |= statefulSetSSLConfigUpdated
+			nextStateID = CreatingK8sResourcesID
 		}
 
 		break
 	}
 
+	//if statefulSetUpdates & statefulSetClusterConfigUpdated > 0 ||
+	//	statefulSetUpdates & statefulSetSSLConfigUpdated > 0 {
 	if statefulSetUpdates > 0 {
 		err = rs.parentFSM.r.client.Update(context.TODO(), currentStatefulSet)
 		if err != nil {
@@ -369,19 +379,6 @@ func (rs *ContainerRunningState) sslConfigSyncCausedUpdateOn(currentStatefulSet 
 
 	if statefulSetUpdated {
 		rs.sslConfigSyncEnsureSecretVolumeMountExists(currentStatefulSet)
-
-		if (rs.parentFSM.customResource.Spec.SSLConfig.KeyStorePassword != "" &&
-			rs.parentFSM.customResource.Spec.SSLConfig.KeystoreFilename != "") ||
-			(rs.parentFSM.customResource.Spec.SSLConfig.TrustStorePassword != "" &&
-				rs.parentFSM.customResource.Spec.SSLConfig.TrustStoreFilename != "") {
-			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-				currentStatefulSet.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
-			}
-		} else {
-			for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
-				currentStatefulSet.Spec.Template.Spec.Containers[i].LivenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTP
-			}
-		}
 	}
 
 	return statefulSetUpdated

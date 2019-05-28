@@ -3,10 +3,8 @@ package routes
 import (
 	"context"
 
-	selectors "github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
-
 	routev1 "github.com/openshift/api/route/v1"
-	v1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,8 +18,7 @@ import (
 var log = logf.Log.WithName("package routes")
 
 // Create newRouteForCR method to create exposed route
-func NewRouteForCR(cr *v1alpha1.ActiveMQArtemis, target string) *routev1.Route {
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+func NewRouteDefinitionForCR(cr *v1alpha1.ActiveMQArtemis, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
 
 	route := &routev1.Route{
 		TypeMeta: metav1.TypeMeta{
@@ -30,62 +27,60 @@ func NewRouteForCR(cr *v1alpha1.ActiveMQArtemis, target string) *routev1.Route {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    labels,
-			Name:      cr.Name + "-" + target,
+			Name:      targetServiceName + "-rte",
 			Namespace: cr.Namespace,
 		},
 		Spec: routev1.RouteSpec{
 			Port: &routev1.RoutePort{
-				TargetPort: intstr.FromString(target),
+				TargetPort: intstr.FromString(targetPortName),
 			},
 			To: routev1.RouteTargetReference{
 				Kind: "Service",
-				Name: "amq-broker-amq-headless",
+				Name: targetServiceName,
 			},
 		},
 	}
-	if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
 
+	if passthroughTLS {
 		route.Spec.TLS = &routev1.TLSConfig{
 			Termination:                   routev1.TLSTerminationPassthrough,
 			InsecureEdgeTerminationPolicy: routev1.InsecureEdgeTerminationPolicyNone,
 		}
-
 	}
+
 	return route
 }
 
-func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*routev1.Route, error) {
+func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, route *routev1.Route) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new route")
 
-	// Define the console-jolokia route for this Pod
-	route := NewRouteForCR(cr, "console-jolokia")
-
 	var err error = nil
+
 	// Set ActiveMQArtemis instance as the owner and controller
-	reqLogger.Info("Set controller reference for new  route")
+	reqLogger.Info("Set controller reference for new route")
 	if err = controllerutil.SetControllerReference(cr, route, scheme); err != nil {
 		reqLogger.Error(err, "Failed to set controller reference for new route")
 	}
 
 	// Call k8s create for route
 	if err = client.Create(context.TODO(), route); err != nil {
-		reqLogger.Error(err, "Failed to creating new route")
+		reqLogger.Error(err, "Failed to create new route")
 	}
+
 	reqLogger.Info("End of Route Creation")
 
-	return route, err
+	return err
 }
 
-func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*routev1.Route, error) {
+func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, route *routev1.Route) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Retrieving the Route ")
 
 	var err error = nil
-	route := NewRouteForCR(cr, "console-jolokia")
 
 	// Check if the headless route already exists
 	if err = client.Get(context.TODO(), namespacedName, route); err != nil {
@@ -96,5 +91,31 @@ func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.Namespaced
 		}
 	}
 
-	return route, err
+	return err
+}
+
+func UpdateRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Updating route")
+
+	var err error = nil
+	if err = client.Update(context.TODO(), route); err != nil {
+		reqLogger.Error(err, "Failed to update route")
+	}
+
+	return err
+}
+
+func DeleteRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, route *routev1.Route) error {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Deleting route")
+
+	var err error = nil
+	if err = client.Delete(context.TODO(), route); err != nil {
+		reqLogger.Error(err, "Failed to delete route")
+	}
+
+	return err
 }

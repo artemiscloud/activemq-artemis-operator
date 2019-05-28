@@ -551,12 +551,6 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 	reqLogger.Info("Retrieving " + "statefulset")
 
 	var err error = nil
-	//ss := &appsv1.StatefulSet{
-	//	TypeMeta: metav1.TypeMeta{},
-	//	ObjectMeta: metav1.ObjectMeta {
-	//		Name: statefulsetName,
-	//	},
-	//}
 
 	labels := selectors.LabelsForActiveMQArtemis("example-activemqartemis")
 

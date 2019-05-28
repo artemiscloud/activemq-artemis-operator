@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strconv"
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
@@ -47,19 +48,14 @@ func newHeadlessServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, servicePorts *[
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, port_number int32) *corev1.Service {
-
-	// Log where we are and what we're doing
-	//reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	//reqLogger.Info("Creating new " + name_suffix + " service")
-
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+func NewServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
-		Name:       cr.Name + "-" + name_suffix + "-port",
+		//Name:       cr.Name + "-" + nameSuffix + "-port",
+		Name:		nameSuffix,
 		Protocol:   "TCP",
-		Port:       port_number,
-		TargetPort: intstr.FromInt(int(port_number)),
+		Port:       portNumber,
+		TargetPort: intstr.FromInt(int(portNumber)),
 	}
 	ports := []corev1.ServicePort{}
 	ports = append(ports, port)
@@ -71,15 +67,16 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
-			Labels:      labels,
-			Name:        cr.Name + "-" + name_suffix + "-service",
+			Labels:      selectors.LabelsForActiveMQArtemis(cr.Name),
+			Name:        cr.Name + "-service" + "-" + nameSuffix,
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:            "LoadBalancer",
+			Type:            "ClusterIP",
 			Ports:           ports,
-			Selector:        labels,
-			SessionAffinity: "ClientIP",
+			Selector:        selectorLabels,
+			SessionAffinity: "None",
+			PublishNotReadyAddresses: true,
 		},
 	}
 
@@ -87,13 +84,7 @@ func newServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis, name_suffix string, por
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
-
-	// Log where we are and what we're doing
-	//reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	//reqLogger.Info("Creating new " + name_suffix + " service")
-
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+func newPingServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Protocol:   "TCP",
@@ -117,7 +108,7 @@ func newPingServiceForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type:                     "ClusterIP",
 			Ports:                    ports,
-			Selector:                 labels,
+			Selector:                 selectorLabels,
 			ClusterIP:                "None",
 			PublishNotReadyAddresses: true,
 		},
@@ -205,101 +196,110 @@ func SetBasicPorts() []corev1.ServicePort {
 
 	return ports
 }
-func CreateConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+
+func CreateService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceToCreate *corev1.Service) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Creating new " + "console-jolokia" + " service")
-
-	// These next two should be considered "hard coded" and temporary
-	// Define the console-jolokia Service for this Pod
-	consoleJolokiaSvc := newServiceForCR(cr, "console-jolokia", 8161)
+	reqLogger.Info("Creating new " + serviceToCreate.Name + " service")
 
 	var err error = nil
 	// Set ActiveMQArtemis instance as the owner and controller
-	if err = controllerutil.SetControllerReference(cr, consoleJolokiaSvc, scheme); err != nil {
+	if err = controllerutil.SetControllerReference(cr, serviceToCreate, scheme); err != nil {
 		// Add error detail for use later
-		reqLogger.Info("Failed to set controller reference for new " + "console-jolokia" + " service")
+		reqLogger.Info("Failed to set controller reference for new " + serviceToCreate.Name + " service")
 	}
-	reqLogger.Info("Set controller reference for new " + "console-jolokia" + " service")
+	reqLogger.Info("Set controller reference for new " + serviceToCreate.Name + " service")
 
 	// Call k8s create for service
-	if err = client.Create(context.TODO(), consoleJolokiaSvc); err != nil {
+	if err = client.Create(context.TODO(), serviceToCreate); err != nil {
 		// Add error detail for use later
 		//rs.stepsComplete |= CreatedConsoleJolokiaService
-		reqLogger.Info("Failed to creating new " + "console-jolokia" + " service")
+		reqLogger.Info("Failed to creating new " + serviceToCreate.Name + " service")
 	}
-	reqLogger.Info("Created new " + "console-jolokia" + " service")
+	reqLogger.Info("Created new " + serviceToCreate.Name + " service")
 
-	return consoleJolokiaSvc, err
+	return err
 }
-func RetrieveConsoleJolokiaService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+
+func RetrieveService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName, serviceToRetrieve *corev1.Service) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Retrieving " + serviceToRetrieve.Name + " service")
+
+	var err error = nil
+	if err = client.Get(context.TODO(), namespacedName, serviceToRetrieve); err != nil {
+		reqLogger.Info("Failed to retrieve " + serviceToRetrieve.Name + " service")
+	}
+	reqLogger.Info("Retrieved " + serviceToRetrieve.Name + " service")
+
+	return err
+}
+
+func CreateServices(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, baseServiceName string, portNumber int32) error {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Creating " + baseServiceName + " services")
+
+	var err error = nil
+	var i int32 = 0
+	ordinalString := ""
+	for ; i < cr.Spec.Size; i++ {
+		labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+		ordinalString = strconv.Itoa(int(i))
+		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
+		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName + "-" + ordinalString, portNumber, labels)
+		if err = CreateService(cr, client, scheme, consoleJolokiaService); err != nil {
+			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+			break
+		}
+	}
+
+	return err
+}
+
+func RetrieveConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Retrieving " + "console-jolokia" + " service")
 
 	var err error = nil
-	consoleJolokiaSvc := newServiceForCR(instance, "console-jolokia", 8161)
+	consoleJolokiaSvc := NewServiceDefinitionForCR(cr, "console-jolokia", 8161, selectors.LabelsForActiveMQArtemis(cr.Name))
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, consoleJolokiaSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Console Jolokia service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Console Jolokia service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Console Jolokia service found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Console Jolokia service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
 	return consoleJolokiaSvc, err
 }
 
-func CreateMuxProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
+func RetrieveAllProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Creating new " + "mux-protocol" + " service")
-
-	// Define the console-jolokia Service for this Pod
-	muxProtocolSvc := newServiceForCR(cr, "mux-protocol", 61616)
+	reqLogger.Info("Retrieving " + "all-protocol" + " service")
 
 	var err error = nil
-	// Set ActiveMQArtemis instance as the owner and controller
-	if err = controllerutil.SetControllerReference(cr, muxProtocolSvc, scheme); err != nil {
-		// Add error detail for use later
-		reqLogger.Info("Failed to set controller reference for new " + "mux-protocol" + " service")
-	}
-	reqLogger.Info("Set controller reference for new " + "mux-protocol" + " service")
-
-	// Call k8s create for service
-	if err = client.Create(context.TODO(), muxProtocolSvc); err != nil {
-		// Add error detail for use later
-		//rs.stepsComplete |= CreatedMuxProtocolService
-		reqLogger.Info("Failed to creating new " + "mux-protocol" + " service")
-	}
-	reqLogger.Info("Created new " + "mux-protocol" + " service")
-
-	return muxProtocolSvc, err
-}
-func RetrieveMuxProtocolService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
-
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
-	reqLogger.Info("Retrieving " + "mux-protocol" + " service")
-
-	var err error = nil
-	muxProtocolSvc := newServiceForCR(instance, "mux-protocol", 61616)
+	allProtocolSvc := NewServiceDefinitionForCR(cr, "all-protocol", 61616, selectors.LabelsForActiveMQArtemis(cr.Name))
 
 	// Check if the headless service already exists
-	if err = client.Get(context.TODO(), namespacedName, muxProtocolSvc); err != nil {
+	if err = client.Get(context.TODO(), namespacedName, allProtocolSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Mux Protocol service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "All Protocol service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Mux Protocol service found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "All Protocol service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
-	return muxProtocolSvc, err
+	return allProtocolSvc, err
 }
 
 func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.Service, error) {
@@ -308,7 +308,8 @@ func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client,
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Creating new " + "ping" + " service")
 
-	pingSvc := newPingServiceForCR(cr)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	pingSvc := newPingServiceDefinitionForCR(cr, labels, labels)
 
 	// Define the headless Service for the StatefulSet
 	// Set ActiveMQArtemis instance as the owner and controller
@@ -329,21 +330,22 @@ func CreatePingService(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client,
 
 	return pingSvc, err
 }
-func RetrievePingService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrievePingService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Retrieving " + "ping" + " service")
 
 	var err error = nil
-	pingSvc := newPingServiceForCR(instance)
+	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
+	pingSvc := newPingServiceDefinitionForCR(cr, labels, labels)
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, pingSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Ping service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Ping service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Ping service found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Ping service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
@@ -383,21 +385,21 @@ func DeleteHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis) {
 }
 
 //r *ReconcileActiveMQArtemis
-func RetrieveHeadlessService(instance *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
+func RetrieveHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client) (*corev1.Service, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", instance.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.Info("Retrieving " + "headless" + " service")
 
 	var err error = nil
-	headlessService := newHeadlessServiceForCR(instance, GetDefaultPorts(instance)) //&corev1.Service{}
+	headlessService := newHeadlessServiceForCR(cr, GetDefaultPorts(cr))
 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Headless service IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Headless service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Headless service found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Error(err, "Headless service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
