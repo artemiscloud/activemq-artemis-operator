@@ -26,12 +26,14 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  branch = "master"
-  digest = "1:71aa8bdd52833ef34ce166318292c9a99967a5b7b8070658f870ae49b4a9562f"
+  digest = "1:b0c94aea1797e0a93e644ee6a6937bb2402e2ab418154ece436cee737eec1c2d"
   name = "github.com/RHsyseng/operator-utils"
-  packages = ["pkg/validation"]
+  packages = [
+    "pkg/olm",
+    "pkg/validation",
+  ]
   pruneopts = "NT"
-  revision = "4edf3fc415210d82efe059a6f1728aa7533f8a6f"
+  revision = "232650febd728455482b3c780c79a9ac0be62b50"
 
 [[projects]]
   digest = "1:680b63a131506e668818d630d3ca36123ff290afa0afc9f4be21940adca3f27d"
@@ -393,7 +395,10 @@
 [[projects]]
   digest = "1:8bc8f43d2332d035857c92581df240f247c287629d5f60c751df609f9b6215c5"
   name = "github.com/openshift/api"
-  packages = ["route/v1"]
+  packages = [
+    "apps/v1",
+    "route/v1",
+  ]
   pruneopts = "NT"
   revision = "0d921e363e951d89f583292c60d013c318df64dc"
   version = "v3.9.0"
@@ -1100,6 +1105,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/RHsyseng/operator-utils/pkg/olm",
     "github.com/RHsyseng/operator-utils/pkg/validation",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",
