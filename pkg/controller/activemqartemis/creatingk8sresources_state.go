@@ -132,6 +132,7 @@ func (rs *CreatingK8sResourcesState) configureServices() error {
 		}
 
 		baseServiceName = "all-protocol"
+		portNumber = int32(61616)
 		serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName + "-" + ordinalString, portNumber, labels)
 		if err = svc.CreateService(cr, client, scheme, serviceDefinition); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
