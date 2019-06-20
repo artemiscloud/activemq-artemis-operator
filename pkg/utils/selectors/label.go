@@ -5,10 +5,9 @@ import (
 )
 
 const (
-	LabelAppKey = "application"
+	LabelAppKey      = "application"
 	LabelResourceKey = "ActiveMQArtemis"
 )
-
 
 // Set labels in a map
 func LabelsForActiveMQArtemis(name string) map[string]string {

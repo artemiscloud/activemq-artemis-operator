@@ -4,6 +4,7 @@ import (
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Names of states
@@ -12,16 +13,18 @@ const (
 	ConfiguringEnvironment = "configuring_broker_environment"
 	CreatingContainer      = "creating_container"
 	ContainerRunning       = "running"
+	Scaling                = "scaling"
 )
 
 // IDs of states
 const (
-	InvalidState           = -1
+	NotCreatedID           = -1
 	CreatingK8sResourcesID = 0
 	//ConfiguringEnvironment = "configuring_broker_environment"
 	//CreatingContainer      = "creating_container"
 	ContainerRunningID          = 1
-	NumActiveMQArtemisFSMStates = 2
+	ScalingID                   = 2
+	NumActiveMQArtemisFSMStates = 3
 )
 
 // Completion of CreatingK8sResources state
@@ -35,7 +38,6 @@ const (
 	CreatedPingService           = 1 << 4
 	CreatedRouteOrIngress        = 1 << 5
 
-	//Complete = CreatedHeadlessService | CreatedConsoleJolokiaService | CreatedMuxProtocolService
 	Complete = CreatedHeadlessService |
 		//CreatedPersistentVolumeClaim |
 		CreatedConsoleJolokiaService |
@@ -62,6 +64,7 @@ func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespace
 
 	var creatingK8sResourceIState fsm.IState
 	var containerRunningIState fsm.IState
+	var scalingIState fsm.IState
 
 	amqbfsm := ActiveMQArtemisFSM{
 		m: fsm.NewMachine(),
@@ -80,11 +83,17 @@ func MakeActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespace
 	containerRunningIState = &containerRunningState
 	amqbfsm.Add(&containerRunningIState)
 
+	scalingState := MakeScalingState(&amqbfsm, _namespacedName)
+	scalingIState = &scalingState
+	amqbfsm.Add(&scalingIState)
+
 	return amqbfsm
 }
 
 func NewActiveMQArtemisFSM(instance *brokerv1alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+
 	amqbfsm := MakeActiveMQArtemisFSM(instance, _namespacedName, r)
+
 	return &amqbfsm
 }
 func (amqbfsm *ActiveMQArtemisFSM) Add(s *fsm.IState) {
@@ -98,6 +107,7 @@ func (amqbfsm *ActiveMQArtemisFSM) Remove(s *fsm.IState) {
 }
 
 func ID() int {
+
 	return ActiveMQArtemisFSMID
 }
 
@@ -105,24 +115,25 @@ func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
 
 	// For the moment sequentially set stuff up
 	// k8s resource creation and broker environment configuration can probably be done concurrently later
-
-	// Enter == Setup
+	amqbfsm.r.result = reconcile.Result{}
 	err := amqbfsm.m.Enter(CreatingK8sResourcesID)
+
 	return err
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
 
 	// Was the current state complete?
-
-	// Update == Reconcile
+	amqbfsm.r.result = reconcile.Result{}
 	err, nextStateID := amqbfsm.m.Update()
+
 	return err, nextStateID
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Exit() error {
 
-	// Exit == Teardown
+	amqbfsm.r.result = reconcile.Result{}
 	err := amqbfsm.m.Exit()
+
 	return err
 }

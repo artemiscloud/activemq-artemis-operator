@@ -2,14 +2,10 @@ package activemqartemis
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/errors"
-
-	//"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
-
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,8 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	appsv1 "k8s.io/api/apps/v1"
 )
 
 var log = logf.Log.WithName("controller_activemqartemis")
@@ -41,7 +35,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileActiveMQArtemis{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileActiveMQArtemis{client: mgr.GetClient(), scheme: mgr.GetScheme(), result: reconcile.Result{Requeue: false}}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -88,6 +82,7 @@ type ReconcileActiveMQArtemis struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	result reconcile.Result
 }
 
 // Reconcile reads that state of the cluster for a ActiveMQArtemis object and makes changes based on the state read
@@ -112,7 +107,6 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		Name:      request.Name,
 		Namespace: request.Namespace,
 	}
-	reconcileResult := reconcile.Result{Requeue: false}
 
 	// Fetch the ActiveMQArtemis instance
 	// When first creating this will have err == nil
@@ -140,7 +134,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		}
 
 		// Add error detail for use later
-		return reconcileResult, err
+		return r.result, err
 	}
 
 	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
@@ -157,9 +151,8 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		amqbfsm = namespacedNameFSM
 		*amqbfsm.customResource = *instance
 		err, _ = amqbfsm.Update()
-		// if err need reconcile result as before
 	}
 
 	// Single exit, return the result and error condition
-	return reconcileResult, err
+	return r.result, err
 }

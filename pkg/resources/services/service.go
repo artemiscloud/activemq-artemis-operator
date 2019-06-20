@@ -52,7 +52,7 @@ func NewServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, nameSuffix st
 
 	port := corev1.ServicePort{
 		//Name:       cr.Name + "-" + nameSuffix + "-port",
-		Name:		nameSuffix,
+		Name:       nameSuffix,
 		Protocol:   "TCP",
 		Port:       portNumber,
 		TargetPort: intstr.FromInt(int(portNumber)),
@@ -72,10 +72,10 @@ func NewServiceDefinitionForCR(cr *brokerv1alpha1.ActiveMQArtemis, nameSuffix st
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:            "ClusterIP",
-			Ports:           ports,
-			Selector:        selectorLabels,
-			SessionAffinity: "None",
+			Type:                     "ClusterIP",
+			Ports:                    ports,
+			Selector:                 selectorLabels,
+			SessionAffinity:          "None",
 			PublishNotReadyAddresses: true,
 		},
 	}
@@ -250,7 +250,7 @@ func CreateServices(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, sc
 		labels := selectors.LabelsForActiveMQArtemis(cr.Name)
 		ordinalString = strconv.Itoa(int(i))
 		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
-		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName + "-" + ordinalString, portNumber, labels)
+		consoleJolokiaService := NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
 		if err = CreateService(cr, client, scheme, consoleJolokiaService); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			break
