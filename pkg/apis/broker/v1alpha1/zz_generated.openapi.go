@@ -210,7 +210,34 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisScaledownSpec(ref common.Ref
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ActiveMQArtemisScaledownSpec defines the desired state of ActiveMQArtemisScaledown",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"masterURL": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"kubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"localOnly": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"masterURL", "kubeconfig", "namespace", "localOnly"},
 			},
 		},
 		Dependencies: []string{},
@@ -241,10 +268,10 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCal
 							Format: "",
 						},
 					},
-					"sslEnabled": {
+					"size": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"persistent": {
@@ -253,7 +280,7 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCal
 							Format: "",
 						},
 					},
-					"clusterEnabled": {
+					"aio": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"boolean"},
 							Format: "",
@@ -275,7 +302,7 @@ func schema_pkg_apis_broker_v1alpha1_ActiveMQArtemisSpec(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"image", "sslEnabled", "persistent", "clusterEnabled"},
+				Required: []string{"image", "persistent", "aio"},
 			},
 		},
 		Dependencies: []string{
