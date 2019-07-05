@@ -11,14 +11,14 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.4.0
+            name: activemq-artemis-operator.v0.6.1
             namespace: placeholder
             annotations:
               categories: "Messaging"
               certified: "false"
               description: ActiveMQ Artemis Operator can deploy headless service environments which exposed each of the ports, along with the statefulset.
-              containerImage: activemq-artemis-operator:latest
-              createdAt: 2019-03-20T20:48:22Z
+              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.6.1
+              createdAt: 2019-07-04T15:55:00Z
               support: Red Hat, Inc.
               tectonic-visibility: ocs
               alm-examples: >-
@@ -33,8 +33,8 @@ items:
                  			}
                  		},
                  		"spec": {
-                   		"size": 4,
-                   		"image": "registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4",
+                   		"size": 1,
+                   		"image": "registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3-4",
                    		"commonConfig": {
                    			"userName": "admin",
                    			"password": "admin"
@@ -68,7 +68,7 @@ items:
             keywords:
               - activemqartemis
               - operator
-            version: 0.4.0
+            version: 0.6.1
             maturity: alpha
             maintainers:
               - name: Red Hat, Inc.
@@ -79,18 +79,18 @@ items:
               - name: Product Page
                 url: https://access.redhat.com/products/red-hat-amq/
               - name: Documentation
-                url: https://access.redhat.com/documentation/en-us/red_hat_amq/7.2/
+                url: https://access.redhat.com/documentation/en-us/red_hat_amq/
             icon:
               - base64data: iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAlywAAJcsBGkdkZgAAAAd0SU1FB+MDHQ02AU8UBK4AAASBSURBVFjDtZfNb1RlFMZ/7zt3vqCU0pSSQjMSbCHVRSEjq7aBhQvFsDBqJIYF/gGGxAUpREyMCG5YqCSuiDGGRE2NCxTRBgkJuGlKYpAOBW3NtJ22UzoznTv3du6d++FibsvQ6XzQ1rO899z3Oefc5zznvII6LRahCTgCHAIOAu3ANu91GpgEhoBbwLWuOJl6zhV1AO8F+oG3gU11xqsD3wMXuuI8XFMAsQhh4BzwHuBnbVYAvgDOdsXR6w4gFqET+BF4kY2x+8DrXXEe1QwgFuEA8CuwnY21Od3h1egkwxUD8DK/8z+AozugOaQl9PQmiJUF4P3zoQ0s+0rwJRv1QbQngQaglPidqwYuWjtp+eRzELIqmF0wyefzy7kVcira6XdLXfY58KlH7qKX12p/VWO7cvA1OgZ+wrVthM+HY1lIRXnKx7EsMpkMOVXFJ8AwDMJ+P3/3daw8zpLQ3ZtgZCmd0/W22r/jY6jpFLdv/o6xuFgGbrsuqqqyuJDhcTJZMR8XzgAIT+GmaonMcgUsC6H4sAsWPr+/DBxgMaciERhGnk2BwGoVAMj7BO2KJ681Fc6ZHCd18waIculYXFjAdoosU/buI9y6Ayu7gDUyQjqnVjoy5LgcVYDD9ZTemR4heeLlmmxvvHydzaEw8Y/OYt74ttaxhxTgpdIn4eOnCHR0epS2KmusrmOXyEh28Be0u4OEZmeYv/J1PeC4EFW8qbZszW8dY8v+A1U/zGsaqpYjr+lIn8QfDKEWTLg7yHz/ibr1QUBEKRmpT/6pmiWZTBIIhjBNk+f27CkBz6FqOq5tMzUxQbChgdYdO9YkUC40KquyY3MDO3cFED6J67hl4AiBkJKtzdtQAkGklGtWSQVIAa3L2T8aRQYDBNt2oTQ14Zgm2v17WKaJlsvhel1guRD2vjFmZzDj8WcGF5AVsQh3gbKfrvS+SeSzLxE+H//sb66m7euxe4o3gMoCsG4PED8JbR9+7EUUJHzsJKaU+FxorDgMbArGk1ng6BrG1cuVKjAsYhHeAa5ULFOgAdfMoRw8QsfAzzVY5ZJNp9GNPAKBbdtI0+RR3/OVAjghgWveDrf6mWauSEAvo+nJCbRslj+HhjAN42nwTBrDtpmfe4yanGFyfKxqN0vBVeltr9/VUjjda4amrU2EwmEiu3fj92ZBETyDYdkABPx+lGCIcDhcjYA/9EyRWmrDC8Dx1SbiEuH8mRT67AwCganrhID83BwA2kKGfKFQpMqWRppaWnAdG7/jYCRnV8O3BJxfuRFdBN5fL9vbvrpOY3c301e+IXvxVKXsL/UligtJqYJ84G2v62o117KqggOjUtBfaSntAP7QHbavtc/lnijO2HCl1ylvKX1QcS0fbieqOfwGNG/wbpqS8EpvgqGnAl7pFZ1kWEIPMLqB4KNe5kNlFVvNuzfBA0UQFcVrlbUOYEvAJQWipWV/psvp7Z284MIZF94AQnUCGwIGBJzvTTCyrtvxkt3ZRbPjchQ47EJUQGRpJAjIuhAXMAzckoKrPVPM13Puf2Qd6X5KXrjXAAAAAElFTkSuQmCC
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.4.0
+              operated-by: activemq-artemis-operator.v0.6.1
             selector:
               matchLabels:
                 ActiveMQArtemis: example-activemqartemis
                 application: example-activemqartemis-app
-                operated-by: activemq-artemis-operator.v0.4.0
+                operated-by: activemq-artemis-operator.v0.6.1
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -215,7 +215,7 @@ items:
                           containers:
                             - name: activemq-artemis-operator
                               # Replace this with the built image name
-                              image: quay.io/rh_messaging/activemq-artemis-operator:0.4.0
+                              image: quay.io/artemiscloud/activemq-artemis-operator:0.6.1
                               command:
                                 -  /home/activemq-artemis-operator/bin/entrypoint
                               imagePullPolicy: Always
@@ -384,11 +384,11 @@ items:
               served: true
               storage: true
       packages: >
-        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.4.0.clusterserviceversion.yaml
+        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.1.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
-              currentCSV: activemq-artemis-operator.v0.4.0
+              currentCSV: activemq-artemis-operator.v0.6.1
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource

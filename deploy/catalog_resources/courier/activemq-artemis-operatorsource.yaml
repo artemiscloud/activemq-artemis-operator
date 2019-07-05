@@ -6,6 +6,6 @@ metadata:
 spec:
   type: appregistry
   endpoint: https://quay.io/cnr
-  registryNamespace: rh_messaging
+  registryNamespace: artemiscloud
   displayName: "ActiveMQ Artemis Operator"
   publisher: "Red Hat"

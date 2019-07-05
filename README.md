@@ -4,5 +4,5 @@ This project is a [Kubernetes](https://kubernetes.io/) [operator](https://coreos
 to manage the [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) message broker.
 
 ## Status
-At the moment the operator version should be considered pre alpha at 0.4.0 and as well the Kube API at v1alphav1
-as it is early in its lifecycle and under active development.
+At the moment the operator version should be considered alpha at 0.6.1 and as well the Kube API at v1alphav1
+as it is under active development.
