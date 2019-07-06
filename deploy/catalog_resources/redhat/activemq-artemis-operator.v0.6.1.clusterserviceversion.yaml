@@ -7,49 +7,61 @@ metadata:
     categories: "Messaging"
     certified: "false"
     description: ActiveMQ Artemis Operator can deploy headless service environments which exposed each of the ports, along with the statefulset.
-    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.6.1
+    containerImage: quay.io/artemiscloud/activemq-artemis-operator:latest
     createdAt: 2019-07-04T15:55:00Z
     support: Red Hat, Inc.
     tectonic-visibility: ocs
     alm-examples: >-
-      [{
-       		"apiVersion": "broker.amq.io/v1alpha1",
-       		"kind": "ActiveMQArtemis",
-       		"metadata": {
-       			"name": "example-activemqartemis",
-       			"labels": {
-       				"ActiveMQArtemis": "example-activemqartemis",
-       				"application": "example-activemqartemis-app"
-       			}
-       		},
-       		"spec": {
-         		"size": 1,
-         		"image": "registry.redhat.io/amq7/amq-broker:7.4",
-         		"commonConfig": {
-         			"userName": "admin",
-         			"password": "admin"
-         		}
-         	}
-         },
-       	{
-       		"apiVersion": "broker.amq.io/v1alpha1",
-       		"kind": "ActiveMQArtemisAddress",
-       		"metadata": {
-       			"name": "example-activemqartemisaddress",
-       			"labels": {
-       				"ActiveMQArtemis": "example-activemqartemis",
-       				"application": "example-activemqartemis-app"
-       			}
-       		},
-       		"spec": {
-       			"statefulsetName": "example-activemqartemis-ss",
-       			"addressName": "myAddress0",
-       			"queueName": "myQueue0",
-       			"routingType": "anycast"
-       		}
-       	}
-       ]
-
+        [{
+            "apiVersion": "broker.amq.io/v1alpha1",
+            "kind": "ActiveMQArtemis",
+            "metadata": {
+                "name": "example-activemqartemis",
+                "labels": {
+                    "ActiveMQArtemis": "example-activemqartemis",
+                    "application": "example-activemqartemis-app"
+                }
+            },
+            "spec": {
+                "size": 1,
+                "image": "registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3",
+                "commonConfig": {
+                    "userName": "admin",
+                    "password": "admin"
+                }
+            }
+        },
+        {
+            "apiVersion": "broker.amq.io/v1alpha1",
+            "kind": "ActiveMQArtemisAddress",
+            "metadata": {
+                "name": "example-activemqartemisaddress",
+                "labels": {
+                    "ActiveMQArtemis": "example-activemqartemis",
+                    "application": "example-activemqartemis-app"
+                }
+            },
+            "spec": {
+                "statefulsetName": "example-activemqartemis-ss",
+                "addressName": "myAddress0",
+                "queueName": "myQueue0",
+                "routingType": "anycast"
+            }
+        },
+        {
+            "apiVersion": "broker.amq.io/v1alpha1",
+            "kind": "ActiveMQArtemisScaledown",
+            "metadata": {
+                "name": "example-activemqartemisscaledown",
+                "labels": {
+                    "ActiveMQArtemis": "example-activemqartemis",
+                    "application": "example-activemqartemis-app"
+                }
+            },
+            "spec": {
+                "localOnly": true
+            }
+        }]
   labels:
     operator-activemqartemis: "true"
 spec:
@@ -127,8 +139,15 @@ spec:
           - description: The Routing Type
             displayName: Routing Type
             path: routingType
-
-
+      - name: activemqartemisscaledowns.broker.amq.io
+        version: v1alpha1
+        kind: ActiveMQArtemisScaledown
+        description: Provides message migration on clustered broker scaledown
+        displayName: ActiveMQ Artemis Scaledown
+        specDescriptors:
+          - displayName: Local Namespace Only
+            path: localOnly
+            description: REQUIRED the controller only handles StatefulSets in a single namespace.
   install:
     strategy: deployment
     spec:
@@ -205,7 +224,7 @@ spec:
                 containers:
                   - name: activemq-artemis-operator
                     # Replace this with the built image name
-                    image: quay.io/artemiscloud/activemq-artemis-operator:0.6.1
+                    image: quay.io/artemiscloud/activemq-artemis-operator:latest
                     command:
                       -  /home/activemq-artemis-operator/bin/entrypoint
                     imagePullPolicy: Always
