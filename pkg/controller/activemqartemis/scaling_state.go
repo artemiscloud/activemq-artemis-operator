@@ -176,7 +176,7 @@ func (rs *ScalingState) configureExternalNetworkAccess() error {
 		log.Error(err, "Failed to get env, will try kubernetes")
 	}
 	if isOpenshift {
-		log.Info("Evnironment is OpenShift")
+		log.Info("Environment is OpenShift")
 		err = rs.configureRoutes()
 	} else {
 		log.Info("Environment is not OpenShift, creating ingress")

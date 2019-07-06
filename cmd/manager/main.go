@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if isOpenshift {
-		log.Info("evnironment is openshift")
+		log.Info("environment is openshift")
 	} else {
 		log.Info("environment is not openshift")
 	}
