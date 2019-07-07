@@ -18,6 +18,7 @@ package draincontroller
 
 import (
 	"fmt"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -65,7 +66,7 @@ const (
 )
 
 // TODO: Remove this hack
-var globalPodTemplateJson string = "{\n \"metadata\": {\n    \"labels\": {\n      \"app\": \"example-scaledown-amq-drainer\"\n    }\n  },\n  \"spec\": {\n \"serviceAccount\": \"activemq-artemis-operator\",\n \"serviceAccountName\": \"activemq-artemis-operator\",\n \"terminationGracePeriodSeconds\": 5,\n    \"containers\": [\n {\n        \"env\": [\n          {\n            \"name\": \"AMQ_EXTRA_ARGS\",\n            \"value\": \"--no-autotune\"\n },\n          {\n            \"name\": \"AMQ_USER\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_PASSWORD\",\n            \"value\": \"admin\"\n },\n          {\n            \"name\": \"AMQ_ROLE\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_NAME\",\n            \"value\": \"amq-broker\"\n },\n          {\n            \"name\": \"AMQ_TRANSPORTS\",\n \"value\": \"openwire,amqp,stomp,mqtt,hornetq\"\n          },\n {\n            \"name\": \"AMQ_GLOBAL_MAX_SIZE\",\n            \"value\": \"100mb\"\n          },\n          {\n            \"name\": \"AMQ_DATA_DIR\",\n            \"value\": \"/opt/example-scaledown/data\"\n          },\n          {\n \"name\": \"AMQ_DATA_DIR_LOGGING\",\n            \"value\": \"true\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTERED\",\n            \"value\": \"true\"\n },\n          {\n            \"name\": \"AMQ_REPLICAS\",\n \"value\": \"1\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTER_USER\",\n            \"value\": \"clusteruser\"\n },\n          {\n            \"name\": \"AMQ_CLUSTER_PASSWORD\",\n            \"value\": \"clusterpass\"\n          },\n          {\n            \"name\": \"POD_NAMESPACE\",\n            \"valueFrom\": {\n \"fieldRef\": {\n                \"fieldPath\": \"metadata.namespace\"\n              }\n            }\n },\n          {\n            \"name\": \"OPENSHIFT_DNS_PING_SERVICE_PORT\",\n            \"value\": \"8888\"\n          }\n        ],\n        \"image\": \"registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3\",\n \"name\": \"drainer-amq\",\n\n        \"command\": [\"/bin/sh\", \"-c\", \"echo \\\"Starting the drainer\\\" ; /opt/amq/bin/drain.sh; echo \\\"Drain completed! Exit code $?\\\"\"],\n        \"volumeMounts\": [\n          {\n            \"name\": \"example-scaledown\",\n \"mountPath\": \"/opt/example-scaledown/data\"\n          }\n ]\n      }\n    ]\n }\n}"
+var globalPodTemplateJson string = "{\n \"metadata\": {\n    \"labels\": {\n      \"app\": \"CRNAME-amq-drainer\"\n    }\n  },\n  \"spec\": {\n \"serviceAccount\": \"activemq-artemis-operator\",\n \"serviceAccountName\": \"activemq-artemis-operator\",\n \"terminationGracePeriodSeconds\": 5,\n    \"containers\": [\n {\n        \"env\": [\n          {\n            \"name\": \"AMQ_EXTRA_ARGS\",\n            \"value\": \"--no-autotune\"\n },\n          {\n            \"name\": \"AMQ_USER\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_PASSWORD\",\n            \"value\": \"admin\"\n },\n          {\n            \"name\": \"AMQ_ROLE\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_NAME\",\n            \"value\": \"amq-broker\"\n },\n          {\n            \"name\": \"AMQ_TRANSPORTS\",\n \"value\": \"openwire,amqp,stomp,mqtt,hornetq\"\n          },\n {\n            \"name\": \"AMQ_GLOBAL_MAX_SIZE\",\n            \"value\": \"100mb\"\n          },\n          {\n            \"name\": \"AMQ_DATA_DIR\",\n            \"value\": \"/opt/CRNAME/data\"\n          },\n          {\n \"name\": \"AMQ_DATA_DIR_LOGGING\",\n            \"value\": \"true\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTERED\",\n            \"value\": \"true\"\n },\n          {\n            \"name\": \"AMQ_REPLICAS\",\n \"value\": \"1\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTER_USER\",\n            \"value\": \"CLUSTERUSER\"\n },\n          {\n            \"name\": \"AMQ_CLUSTER_PASSWORD\",\n            \"value\": \"CLUSTERPASS\"\n          },\n          {\n            \"name\": \"POD_NAMESPACE\",\n            \"valueFrom\": {\n \"fieldRef\": {\n                \"fieldPath\": \"metadata.namespace\"\n              }\n            }\n },\n          {\n            \"name\": \"OPENSHIFT_DNS_PING_SERVICE_PORT\",\n            \"value\": \"8888\"\n          }\n        ],\n        \"image\": \"registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3\",\n \"name\": \"drainer-amq\",\n\n        \"command\": [\"/bin/sh\", \"-c\", \"echo \\\"Starting the drainer\\\" ; /opt/amq/bin/drain.sh; echo \\\"Drain completed! Exit code $?\\\"\"],\n        \"volumeMounts\": [\n          {\n            \"name\": \"CRNAME\",\n \"mountPath\": \"/opt/CRNAME/data\"\n          }\n ]\n      }\n    ]\n }\n}"
 
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -389,10 +390,10 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 					//log.V(5).Info("Ordinal zero pod condition %s", podCondition)
 					if corev1.PodReady == podCondition.Type {
 						if corev1.ConditionTrue != podCondition.Status {
-							log.Info("Ordinal zero pod '%s' podCondition Ready not True, waiting for it to True.", sts.Name)
+							log.Info("Ordinal zero pod " + sts.Name + " podCondition Ready not True, waiting for it to True.")
 						}
 						if corev1.ConditionTrue == podCondition.Status {
-							log.Info("Ordinal zero pod '%s' podCondition Ready True, proceeding to create drainer pod.", sts.Name)
+							log.Info("Ordinal zero pod " + sts.Name + " podCondition Ready True, proceeding to create drainer pod.")
 							ordinalZeroPodReady = true
 						}
 					}
@@ -471,7 +472,7 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 
 	switch pod.Status.Phase {
 	case (corev1.PodSucceeded):
-		log.Info("Drain pod '%s' finished.", podName)
+		log.Info("Drain pod " + podName + " finished.")
 		if !c.localOnly {
 			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
 		}
@@ -491,7 +492,7 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
 		// TODO what if we crash after we delete the PVC, but before we delete the pod?
 
-		log.Info("Deleting drain pod %s", podName)
+		log.Info("Deleting drain pod " + podName)
 		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(podName, nil)
 		if err != nil {
 			return err
@@ -505,7 +506,6 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		break
 	default:
 		str := fmt.Sprintf("Drain pod Phase was %s", pod.Status.Phase)
-		//log.Info("Drain pod Phase was %s", pod.Status.Phase)
 		log.Info(str)
 		break
 	}
@@ -606,7 +606,11 @@ func (c *Controller) cachesSynced() bool {
 func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
 	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
+	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
+	podTemplateJson = strings.Replace(podTemplateJson,"CRNAME", statefulsets.GLOBAL_CRNAME, -1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", statefulsets.GLOBAL_AMQ_CLUSTER_USER, 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", statefulsets.GLOBAL_AMQ_CLUSTER_PASSWORD, 1)
 	if podTemplateJson == "" {
 		return nil, fmt.Errorf("No drain pod template configured for StatefulSet " + sts.Name)
 	}

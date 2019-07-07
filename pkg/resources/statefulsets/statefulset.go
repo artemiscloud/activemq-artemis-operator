@@ -197,6 +197,10 @@ func makeEnvVarArrayForCR(cr *brokerv1alpha1.ActiveMQArtemis) []corev1.EnvVar {
 //return makeEnvVarArrayForBasicCR(cr)
 //}
 
+//TODO: Remove this blatant hack
+var GLOBAL_AMQ_CLUSTER_USER string = ""
+var GLOBAL_AMQ_CLUSTER_PASSWORD string = ""
+
 func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defaultValue string) string {
 
 	result := defaultValue
@@ -212,10 +216,12 @@ func getPropertyForCR(propName string, cr *brokerv1alpha1.ActiveMQArtemis, defau
 	case "AMQ_CLUSTER_USER":
 		if len(cr.Spec.ClusterConfig.ClusterUserName) > 0 {
 			result = cr.Spec.ClusterConfig.ClusterUserName
+			GLOBAL_AMQ_CLUSTER_USER = result
 		}
 	case "AMQ_CLUSTER_PASSWORD":
 		if len(cr.Spec.ClusterConfig.ClusterPassword) > 0 {
 			result = cr.Spec.ClusterConfig.ClusterPassword
+			GLOBAL_AMQ_CLUSTER_PASSWORD = result
 		}
 	case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
 		if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
@@ -519,6 +525,8 @@ func checkClusterEnabled(cr *brokerv1alpha1.ActiveMQArtemis) bool {
 	return clusterEnabled
 }
 
+var GLOBAL_CRNAME string = ""
+
 func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
@@ -542,6 +550,9 @@ func CreateStatefulSet(cr *brokerv1alpha1.ActiveMQArtemis, client client.Client,
 		reqLogger.Info("Failed to creating new " + "statefulset")
 	}
 	reqLogger.Info("Created new " + "statefulset")
+
+	//TODO: Remove this blatant hack
+	GLOBAL_CRNAME = cr.Name
 
 	return ss, err
 }
