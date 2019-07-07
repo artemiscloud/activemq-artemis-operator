@@ -7,7 +7,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -19,7 +18,6 @@ import (
 
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/draincontroller"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/signals"
 	"io/ioutil"
@@ -130,12 +128,12 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		reqLogger.Error(err,"Error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		reqLogger.Error(err, "Error building kubernetes clientset: %s", err.Error())
 	}
 
 	var kubeInformerFactory kubeinformers.SharedInformerFactory
@@ -144,55 +142,32 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 		if namespace == "" {
 			bytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 			if err != nil {
-				glog.Fatalf("Using --localOnly without --namespace, but unable to determine namespace: %s", err.Error())
+				reqLogger.Error(err, "Using --localOnly without --namespace, but unable to determine namespace: %s", err.Error())
 			}
 			namespace = string(bytes)
-			reqLogger.Info("====reading ns from file", "namespace", namespace)
+			reqLogger.Info("==== reading ns from file", "namespace", namespace)
 		}
 		reqLogger.Info("==== creating namespace wide factory")
-		glog.Infof("Configured to only operate on StatefulSets in namespace %s", namespace)
+		reqLogger.Info("Configured to only operate on StatefulSets in namespace " + namespace)
 		kubeInformerFactory = kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Second*30, namespace, nil)
 	} else {
-		glog.Infof("Configured to operate on StatefulSets across all namespaces")
+		reqLogger.Info("Configured to operate on StatefulSets across all namespaces")
 		kubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	}
 
 	reqLogger.Info("==== new drain controller...")
 	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly)
 
-	reqLogger.Info("====Starting async factory...")
+	reqLogger.Info("==== Starting async factory...")
 	go kubeInformerFactory.Start(stopCh)
 
-	reqLogger.Info("====Running drain controller...")
+	reqLogger.Info("==== Running drain controller...")
 	if err = drainControllerInstance.Run(1, stopCh); err != nil {
-		reqLogger.Info("=======failed to run drainer", "error", err.Error())
-		glog.Fatalf("Error running controller: %s", err.Error())
+		reqLogger.Info("===== failed to run drainer", "error", err.Error())
+		reqLogger.Error(err, "Error running controller: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("====OK, return result")
+	reqLogger.Info("==== OK, return result")
 	return reconcile.Result{}, nil
-}
-
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *brokerv1alpha1.ActiveMQArtemisScaledown) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
 }

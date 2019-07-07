@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +64,9 @@ const (
 	MessagePVCDeleted       = "delete Claim %s in StatefulSet %s successful"
 )
 
+// TODO: Remove this hack
+var globalPodTemplateJson string = "{\n \"metadata\": {\n    \"labels\": {\n      \"app\": \"example-scaledown-amq-drainer\"\n    }\n  },\n  \"spec\": {\n \"serviceAccount\": \"activemq-artemis-operator\",\n \"serviceAccountName\": \"activemq-artemis-operator\",\n \"terminationGracePeriodSeconds\": 5,\n    \"containers\": [\n {\n        \"env\": [\n          {\n            \"name\": \"AMQ_EXTRA_ARGS\",\n            \"value\": \"--no-autotune\"\n },\n          {\n            \"name\": \"AMQ_USER\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_PASSWORD\",\n            \"value\": \"admin\"\n },\n          {\n            \"name\": \"AMQ_ROLE\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_NAME\",\n            \"value\": \"amq-broker\"\n },\n          {\n            \"name\": \"AMQ_TRANSPORTS\",\n \"value\": \"openwire,amqp,stomp,mqtt,hornetq\"\n          },\n {\n            \"name\": \"AMQ_GLOBAL_MAX_SIZE\",\n            \"value\": \"100mb\"\n          },\n          {\n            \"name\": \"AMQ_DATA_DIR\",\n            \"value\": \"/opt/example-scaledown/data\"\n          },\n          {\n \"name\": \"AMQ_DATA_DIR_LOGGING\",\n            \"value\": \"true\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTERED\",\n            \"value\": \"true\"\n },\n          {\n            \"name\": \"AMQ_REPLICAS\",\n \"value\": \"1\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTER_USER\",\n            \"value\": \"clusteruser\"\n },\n          {\n            \"name\": \"AMQ_CLUSTER_PASSWORD\",\n            \"value\": \"clusterpass\"\n          },\n          {\n            \"name\": \"POD_NAMESPACE\",\n            \"valueFrom\": {\n \"fieldRef\": {\n                \"fieldPath\": \"metadata.namespace\"\n              }\n            }\n },\n          {\n            \"name\": \"OPENSHIFT_DNS_PING_SERVICE_PORT\",\n            \"value\": \"8888\"\n          }\n        ],\n        \"image\": \"registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3\",\n \"name\": \"drainer-amq\",\n\n        \"command\": [\"/bin/sh\", \"-c\", \"echo \\\"Starting the drainer\\\" ; /opt/amq/bin/drain.sh; echo \\\"Drain completed! Exit code $?\\\"\"],\n        \"volumeMounts\": [\n          {\n            \"name\": \"example-scaledown\",\n \"mountPath\": \"/opt/example-scaledown/data\"\n          }\n ]\n      }\n    ]\n }\n}"
+
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
@@ -105,9 +107,9 @@ func NewController(
 	// Create event broadcaster
 	// Add statefulset-drain-controller types to the default Kubernetes Scheme so Events can be
 	// logged for statefulset-drain-controller types.
-	glog.V(4).Info("Creating event broadcaster")
+	log.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(log.Info)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events(namespace)})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	itemExponentialFailureRateLimiter := workqueue.NewItemExponentialFailureRateLimiter(5*time.Second, 300*time.Second)
@@ -125,7 +127,7 @@ func NewController(
 		localOnly:          localOnly,
 	}
 
-	glog.Info("Setting up event handlers")
+	log.Info("Setting up event handlers")
 	// Set up an event handler for when Foo resources change
 	statefulSetInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueStatefulSet,
@@ -167,22 +169,22 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting StatefulSet scaledown cleanup controller")
+	log.Info("Starting StatefulSet scaledown cleanup controller")
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	log.Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.statefulSetsSynced, c.podsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	glog.Info("Starting workers")
+	log.Info("Starting workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	glog.Info("Started workers")
+	log.Info("Started workers")
 	<-stopCh
-	glog.Info("Shutting down workers")
+	log.Info("Shutting down workers")
 
 	return nil
 }
@@ -232,12 +234,12 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		if err := c.syncHandler(key); err != nil {
-			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
+			return fmt.Errorf("error syncing '" + key +": " + err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		glog.V(4).Infof("Successfully processed '%s'", key)
+		log.V(4).Info("Successfully processed '" + key + "'")
 		return nil
 	}(obj)
 
@@ -254,14 +256,14 @@ func (c *Controller) processNextWorkItem() bool {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
-	glog.V(4).Infof("--------------------------------------------------------------------")
-	glog.V(4).Infof("SyncHandler invoked for %s", key)
+	log.V(4).Info("--------------------------------------------------------------------")
+	log.V(4).Info("SyncHandler invoked for " + key)
 
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		runtime.HandleError(fmt.Errorf("invalid resource key: " + key))
 		return nil
 	}
 
@@ -272,7 +274,7 @@ func (c *Controller) syncHandler(key string) error {
 		// The StatefulSet may no longer exist, in which case we stop
 		// processing.
 		if errors.IsNotFound(err) {
-			runtime.HandleError(fmt.Errorf("StatefulSet '%s' in work queue no longer exists", key))
+			runtime.HandleError(fmt.Errorf("StatefulSet " + key + " in work queue no longer exists"))
 			return nil
 		}
 
@@ -287,27 +289,28 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 	if 0 == *sts.Spec.Replicas {
 		// Ensure data is not touched in the case of complete scaledown
-		glog.V(5).Infof("Ignoring StatefulSet '%s' because replicas set to 0.", sts.Name)
+		log.V(5).Info("Ignoring StatefulSet " + sts.Name + " because replicas set to 0.")
 		return nil
 	}
-	glog.V(5).Infof("Statefulset '%s' Spec.Replicas set to %d.", sts.Name, *sts.Spec.Replicas)
+
+	log.V(5).Info("Statefulset " + sts.Name + " Spec.Replicas set to " + strconv.Itoa(int(*sts.Spec.Replicas)))
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {
 		// nothing to do, as the stateful pods don't use any PVCs
-		glog.Infof("Ignoring StatefulSet '%s' because it does not use any PersistentVolumeClaims.", sts.Name)
+		log.Info("Ignoring StatefulSet " + sts.Name + " because it does not use any PersistentVolumeClaims.")
 		return nil
 	}
-	glog.V(5).Infof("Statefulset '%s' Spec.VolumeClaimTemplates is %d", sts.Name, len(sts.Spec.VolumeClaimTemplates))
+	log.V(5).Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))
 
-	if sts.Annotations[AnnotationDrainerPodTemplate] == "" {
-		glog.Infof("Ignoring StatefulSet '%s' because it does not define a drain pod template.", sts.Name)
-		return nil
-	}
+	//if sts.Annotations[AnnotationDrainerPodTemplate] == "" {
+	//	log.Info("Ignoring StatefulSet '%s' because it does not define a drain pod template.", sts.Name)
+	//	return nil
+	//}
 
 	claimsGroupedByOrdinal, err := c.getClaims(sts)
 	if err != nil {
 		err = fmt.Errorf("Error while getting list of PVCs in namespace %s: %s", sts.Namespace, err)
-		glog.Error(err)
+		log.Error(err, "Error while getting list of PVCs in namespace " + sts.Namespace)
 		return err
 	}
 
@@ -321,7 +324,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 		if 0 == ordinal {
 			// This assumes order on scale up and down is enforced, i.e. the system waits for n, n-1,... 2, 1 to scaledown before attempting 0
-			glog.V(5).Infof("Ignoring ordinal 0 as no other pod to drain to.")
+			log.V(5).Info("Ignoring ordinal 0 as no other pod to drain to.")
 			continue
 		}
 
@@ -332,7 +335,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 		pod, err := c.podLister.Pods(sts.Namespace).Get(podName)
 
 		if err != nil && !errors.IsNotFound(err) {
-			glog.Errorf("Error while getting Pod %s: %s", podName, err)
+			log.Error(err, "Error while getting Pod "+ podName)
 			return err
 		}
 
@@ -350,7 +353,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 			}
 		} else {
 			// DO nothing. Pod is a regular stateful pod
-			//glog.Infof("Pod '%s' exists. Not taking any action.", podName)
+			//log.Info("Pod '%s' exists. Not taking any action.", podName)
 			//return nil
 		}
 
@@ -361,20 +364,20 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 			// If the Pod doesn't exist, we'll create it
 			if pod == nil { // TODO: what if the PVC doesn't exist here (or what if it's deleted just after we create the pod)
-				glog.Infof("Found orphaned PVC(s) for ordinal '%d'. Creating drain pod '%s'.", ordinal, podName)
+				log.Info("Found orphaned PVC(s) for ordinal " + strconv.Itoa(ordinal) + ". Creating drain pod "+ podName)
 
 				// Check to ensure we have a pod to drain to
 				ordinalZeroPodName := getPodName(sts, 0)
 				ordinalZeroPod, err := c.podLister.Pods(sts.Namespace).Get(ordinalZeroPodName)
 				if err != nil {
-					glog.Errorf("Error while getting ordinal zero pod %s: %s", podName, err)
+					log.Error(err, "Error while getting ordinal zero pod %s: %s", podName, err)
 					return err
 				}
 
 				// Ensure that at least the ordinal zero pod is running
 				if corev1.PodRunning != ordinalZeroPod.Status.Phase {
-					//glog.Infof("Ordinal zero pod '%s' status phase '%s', waiting for it to be Running.", sts.Name, pod.Status.Phase)
-					glog.Infof("Ordinal zero pod '%s' status phase not PodRunning, waiting for it to be Running.", sts.Name)
+					//log.Info("Ordinal zero pod '%s' status phase '%s', waiting for it to be Running.", sts.Name, pod.Status.Phase)
+					log.Info("Ordinal zero pod " + sts.Name + " status phase not PodRunning, waiting for it to be Running.")
 					continue
 				}
 
@@ -383,13 +386,13 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 				ordinalZeroPodReady := false
 				for _, podCondition := range podConditions {
-					glog.V(5).Infof("Ordinal zero pod condition %s", podCondition)
+					//log.V(5).Info("Ordinal zero pod condition %s", podCondition)
 					if corev1.PodReady == podCondition.Type {
 						if corev1.ConditionTrue != podCondition.Status {
-							glog.Infof("Ordinal zero pod '%s' podCondition Ready not True, waiting for it to True.", sts.Name)
+							log.Info("Ordinal zero pod '%s' podCondition Ready not True, waiting for it to True.", sts.Name)
 						}
 						if corev1.ConditionTrue == podCondition.Status {
-							glog.Infof("Ordinal zero pod '%s' podCondition Ready True, proceeding to create drainer pod.", sts.Name)
+							log.Info("Ordinal zero pod '%s' podCondition Ready True, proceeding to create drainer pod.", sts.Name)
 							ordinalZeroPodReady = true
 						}
 					}
@@ -409,7 +412,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				// attempt processing again later. This could have been caused by a
 				// temporary network failure, or any other transient reason.
 				if err != nil {
-					glog.Errorf("Error while creating drain Pod %s: %s", podName, err)
+					log.Error(err, "Error while creating drain Pod " + podName +": ")
 					return err
 				}
 
@@ -419,7 +422,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 				continue
 				//} else {
-				//	glog.Infof("Pod '%s' exists. Not taking any action.", podName)
+				//	log.Info("Pod '%s' exists. Not taking any action.", podName)
 			}
 		}
 	}
@@ -434,13 +437,13 @@ func (c *Controller) getClaims(sts *appsv1.StatefulSet) (claimsGroupedByOrdinal 
 	if err != nil {
 		return nil, err
 	}
-	glog.V(5).Infof("getClaims allClaims len is %d", len(allClaims))
+	log.V(5).Info("getClaims allClaims len is %d", len(allClaims))
 
 	claimsMap := map[int][]*corev1.PersistentVolumeClaim{}
 	for _, pvc := range allClaims {
-		glog.V(5).Infof("getClaims allClaims pvc name is '%s'", pvc.Name)
+		log.V(5).Info("getClaims allClaims pvc name is " + pvc.Name)
 		if pvc.DeletionTimestamp != nil {
-			glog.Infof("PVC '%s' is being deleted. Ignoring it.", pvc.Name)
+			log.Info("PVC " + pvc.Name + " is being deleted. Ignoring it.")
 			continue
 		}
 
@@ -468,14 +471,14 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 
 	switch pod.Status.Phase {
 	case (corev1.PodSucceeded):
-		glog.Infof("Drain pod '%s' finished.", podName)
+		log.Info("Drain pod '%s' finished.", podName)
 		if !c.localOnly {
 			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
 		}
 
 		for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
 			pvcName := getPVCName(sts, pvcTemplate.Name, int32(ordinal))
-			glog.Infof("Deleting PVC %s", pvcName)
+			log.Info("Deleting PVC " + pvcName)
 			err := c.kubeclientset.CoreV1().PersistentVolumeClaims(sts.Namespace).Delete(pvcName, nil)
 			if err != nil {
 				return err
@@ -488,7 +491,7 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
 		// TODO what if we crash after we delete the PVC, but before we delete the pod?
 
-		glog.Infof("Deleting drain pod %s", podName)
+		log.Info("Deleting drain pod %s", podName)
 		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(podName, nil)
 		if err != nil {
 			return err
@@ -498,10 +501,12 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		}
 		break
 	case (corev1.PodFailed):
-		glog.Infof("Drain pod '%s' failed.", podName)
+		log.Info("Drain pod " + podName + " failed.")
 		break
 	default:
-		glog.Infof("Drain pod Phase was %s", pod.Status.Phase)
+		str := fmt.Sprintf("Drain pod Phase was %s", pod.Status.Phase)
+		//log.Info("Drain pod Phase was %s", pod.Status.Phase)
+		log.Info(str)
 		break
 	}
 
@@ -549,21 +554,21 @@ func (c *Controller) handlePod(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		glog.V(4).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
+		log.V(4).Info("Recovered deleted object " + object.GetName() +" from tombstone")
 	}
-	glog.V(5).Infof("Processing object: %s", object.GetName())
+	log.V(5).Info("Processing object: " + object.GetName())
 
 	stsNameFromAnnotation := object.GetAnnotations()[AnnotationStatefulSet]
 	if stsNameFromAnnotation != "" {
-		glog.V(5).Infof("Found pod with '%s' annotation pointing to StatefulSet '%s'. Enqueueing StatefulSet.", AnnotationStatefulSet, stsNameFromAnnotation)
+		log.V(5).Info("Found pod with " + AnnotationStatefulSet + " annotation pointing to StatefulSet " + stsNameFromAnnotation + ". Enqueueing StatefulSet.")
 		sts, err := c.statefulSetLister.StatefulSets(object.GetNamespace()).Get(stsNameFromAnnotation)
 		if err != nil {
-			glog.V(4).Infof("Error retrieving StatefulSet %s: %s", stsNameFromAnnotation, err)
+			log.V(4).Info("Error retrieving StatefulSet " + stsNameFromAnnotation + ": " + err.Error())
 			return
 		}
 
 		if 0 == *sts.Spec.Replicas {
-			glog.V(5).Infof("NameFromAnnotation not enqueueing Statefulset '%s' as Spec.Replicas is 0.", sts.Name)
+			log.V(5).Info("NameFromAnnotation not enqueueing Statefulset " + sts.Name + " as Spec.Replicas is 0.")
 			return
 		}
 
@@ -580,12 +585,12 @@ func (c *Controller) handlePod(obj interface{}) {
 
 		sts, err := c.statefulSetLister.StatefulSets(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
-			glog.V(4).Infof("ignoring orphaned object '%s' of StatefulSet '%s'", object.GetSelfLink(), ownerRef.Name)
+			log.V(4).Info("ignoring orphaned object " + object.GetSelfLink() + " of StatefulSet " + ownerRef.Name)
 			return
 		}
 
 		if 0 == *sts.Spec.Replicas {
-			glog.V(5).Infof("Name from ownerRef.Name not enqueueing Statefulset '%s' as Spec.Replicas is 0.", sts.Name)
+			log.V(5).Info("Name from ownerRef.Name not enqueueing Statefulset " + sts.Name + " as Spec.Replicas is 0.")
 			return
 		}
 
@@ -600,14 +605,15 @@ func (c *Controller) cachesSynced() bool {
 
 func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 
-	podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
+	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
+	podTemplateJson := globalPodTemplateJson
 	if podTemplateJson == "" {
-		return nil, fmt.Errorf("No drain pod template configured for StatefulSet %s.", sts.Name)
+		return nil, fmt.Errorf("No drain pod template configured for StatefulSet " + sts.Name)
 	}
 	pod := corev1.Pod{}
 	err := json.Unmarshal([]byte(podTemplateJson), &pod)
 	if err != nil {
-		return nil, fmt.Errorf("Can't unmarshal DrainerPodTemplate JSON from annotation: %s", err)
+		return nil, fmt.Errorf("Can't unmarshal DrainerPodTemplate JSON from annotation: " + err.Error())
 	}
 
 	pod.Name = getPodName(sts, ordinal)
