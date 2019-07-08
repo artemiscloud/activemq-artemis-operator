@@ -19,6 +19,11 @@ spec:
           image: activemq-artemis-operator:latest
           command:
             - /home/activemq-artemis-operator/bin/entrypoint
+          args:
+            # Explicitly set the logging level.
+            # Valid values are debug, info, and error
+            # from most to least
+            - '--zap-level info'
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

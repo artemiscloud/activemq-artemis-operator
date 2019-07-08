@@ -61,7 +61,7 @@ func CreateNewRoute(cr *v1alpha1.ActiveMQArtemis, client client.Client, scheme *
 	// Set ActiveMQArtemis instance as the owner and controller
 	reqLogger.Info("Set controller reference for new route")
 	if err = controllerutil.SetControllerReference(cr, route, scheme); err != nil {
-		reqLogger.Error(err, "Failed to set controller reference for new route")
+		reqLogger.Info("Failed to set controller reference for new route")
 	}
 
 	// Call k8s create for route
@@ -85,9 +85,9 @@ func RetrieveRoute(cr *v1alpha1.ActiveMQArtemis, namespacedName types.Namespaced
 	// Check if the headless route already exists
 	if err = client.Get(context.TODO(), namespacedName, route); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Route Not Found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Route Not Found", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Route found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Route found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 

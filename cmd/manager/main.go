@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/rh-messaging/activemq-artemis-operator/version"
 	"os"
 	"runtime"
 
@@ -35,11 +36,10 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+	log.Info(fmt.Sprintf("Version of the operator: %s", version.Version))
 }
 
 func main() {
-	log.V(5)
-
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
 	pflag.CommandLine.AddFlagSet(zap.FlagSet())

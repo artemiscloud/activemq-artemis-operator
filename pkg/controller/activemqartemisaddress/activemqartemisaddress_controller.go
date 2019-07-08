@@ -216,7 +216,7 @@ func getPodBrokers(instance *brokerv1alpha1.ActiveMQArtemisAddress, request reco
 					reqLogger.Error(err, "Pod lookup error", "Namespace", request.Namespace, "Name", request.Name)
 				}
 			} else {
-				reqLogger.Error(err, "Pod found", "Namespace", request.Namespace, "Name", request.Name)
+				reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
 				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker")
 				artemisArray = append(artemisArray, artemis)
 			}

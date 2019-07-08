@@ -98,9 +98,9 @@ func RetrievePersistentVolumeClaim(instance *brokerv1alpha1.ActiveMQArtemis, nam
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, pvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Persistent volume claim IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Info("Persistent volume claim IsNotFound", "Namespace", instance.Namespace, "Name", instance.Name)
 		} else {
-			reqLogger.Error(err, "Persistent volume claim found", "Namespace", instance.Namespace, "Name", instance.Name)
+			reqLogger.Info("Persistent volume claim found", "Namespace", instance.Namespace, "Name", instance.Name)
 		}
 	}
 

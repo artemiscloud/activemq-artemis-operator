@@ -585,9 +585,9 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, ss); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Statefulset claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.Info("Statefulset claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
-			reqLogger.Error(err, "Statefulset claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.Info("Statefulset claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		}
 	}
 

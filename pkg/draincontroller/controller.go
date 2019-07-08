@@ -371,7 +371,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				ordinalZeroPodName := getPodName(sts, 0)
 				ordinalZeroPod, err := c.podLister.Pods(sts.Namespace).Get(ordinalZeroPodName)
 				if err != nil {
-					log.Error(err, "Error while getting ordinal zero pod %s: %s", podName, err)
+					log.Error(err, "Error while getting ordinal zero pod " + podName + ": " + err.Error())
 					return err
 				}
 
@@ -413,7 +413,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				// attempt processing again later. This could have been caused by a
 				// temporary network failure, or any other transient reason.
 				if err != nil {
-					log.Error(err, "Error while creating drain Pod " + podName +": ")
+					log.Error(err, "Error while creating drain Pod " + podName + ": ")
 					return err
 				}
 

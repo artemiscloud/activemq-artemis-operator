@@ -272,9 +272,9 @@ func RetrieveConsoleJolokiaService(cr *brokerv1alpha1.ActiveMQArtemis, namespace
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, consoleJolokiaSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Console Jolokia service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Console Jolokia service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Console Jolokia service found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Console Jolokia service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
@@ -293,9 +293,9 @@ func RetrieveAllProtocolService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedNa
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, allProtocolSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "All Protocol service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("All Protocol service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "All Protocol service found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("All Protocol service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
@@ -343,9 +343,9 @@ func RetrievePingService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName type
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, pingSvc); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Ping service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Ping service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Ping service found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Ping service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
@@ -397,9 +397,9 @@ func RetrieveHeadlessService(cr *brokerv1alpha1.ActiveMQArtemis, namespacedName 
 	// Check if the headless service already exists
 	if err = client.Get(context.TODO(), namespacedName, headlessService); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "Headless service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Headless service IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
-			reqLogger.Error(err, "Headless service found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info("Headless service found", "Namespace", cr.Namespace, "Name", cr.Name)
 		}
 	}
 
