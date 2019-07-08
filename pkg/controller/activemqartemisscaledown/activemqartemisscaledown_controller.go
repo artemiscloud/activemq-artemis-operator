@@ -128,7 +128,7 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		reqLogger.Error(err,"Error building kubeconfig: %s", err.Error())
+		reqLogger.Error(err, "Error building kubeconfig: %s", err.Error())
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)

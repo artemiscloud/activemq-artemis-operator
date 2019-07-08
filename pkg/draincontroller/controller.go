@@ -235,7 +235,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		if err := c.syncHandler(key); err != nil {
-			return fmt.Errorf("error syncing '" + key +": " + err.Error())
+			return fmt.Errorf("error syncing '" + key + ": " + err.Error())
 		}
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
@@ -311,7 +311,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	claimsGroupedByOrdinal, err := c.getClaims(sts)
 	if err != nil {
 		err = fmt.Errorf("Error while getting list of PVCs in namespace %s: %s", sts.Namespace, err)
-		log.Error(err, "Error while getting list of PVCs in namespace " + sts.Namespace)
+		log.Error(err, "Error while getting list of PVCs in namespace "+sts.Namespace)
 		return err
 	}
 
@@ -336,7 +336,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 		pod, err := c.podLister.Pods(sts.Namespace).Get(podName)
 
 		if err != nil && !errors.IsNotFound(err) {
-			log.Error(err, "Error while getting Pod "+ podName)
+			log.Error(err, "Error while getting Pod "+podName)
 			return err
 		}
 
@@ -365,13 +365,13 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 			// If the Pod doesn't exist, we'll create it
 			if pod == nil { // TODO: what if the PVC doesn't exist here (or what if it's deleted just after we create the pod)
-				log.Info("Found orphaned PVC(s) for ordinal " + strconv.Itoa(ordinal) + ". Creating drain pod "+ podName)
+				log.Info("Found orphaned PVC(s) for ordinal " + strconv.Itoa(ordinal) + ". Creating drain pod " + podName)
 
 				// Check to ensure we have a pod to drain to
 				ordinalZeroPodName := getPodName(sts, 0)
 				ordinalZeroPod, err := c.podLister.Pods(sts.Namespace).Get(ordinalZeroPodName)
 				if err != nil {
-					log.Error(err, "Error while getting ordinal zero pod " + podName + ": " + err.Error())
+					log.Error(err, "Error while getting ordinal zero pod "+podName+": "+err.Error())
 					return err
 				}
 
@@ -413,7 +413,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				// attempt processing again later. This could have been caused by a
 				// temporary network failure, or any other transient reason.
 				if err != nil {
-					log.Error(err, "Error while creating drain Pod " + podName + ": ")
+					log.Error(err, "Error while creating drain Pod "+podName+": ")
 					return err
 				}
 
@@ -554,7 +554,7 @@ func (c *Controller) handlePod(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		log.V(4).Info("Recovered deleted object " + object.GetName() +" from tombstone")
+		log.V(4).Info("Recovered deleted object " + object.GetName() + " from tombstone")
 	}
 	log.V(5).Info("Processing object: " + object.GetName())
 
@@ -608,7 +608,7 @@ func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
 	//TODO: Remove this blatant hack
 	podTemplateJson := globalPodTemplateJson
-	podTemplateJson = strings.Replace(podTemplateJson,"CRNAME", statefulsets.GLOBAL_CRNAME, -1)
+	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", statefulsets.GLOBAL_CRNAME, -1)
 	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", statefulsets.GLOBAL_AMQ_CLUSTER_USER, 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", statefulsets.GLOBAL_AMQ_CLUSTER_PASSWORD, 1)
 	if podTemplateJson == "" {

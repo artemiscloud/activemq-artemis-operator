@@ -1103,7 +1103,6 @@
     "github.com/RHsyseng/operator-utils/pkg/validation",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",
-    "github.com/golang/glog",
     "github.com/openshift/api/route/v1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
