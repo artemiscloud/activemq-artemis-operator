@@ -8,7 +8,7 @@ metadata:
 spec:
   # Add fields here
   size: 4
-  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:1.3-4
+  image: registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3
   commonConfig:
     userName: admin
     password: admin

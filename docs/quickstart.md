@@ -92,7 +92,7 @@ metadata:
 spec:
   # Add fields here
   size: 4
-  image: registry.access.redhat.com/amq-broker-7/amq-broker-72-openshift:latest
+  image: registry.redhat.io/amq-broker-7/amq-broker-73-openshift:latest
 ```  
 
 Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.4.0/deploy/crds/broker_v1alpha1_activemqartemis_cr.yaml#L8)
