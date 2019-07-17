@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.1 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.2 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,7 +31,7 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.1 ahameed amqoperator 0.6.1 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.2 ahameed amqoperator 0.6.2 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
 ```
 
 

@@ -16,7 +16,7 @@ spec:
       containers:
         - name: activemq-artemis-operator
           # Replace this with the built image name
-          image: activemq-artemis-operator:latest
+          image: registry.redhat.io/amq7-tech-preview/amq-broker-operator:0.6.2
           command:
             - /home/activemq-artemis-operator/bin/entrypoint
           args:

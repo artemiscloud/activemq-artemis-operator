@@ -11,7 +11,7 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.6.1
+            name: activemq-artemis-operator.v0.6.2
             namespace: placeholder
             annotations:
               categories: "Messaging"
@@ -22,56 +22,56 @@ items:
               support: Red Hat, Inc.
               tectonic-visibility: ocs
               alm-examples: >-
-                [{
-                    "apiVersion": "broker.amq.io/v1alpha1",
-                    "kind": "ActiveMQArtemis",
-                    "metadata": {
-                        "name": "example-activemqartemis",
-                        "labels": {
-                            "ActiveMQArtemis": "example-activemqartemis",
-                            "application": "example-activemqartemis-app"
-                        }
-                    },
-                    "spec": {
-                        "size": 1,
-                        "image": "registry.redhat.io/amq-broker-7/amq-broker-73-openshift:7.3",
-                        "commonConfig": {
-                            "userName": "admin",
-                            "password": "admin"
-                        }
-                    }
-                },
-                {
-                    "apiVersion": "broker.amq.io/v1alpha1",
-                    "kind": "ActiveMQArtemisAddress",
-                    "metadata": {
-                        "name": "example-activemqartemisaddress",
-                        "labels": {
-                            "ActiveMQArtemis": "example-activemqartemis",
-                            "application": "example-activemqartemis-app"
-                        }
-                    },
-                    "spec": {
-                        "statefulsetName": "example-activemqartemis-ss",
-                        "addressName": "myAddress0",
-                        "queueName": "myQueue0",
-                        "routingType": "anycast"
-                    }
-                },
-                {
-                    "apiVersion": "broker.amq.io/v1alpha1",
-                    "kind": "ActiveMQArtemisScaledown",
-                    "metadata": {
-                        "name": "example-activemqartemisscaledown",
-                        "labels": {
-                            "ActiveMQArtemis": "example-activemqartemis",
-                            "application": "example-activemqartemis-app"
-                        }
-                    },
-                    "spec": {
-                        "localOnly": true
-                    }
-                }]
+                  [{
+                      "apiVersion": "broker.amq.io/v1alpha1",
+                      "kind": "ActiveMQArtemis",
+                      "metadata": {
+                          "name": "example-activemqartemis",
+                          "labels": {
+                              "ActiveMQArtemis": "example-activemqartemis",
+                              "application": "example-activemqartemis-app"
+                          }
+                      },
+                      "spec": {
+                          "size": 1,
+                          "image": "registry.redhat.io/amq7/amq-broker:7.4",
+                          "commonConfig": {
+                              "userName": "admin",
+                              "password": "admin"
+                          }
+                      }
+                  },
+                  {
+                      "apiVersion": "broker.amq.io/v1alpha1",
+                      "kind": "ActiveMQArtemisAddress",
+                      "metadata": {
+                          "name": "example-activemqartemisaddress",
+                          "labels": {
+                              "ActiveMQArtemis": "example-activemqartemis",
+                              "application": "example-activemqartemis-app"
+                          }
+                      },
+                      "spec": {
+                          "statefulsetName": "example-activemqartemis-ss",
+                          "addressName": "myAddress0",
+                          "queueName": "myQueue0",
+                          "routingType": "anycast"
+                      }
+                  },
+                  {
+                      "apiVersion": "broker.amq.io/v1alpha1",
+                      "kind": "ActiveMQArtemisScaledown",
+                      "metadata": {
+                          "name": "example-activemqartemisscaledown",
+                          "labels": {
+                              "ActiveMQArtemis": "example-activemqartemis",
+                              "application": "example-activemqartemis-app"
+                          }
+                      },
+                      "spec": {
+                          "localOnly": true
+                      }
+                  }]
             labels:
               operator-activemqartemis: "true"
           spec:
@@ -80,8 +80,9 @@ items:
             keywords:
               - activemqartemis
               - operator
-            version: 0.6.1
+            version: 0.6.2
             maturity: alpha
+            replaces: activemq-artemis-operator.v0.6.1
             maintainers:
               - name: Red Hat, Inc.
                 email: rkieley@redhat.com
@@ -97,12 +98,12 @@ items:
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.6.1
+              operated-by: activemq-artemis-operator.v0.6.2
             selector:
               matchLabels:
                 ActiveMQArtemis: example-activemqartemis
                 application: example-activemqartemis-app
-                operated-by: activemq-artemis-operator.v0.6.1
+                operated-by: activemq-artemis-operator.v0.6.2
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -149,8 +150,15 @@ items:
                     - description: The Routing Type
                       displayName: Routing Type
                       path: routingType
-          
-          
+                - name: activemqartemisscaledowns.broker.amq.io
+                  version: v1alpha1
+                  kind: ActiveMQArtemisScaledown
+                  description: Provides message migration on clustered broker scaledown
+                  displayName: ActiveMQ Artemis Scaledown
+                  specDescriptors:
+                    - displayName: Local Namespace Only
+                      path: localOnly
+                      description: REQUIRED the controller only handles StatefulSets in a single namespace.
             install:
               strategy: deployment
               spec:
@@ -395,12 +403,68 @@ items:
             - name: v1alpha1
               served: true
               storage: true
+        - apiVersion: apiextensions.k8s.io/v1beta1
+          kind: CustomResourceDefinition
+          metadata:
+            name: activemqartemisscaledowns.broker.amq.io
+          spec:
+            group: broker.amq.io
+            names:
+              kind: ActiveMQArtemisScaledown
+              listKind: ActiveMQArtemisScaledownList
+              plural: activemqartemisscaledowns
+              singular: activemqartemisscaledown
+            scope: Namespaced
+            subresources:
+              status: {}
+            validation:
+              openAPIV3Schema:
+                properties:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this representation
+                      of an object. Servers should convert recognized schemas to the latest
+                      internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                    type: string
+                  kind:
+                    description: 'Kind is a string value representing the REST resource this
+                      object represents. Servers may infer this from the endpoint the client
+                      submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                    type: string
+                  metadata:
+                    type: object
+                  spec:
+                    properties:
+                      masterURL:
+                        description: 'The address of the Kubernetes API server. Overrides any 
+                          value in kubeconfig. Only required if out-of-cluster.'
+                        type: string
+                      kubeconfig:
+                        description: 'Path to a kubeconfig. Only required if out-of-cluster.'
+                        type: string
+                      namespace:
+                        description: 'Only used with --localOnly. When specified, the controller
+                          only handles StatefulSets in the specified namespace. If left empty,
+                          the controller defaults to the namespace it is running in (read from
+                          /var/run/secrets/kubernetes.io/serviceaccount/namespace).'
+                        type: string
+                      localOnly:
+                        description: 'If enabled, the controller only handles StatefulSets in a
+                          single namespace instead of across all namespaces.'
+                        type: boolean
+                    type: object
+                  status:
+                    type: object
+            version: v1alpha1
+            versions:
+            - name: v1alpha1
+              served: true
+              storage: true
       packages: >
-        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.1.clusterserviceversion.yaml
+        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.2.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
-              currentCSV: activemq-artemis-operator.v0.6.1
+              currentCSV: activemq-artemis-operator.v0.6.2
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
