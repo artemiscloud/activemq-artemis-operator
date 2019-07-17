@@ -120,9 +120,9 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		}
 
 		// Do we need to check for and bounce an observed generation change here?
-		if rs.stepsComplete&CreatedStatefulSet > 0 &&
-			rs.stepsComplete&CreatedHeadlessService > 0 &&
-			rs.stepsComplete&CreatedPingService > 0 {
+		if (rs.stepsComplete&CreatedStatefulSet > 0) &&
+			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
+			(rs.stepsComplete&CreatedPingService > 0) {
 
 			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, currentStatefulSet)
 			if statefulSetUpdates > 0 {
@@ -130,6 +130,8 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 				if err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 				}
+			}
+			if rs.parentFSM.customResource.Spec.Size > 0 {
 				nextStateID = ScalingID
 			}
 		} else {
