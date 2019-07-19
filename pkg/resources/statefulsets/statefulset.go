@@ -22,61 +22,6 @@ import (
 
 var log = logf.Log.WithName("package statefulsets")
 
-// newPodForCR returns an activemqartemis pod with the same name/namespace as the cr
-//func newPodForCR(cr *brokerv1alpha1.ActiveMQArtemis) *corev1.Pod {
-//
-//	// Log where we are and what we're doing
-//	reqLogger:= log.WithName(cr.Name)
-//	reqLogger.Info("Creating new pod for custom resource")
-//
-//	dataPath := "/opt/" + cr.Name + "/data"
-//	userEnvVar := corev1.EnvVar{"AMQ_USER", "admin", nil}
-//	passwordEnvVar := corev1.EnvVar{"AMQ_PASSWORD", "admin", nil}
-//	dataPathEnvVar := corev1.EnvVar{ "AMQ_DATA_DIR", dataPath, nil}
-//
-//	pod := &corev1.Pod{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name:      cr.Name,
-//			Namespace: cr.Namespace,
-//			Labels:    cr.Labels,
-//		},
-//		Spec: corev1.PodSpec{
-//			Containers: []corev1.Container{
-//				{
-//					Name:    cr.Name + "-container",
-//					Image:	 cr.Spec.Image,
-//					Command: []string{"/opt/amq/bin/launch.sh", "start"},
-//					VolumeMounts:	[]corev1.VolumeMount{
-//						corev1.VolumeMount{
-//							Name:		cr.Name + "-data-volume",
-//							MountPath:	dataPath,
-//							ReadOnly:	false,
-//						},
-//					},
-//					Env:     []corev1.EnvVar{userEnvVar, passwordEnvVar, dataPathEnvVar},
-//				},
-//			},
-//			Volumes: []corev1.Volume{
-//				corev1.Volume{
-//					Name: cr.Name + "-data-volume",
-//					VolumeSource: corev1.VolumeSource{
-//						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-//							ClaimName: cr.Name + "-pvc",
-//							ReadOnly:  false,
-//						},
-//					},
-//				},
-//			},
-//		},
-//	}
-//
-//	return pod
-//}
-
-//func makeDataPathForCR(cr *brokerv1alpha1.ActiveMQArtemis) string {
-//return "/opt/" + cr.Name + "/data"
-//}
-
 const (
 	graceTime       = 30
 	TCPLivenessPort = 8161

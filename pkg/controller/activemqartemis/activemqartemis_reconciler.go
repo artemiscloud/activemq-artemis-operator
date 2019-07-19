@@ -4,12 +4,17 @@ import (
 	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"strings"
 )
 
 const (
 	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
 	statefulSetSSLConfigUpdated     = 1 << 2
+	statefulSetImageUpdated			= 1 << 3
+	statefulSetPersistentUpdated	= 1 << 4
+	statefulSetAioUpdated			= 1 << 5
+	statefulSetCommonConfigUpdated  = 1 << 6
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -34,6 +39,22 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv1alp
 
 	if sslConfigSyncCausedUpdateOn(customResource, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetSSLConfigUpdated
+	}
+
+	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetImageUpdated
+	}
+
+	if aioSyncCausedUpdateOn(customResource, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetAioUpdated
+	}
+
+	if persistentSyncCausedUpdateOn(customResource, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
+	}
+
+	if commonConfigSyncCausedUpdateOn(customResource, currentStatefulSet) {
+		reconciler.statefulSetUpdates |= statefulSetCommonConfigUpdated
 	}
 
 	return reconciler.statefulSetUpdates
@@ -119,6 +140,16 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 		if statefulSetUpdated {
 			envVarArrayLen := len(envVarArray)
 			if envVarArrayLen > 0 {
+				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+						if ("AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusteredNeedsUpdate) ||
+							("AMQ_CLUSTER_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterUserNeedsUpdate) ||
+							("AMQ_CLUSTER_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && clusterPasswordNeedsUpdate) {
+							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+						}
+					}
+				}
+
 				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 				for i := 0; i < containerArrayLen; i++ {
 					for j := 0; j < envVarArrayLen; j++ {
@@ -128,7 +159,6 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArte
 			}
 		}
 	} else {
-
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
 			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_CLUSTERED" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
@@ -221,6 +251,16 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if statefulSetUpdated {
 			envVarArrayLen := len(envVarArray)
 			if envVarArrayLen > 0 {
+				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+						if ("AMQ_KEYSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystoreNeedsUpdate) ||
+							("AMQ_KEYSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystorePasswordNeedsUpdate) ||
+							("AMQ_KEYSTORE_TRUSTSTORE_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && keystoreTruststoreDirNeedsUpdate) {
+							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+						}
+					}
+				}
+
 				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 				for i := 0; i < containerArrayLen; i++ {
 					for j := 0; j < envVarArrayLen; j++ {
@@ -230,7 +270,6 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 			}
 		}
 	} else {
-
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
 			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_KEYSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
@@ -286,6 +325,15 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 		if statefulSetUpdated {
 			envVarArrayLen := len(envVarArray)
 			if envVarArrayLen > 0 {
+				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+						if ("AMQ_TRUSTSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && truststoreNeedsUpdate) ||
+							("AMQ_TRUSTSTORE_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && truststorePasswordNeedsUpdate) {
+							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+						}
+					}
+				}
+
 				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 				for i := 0; i < containerArrayLen; i++ {
 					for j := 0; j < envVarArrayLen; j++ {
@@ -295,7 +343,6 @@ func sslConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis,
 			}
 		}
 	} else {
-
 		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
 			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
 				if "AMQ_TRUSTSTORE" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
@@ -354,4 +401,237 @@ func sslConfigSyncEnsureSecretVolumeMountExists(customResource *brokerv1alpha1.A
 			currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts = append(currentStatefulSet.Spec.Template.Spec.Containers[i].VolumeMounts, volumeMount)
 		}
 	}
+}
+
+func aioSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	foundAio := false
+	foundNio := false
+	var extraArgs string = ""
+	extraArgsNeedsUpdate := false
+
+	// Find the existing values
+	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+		if v.Name == "AMQ_EXTRA_ARGS" {
+			if strings.Index(v.Value, "--aio") > -1 {
+				foundAio = true
+			}
+			if strings.Index(v.Value, "--nio") > -1 {
+				foundNio = true
+			}
+			extraArgs = v.Value
+			break
+		}
+	}
+
+	if customResource.Spec.Aio && foundNio {
+		extraArgs = strings.Replace(extraArgs, "--nio", "--aio", 1)
+		extraArgsNeedsUpdate = true
+	}
+
+	if !customResource.Spec.Aio && foundAio {
+		extraArgs = strings.Replace(extraArgs, "--aio", "--nio", 1)
+		extraArgsNeedsUpdate = true
+	}
+
+	newExtraArgsValue := corev1.EnvVar{}
+	if extraArgsNeedsUpdate {
+		newExtraArgsValue = corev1.EnvVar{
+			"AMQ_EXTRA_ARGS",
+			extraArgs,
+			nil,
+		}
+
+		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+		for i := 0; i < containerArrayLen; i++ {
+			//for j := 0; j < envVarArrayLen; j++ {
+			for j := 0; j < len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env); j++ {
+				if "AMQ_EXTRA_ARGS" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, newExtraArgsValue)
+					break
+				}
+			}
+		}
+	}
+
+	return extraArgsNeedsUpdate
+}
+
+func persistentSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	foundDataDir := false
+	foundDataDirLogging := false
+
+	dataDirNeedsUpdate := false
+	dataDirLoggingNeedsUpdate := false
+
+	statefulSetUpdated := false
+
+	// TODO: Remove yuck
+	// ensure password and username are valid if can't via openapi validation?
+	if customResource.Spec.Persistent {
+
+		envVarArray := []corev1.EnvVar{}
+		// Find the existing values
+		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+			if v.Name == "AMQ_DATA_DIR" {
+				foundDataDir = true
+				if v.Value == "false" {
+					dataDirNeedsUpdate = true
+				}
+			}
+			if v.Name == "AMQ_DATA_DIR_LOGGING" {
+				foundDataDirLogging = true
+				if v.Value != "true" {
+					dataDirLoggingNeedsUpdate = true
+				}
+			}
+		}
+
+		if !foundDataDir || dataDirNeedsUpdate {
+			newDataDirValue := corev1.EnvVar{
+				"AMQ_DATA_DIR",
+				"/opt/"+customResource.Name+"/data",
+				nil,
+			}
+			envVarArray = append(envVarArray, newDataDirValue)
+			statefulSetUpdated = true
+		}
+
+		if !foundDataDirLogging || dataDirLoggingNeedsUpdate {
+			newDataDirLoggingValue := corev1.EnvVar{
+				"AMQ_DATA_DIR_LOGGING",
+				"true",
+				nil,
+			}
+			envVarArray = append(envVarArray, newDataDirLoggingValue)
+			statefulSetUpdated = true
+		}
+
+		if statefulSetUpdated {
+			envVarArrayLen := len(envVarArray)
+			if envVarArrayLen > 0 {
+				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+						if ("AMQ_DATA_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && dataDirNeedsUpdate) ||
+							("AMQ_DATA_DIR_LOGGING" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && dataDirLoggingNeedsUpdate) {
+							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+						}
+					}
+				}
+
+				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+				for i := 0; i < containerArrayLen; i++ {
+					for j := 0; j < envVarArrayLen; j++ {
+						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
+					}
+				}
+			}
+		}
+	} else {
+
+		for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+			for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+				if "AMQ_DATA_DIR" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name ||
+					"AMQ_DATA_DIR_LOGGING" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
+					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+					statefulSetUpdated = true
+				}
+			}
+		}
+	}
+
+	return statefulSetUpdated
+}
+
+func imageSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	// At implementation time only one container
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, customResource.Spec.Image) != 0 {
+		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+		for i := 0; i < containerArrayLen; i++ {
+			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = customResource.Spec.Image
+		}
+		return true
+	}
+
+	return false
+}
+
+func commonConfigSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	foundCommonUser := false
+	foundCommonPassword := false
+
+	commonUserNeedsUpdate := false
+	commonPasswordNeedsUpdate := false
+
+	statefulSetUpdated := false
+
+	// TODO: Remove yuck
+	// ensure password and username are valid if can't via openapi validation?
+	if customResource.Spec.CommonConfig.Password != "" &&
+		customResource.Spec.CommonConfig.UserName != "" {
+
+		envVarArray := []corev1.EnvVar{}
+		// Find the existing values
+		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
+			if v.Name == "AMQ_USER" {
+				foundCommonUser = true
+				if v.Value != customResource.Spec.CommonConfig.UserName {
+					commonUserNeedsUpdate = true
+				}
+			}
+			if v.Name == "AMQ_PASSWORD" {
+				foundCommonPassword = true
+				if v.Value != customResource.Spec.CommonConfig.Password {
+					commonPasswordNeedsUpdate = true
+				}
+			}
+		}
+
+		if !foundCommonUser || commonUserNeedsUpdate {
+			newCommonedValue := corev1.EnvVar{
+				"AMQ_USER",
+				customResource.Spec.CommonConfig.UserName,
+				nil,
+			}
+			envVarArray = append(envVarArray, newCommonedValue)
+			statefulSetUpdated = true
+		}
+
+		if !foundCommonPassword || commonPasswordNeedsUpdate {
+			newCommonedValue := corev1.EnvVar{
+				"AMQ_PASSWORD",
+				customResource.Spec.CommonConfig.Password,
+				nil,
+			}
+			envVarArray = append(envVarArray, newCommonedValue)
+			statefulSetUpdated = true
+		}
+
+		if statefulSetUpdated {
+			envVarArrayLen := len(envVarArray)
+			if envVarArrayLen > 0 {
+				for i := 0; i < len(currentStatefulSet.Spec.Template.Spec.Containers); i++ {
+					for j := len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env) - 1; j >= 0; j-- {
+						if ("AMQ_USER" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonUserNeedsUpdate) ||
+							("AMQ_PASSWORD" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name && commonPasswordNeedsUpdate) {
+							currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+						}
+					}
+				}
+
+				containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+				for i := 0; i < containerArrayLen; i++ {
+					for j := 0; j < envVarArrayLen; j++ {
+						currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, envVarArray[j])
+					}
+				}
+			}
+		}
+	}
+
+	return statefulSetUpdated
 }

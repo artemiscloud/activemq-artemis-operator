@@ -132,6 +132,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 				err = rs.parentFSM.r.client.Update(context.TODO(), currentStatefulSet)
 				if err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
+					break
 				}
 			}
 			if rs.parentFSM.customResource.Spec.Size > 0 {
@@ -181,7 +182,7 @@ func updataPodStatus(rs *CreatingK8sResourcesState) error {
 	//podStatus := getPodDeploymentStatus(rs.parentFSM.r, rs.parentFSM.customResource)
     podStatus := getPodStatus(rs.parentFSM.r, rs.parentFSM.customResource)
 
-	reqLogger.Info("PpodStatus are to be updated.............................", "info:", podStatus)
+	reqLogger.Info("PodStatus are to be updated.............................", "info:", podStatus)
 	reqLogger.Info("Ready Count........................", "info:", len(podStatus.Ready))
 	//reqLogger.Info("Unavailable Count.............................", "info:", len(podStatus.Unavailable))
     reqLogger.Info("Stopped Count........................", "info:", len(podStatus.Stopped))
