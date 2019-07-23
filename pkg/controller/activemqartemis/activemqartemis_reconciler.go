@@ -11,9 +11,9 @@ const (
 	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
 	statefulSetSSLConfigUpdated     = 1 << 2
-	statefulSetImageUpdated			= 1 << 3
-	statefulSetPersistentUpdated	= 1 << 4
-	statefulSetAioUpdated			= 1 << 5
+	statefulSetImageUpdated         = 1 << 3
+	statefulSetPersistentUpdated    = 1 << 4
+	statefulSetAioUpdated           = 1 << 5
 	statefulSetCommonConfigUpdated  = 1 << 6
 )
 
@@ -492,7 +492,7 @@ func persistentSyncCausedUpdateOn(customResource *brokerv1alpha1.ActiveMQArtemis
 		if !foundDataDir || dataDirNeedsUpdate {
 			newDataDirValue := corev1.EnvVar{
 				"AMQ_DATA_DIR",
-				"/opt/"+customResource.Name+"/data",
+				"/opt/" + customResource.Name + "/data",
 				nil,
 			}
 			envVarArray = append(envVarArray, newDataDirValue)
