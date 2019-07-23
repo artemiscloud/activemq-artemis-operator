@@ -11,7 +11,7 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.6.2
+            name: activemq-artemis-operator.v0.6.3
             namespace: placeholder
             annotations:
               categories: "Messaging"
@@ -80,9 +80,9 @@ items:
             keywords:
               - activemqartemis
               - operator
-            version: 0.6.2
+            version: 0.6.3
             maturity: alpha
-            replaces: activemq-artemis-operator.v0.6.1
+            replaces: activemq-artemis-operator.v0.6.2
             maintainers:
               - name: Red Hat, Inc.
                 email: rkieley@redhat.com
@@ -98,12 +98,12 @@ items:
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.6.2
+              operated-by: activemq-artemis-operator.v0.6.3
             selector:
               matchLabels:
                 ActiveMQArtemis: example-activemqartemis
                 application: example-activemqartemis-app
-                operated-by: activemq-artemis-operator.v0.6.2
+                operated-by: activemq-artemis-operator.v0.6.3
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -460,11 +460,11 @@ items:
               served: true
               storage: true
       packages: >
-        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.2.clusterserviceversion.yaml
+        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.3.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
-              currentCSV: activemq-artemis-operator.v0.6.2
+              currentCSV: activemq-artemis-operator.v0.6.3
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource

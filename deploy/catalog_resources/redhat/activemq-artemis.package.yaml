@@ -1,5 +1,5 @@
-#! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.2.clusterserviceversion.yaml
+#! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.3.clusterserviceversion.yaml
 packageName: activemq-artemis
 channels:
   - name: alpha
-    currentCSV: activemq-artemis-operator.v0.6.2
+    currentCSV: activemq-artemis-operator.v0.6.3
