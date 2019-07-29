@@ -13,6 +13,7 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  version: v1alpha2
   validation:
     openAPIV3Schema:
       properties:
@@ -36,12 +37,13 @@ spec:
             - addressName
             - queueName
             - routingType
-            - statefulsetName
           type: object
         status:
           type: object
-  version: v1alpha1
   versions:
-  - name: v1alpha1
+  - name: v1alpha2
     served: true
     storage: true
+  - name: v1alpha1
+    served: true
+    storage: false
