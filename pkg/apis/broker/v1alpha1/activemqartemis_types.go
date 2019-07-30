@@ -32,7 +32,7 @@ type CommonConfig struct {
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
 // +k8s:openapi-gen=true
 type ActiveMQArtemisStatus struct {
-	PodStatus olm.DeploymentStatus `json:"pods"`
+	PodStatus olm.DeploymentStatus `json:"podStatus"`
 }
 
 type SSLConfig struct {
