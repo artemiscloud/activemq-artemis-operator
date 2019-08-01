@@ -97,12 +97,25 @@ spec:
           - commonConfig
           type: object
         status:
-          type: object
           properties:
-            pods:
-              items:
-                type: object
+            podStatus:
+              properties:
+                ready:
+                  items:
+                    type: string
+                  type: array
+                starting:
+                  items:
+                    type: string
+                  type: array
+                stopped:
+                  items:
+                    type: string
+                  type: array
               type: object
+          required:
+          - podStatus
+          type: object
   version: v1alpha1
   versions:
   - name: v1alpha1
