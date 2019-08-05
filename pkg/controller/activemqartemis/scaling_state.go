@@ -2,9 +2,11 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/env"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
@@ -49,7 +51,7 @@ func (ss *ScalingState) Enter(previousStateID int) error {
 	var err error = nil
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.parentFSM.customResource.Name + "-ss", Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -77,7 +79,7 @@ func (ss *ScalingState) Update() (error, int) {
 	var nextStateID int = ScalingID
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.parentFSM.customResource.Name + "-ss", Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -143,24 +145,29 @@ func (rs *ScalingState) configureServices() error {
 	cr := rs.parentFSM.customResource
 	client := rs.parentFSM.r.client
 	scheme := rs.parentFSM.r.scheme
-	labels := selectors.LabelsForActiveMQArtemis(cr.Name)
-	for ; i < cr.Spec.Size; i++ {
+	labels := selectors.LabelBuilder.Labels()
+	for ; i < cr.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = cr.Name + "-ss" + "-" + ordinalString
+		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		baseServiceName := "console-jolokia"
 		serviceDefinition := svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = svc.CreateService(cr, client, scheme, serviceDefinition); err != nil {
+		if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
 			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			continue
 		}
 
-		baseServiceName = "all-protocol"
-		portNumber = int32(61616)
-		serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
-		if err = svc.CreateService(cr, client, scheme, serviceDefinition); err != nil {
-			reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-			continue
+		for _, acceptor := range cr.Spec.Acceptors {
+			if !acceptor.Expose {
+				continue
+			}
+			baseServiceName = acceptor.Name
+			portNumber = acceptor.Port
+			serviceDefinition = svc.NewServiceDefinitionForCR(cr, baseServiceName+"-"+ordinalString, portNumber, labels)
+			if err = resources.Create(cr, client, scheme, serviceDefinition); err != nil {
+				reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+				continue
+			}
 		}
 	}
 
@@ -190,9 +197,11 @@ func (rs *ScalingState) configureIngress() error {
 
 	var err error = nil
 
-	if _, err = ingresses.RetrieveIngress(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client); err != nil {
+	// Define the console-jolokia ingress for this Pod
+	ingress := ingresses.NewIngressForCR(rs.parentFSM.customResource, "console-jolokia")
+	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, ingress); err != nil {
 		// err means not found, so create routes
-		if _, err = ingresses.CreateNewIngress(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme); err == nil {
+		if err = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, ingress); err == nil {
 		}
 	}
 
@@ -204,28 +213,35 @@ func (rs *ScalingState) configureRoutes() error {
 	var err error = nil
 	var passthroughTLS bool
 
-	for i := 0; i < int(rs.parentFSM.customResource.Spec.Size); i++ {
+	cr := rs.parentFSM.customResource
+	for i := 0; i < int(cr.Spec.DeploymentPlan.Size); i++ {
 		passthroughTLS = false
 		targetPortName := "console-jolokia" + "-" + strconv.Itoa(i)
-		targetServiceName := rs.parentFSM.customResource.Name + "-service-" + targetPortName
+		targetServiceName := cr.Name + "-service-" + targetPortName
 		log.Info("Checking route for " + targetPortName)
 
-		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelsForActiveMQArtemis(rs.parentFSM.customResource.Name), targetServiceName, targetPortName, passthroughTLS)
-		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
-			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, consoleJolokiaRoute)
+		consoleJolokiaRoute := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+		if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, consoleJolokiaRoute); err != nil {
+			resources.Delete(cr, rs.parentFSM.r.client, consoleJolokiaRoute)
 		}
-		if err = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
+		if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, consoleJolokiaRoute); err == nil {
 		}
+		
+		for _, acceptor := range cr.Spec.Acceptors {
+			if !acceptor.Expose {
+				continue
+			}
 
-		targetPortName = "all-protocol" + "-" + strconv.Itoa(i)
-		targetServiceName = rs.parentFSM.customResource.Name + "-service-" + targetPortName
-		log.Info("Checking route for " + targetPortName)
-		passthroughTLS = true
-		allProtocolRoute := routes.NewRouteDefinitionForCR(rs.parentFSM.customResource, selectors.LabelsForActiveMQArtemis(rs.parentFSM.customResource.Name), targetServiceName, targetPortName, passthroughTLS)
-		if err = routes.RetrieveRoute(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, allProtocolRoute); err != nil {
-			routes.DeleteRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, allProtocolRoute)
-		}
-		if err = routes.CreateNewRoute(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, allProtocolRoute); err == nil {
+			targetPortName = acceptor.Name + "-" + strconv.Itoa(i)
+			targetServiceName = cr.Name + "-service-" + targetPortName
+			log.Info("Checking routeDefinition for " + targetPortName)
+			passthroughTLS = true
+			routeDefinition := routes.NewRouteDefinitionForCR(cr, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
+			if err = resources.Retrieve(cr, rs.parentFSM.namespacedName, rs.parentFSM.r.client, routeDefinition); err != nil {
+				resources.Delete(cr, rs.parentFSM.r.client, routeDefinition)
+			}
+			if err = resources.Create(cr, rs.parentFSM.r.client, rs.parentFSM.r.scheme, routeDefinition); err == nil {
+			}
 		}
 	}
 

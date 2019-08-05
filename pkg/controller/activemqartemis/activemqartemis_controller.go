@@ -2,9 +2,7 @@ package activemqartemis
 
 import (
 	"context"
-	syserr "errors"
-
-	brokerv1alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,17 +19,7 @@ import (
 
 var log = logf.Log.WithName("controller_activemqartemis")
 
-//var namespacedNameToFSM map[types.NamespacedName]*fsm.Machine
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
-
-func GetStatefulSetName(namespace string) (string, error) {
-	for k := range namespacedNameToFSM {
-		if k.Namespace == namespace {
-			return k.Name, nil
-		}
-	}
-	return "", syserr.New("Couldn't find the StatefulSet in ns " + namespace)
-}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -58,7 +46,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ActiveMQArtemis
-	err = c.Watch(&source.Kind{Type: &brokerv1alpha1.ActiveMQArtemis{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &brokerv2alpha1.ActiveMQArtemis{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -67,7 +55,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv1alpha1.ActiveMQArtemis{},
+		OwnerType:    &brokerv2alpha1.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
@@ -76,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv1alpha1.ActiveMQArtemis{},
+		OwnerType:    &brokerv2alpha1.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
@@ -113,7 +101,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	var namespacedNameFSM *ActiveMQArtemisFSM = nil
 	var amqbfsm *ActiveMQArtemisFSM = nil
 
-	instance := &brokerv1alpha1.ActiveMQArtemis{}
+	instance := &brokerv2alpha1.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
 		Name:      request.Name,
 		Namespace: request.Namespace,

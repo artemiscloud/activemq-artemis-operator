@@ -2,6 +2,8 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -66,7 +68,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: rs.parentFSM.customResource.Name + "-ss", Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
+	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -74,14 +76,13 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, currentStatefulSet)
+		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet)
 
 		break
 	}
 
 	if statefulSetUpdates > 0 {
-		err = rs.parentFSM.r.client.Update(context.TODO(), currentStatefulSet)
-		if err != nil {
+		if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 		}
 		nextStateID = ScalingID
