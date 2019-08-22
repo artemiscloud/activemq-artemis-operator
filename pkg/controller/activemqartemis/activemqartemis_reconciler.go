@@ -16,15 +16,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 
+	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	routev1 "github.com/openshift/api/route/v1"
 
 	"strconv"
 	"strings"
@@ -812,4 +812,3 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 
 	return statefulSetUpdated
 }
-

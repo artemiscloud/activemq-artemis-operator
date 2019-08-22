@@ -31,7 +31,7 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		}
 		volumeMountMountPath := "/etc/" + volumeMountName
 		volumeMount := corev1.VolumeMount{
-			Name: 			  volumeMountName,
+			Name:             volumeMountName,
 			ReadOnly:         true,
 			MountPath:        volumeMountMountPath,
 			SubPath:          "",
@@ -51,7 +51,7 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		}
 		volumeMountMountPath := "/etc/" + volumeMountName
 		volumeMount := corev1.VolumeMount{
-			Name: 			  volumeMountName,
+			Name:             volumeMountName,
 			ReadOnly:         true,
 			MountPath:        volumeMountMountPath,
 			SubPath:          "",

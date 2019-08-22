@@ -35,7 +35,7 @@ func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingre
 								extv1b1.HTTPIngressPath{
 									Path: "/",
 									Backend: extv1b1.IngressBackend{
-										ServiceName: "amq-broker-amq-headless",//"hs",
+										ServiceName: "amq-broker-amq-headless", //"hs",
 										ServicePort: intstr.FromString(target),
 									},
 								},

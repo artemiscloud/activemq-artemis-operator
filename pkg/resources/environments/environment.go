@@ -3,8 +3,8 @@ package environments
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"strconv"
 	"os"
+	"strconv"
 	"strings"
 
 	"k8s.io/client-go/rest"
