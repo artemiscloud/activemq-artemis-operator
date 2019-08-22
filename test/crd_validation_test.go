@@ -11,22 +11,22 @@ import (
 )
 
 var crNameMap = map[string]string{
-	"activemqartemis_cr.yaml":                          "broker_v1alpha1_activemqartemis_crd.yaml",
-	"activemqartemisaddress_cr.yaml":                   "broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"address-queue-create.yaml":                        "broker_v1alpha1_activemqartemisaddress_crd.yaml",
-	"artemis-basic-deployment.yaml":                    "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-ssl-deployment.yaml":                      "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-cluster-deployment.yaml":                  "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-persistence-deployment.yaml":              "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-ssl-persistence-cluster-deployment.yaml":  "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-ssl-persistence-deployment.yaml":          "broker_v1alpha1_activemqartemis_crd.yaml",
-	"artemis-aio-journal.yaml":                         "broker_v1alpha1_activemqartemis_crd.yaml",
-	"broker_v1alpha1_activemqartemisscaledown_cr.yaml": "broker_v1alpha1_activemqartemisscaledown_crd.yaml",
+	"activemqartemis_cr.yaml":                          "broker_v2alpha1_activemqartemis_crd.yaml",
+	"activemqartemisaddress_cr.yaml":                   "broker_v2alpha1_activemqartemisaddress_crd.yaml",
+	"address-queue-create.yaml":                        "broker_v2alpha1_activemqartemisaddress_crd.yaml",
+	"artemis-basic-deployment.yaml":                    "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-ssl-deployment.yaml":                      "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-cluster-deployment.yaml":                  "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-persistence-deployment.yaml":              "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-ssl-persistence-cluster-deployment.yaml":  "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-ssl-persistence-deployment.yaml":          "broker_v2alpha1_activemqartemis_crd.yaml",
+	"artemis-aio-journal.yaml":                         "broker_v2alpha1_activemqartemis_crd.yaml",
+	"broker_v2alpha1_activemqartemisscaledown_cr.yaml": "broker_v2alpha1_activemqartemisscaledown_crd.yaml",
 }
 
 var crdTypeMap = map[string]interface{}{
-	"broker_v1alpha1_activemqartemis_crd.yaml":        &brokerv2alpha1.ActiveMQArtemis{},
-	"broker_v1alpha1_activemqartemisaddress_crd.yaml": &brokerv2alpha1.ActiveMQArtemisAddress{},
+	"broker_v2alpha1_activemqartemis_crd.yaml":        &brokerv2alpha1.ActiveMQArtemis{},
+	"broker_v2alpha1_activemqartemisaddress_crd.yaml": &brokerv2alpha1.ActiveMQArtemisAddress{},
 }
 
 func TestCRDSchemas(t *testing.T) {

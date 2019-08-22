@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.3 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.7.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,7 +31,7 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.6.3 ahameed amqoperator 0.6.3 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.7.0 ahameed amqoperator 0.7.0 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
 ```
 
 
@@ -68,15 +68,26 @@ This will create a new `CatalogSource` and `ConfigMap`, allowing the OLM Catalog
 
 ### Trigger a ActiveMQ Artemis deployment
 
-Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, use the console to `Create Broker` or create one manually as seen below.
+Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, deploy the the operator in your namespace by deploying the cluster service version. First edit
 
 ```bash
-$ oc create -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
+deploy/catalog_resources/courier/bundle_dir/0.7.0/activemq-artemis-operator.v0.7.0.clusterserviceversion.yaml
+```
+
+and update
+```yaml
+namespace: placeholder
+```
+
+to be your your namespace name. Then use the console to `Create Broker` or create one manually as seen below:
+
+```bash
+$ oc create -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
 ```
 
 ### Clean up a ActiveMQ Artemis deployment
 
 ```bash
-oc delete -f deploy/crs/broker_v1alpha1_activemqartemis_cr.yaml
+oc delete -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
 ```
 

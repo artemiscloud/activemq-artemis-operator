@@ -2,8 +2,6 @@ package activemqartemis
 
 import (
 	"context"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
@@ -15,10 +13,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"strconv"
@@ -129,44 +124,41 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	return err
 }
 
-func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
-
-	var err error = nil
-	var retrieveError error = nil
-
-	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ActiveMQArtemisScaledown",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    selectors.LabelBuilder.Labels(),
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-		},
-		Spec: v1alpha1.ActiveMQArtemisScaledownSpec{
-			MasterURL:  "",
-			Kubeconfig: "",
-			Namespace:  cr.Namespace,
-			LocalOnly:  true,
-		},
-		Status: v1alpha1.ActiveMQArtemisScaledownStatus{},
-	}
-
-	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {
-		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err != nil {
-			// err means not found so create
-			if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, scaledown); retrieveError == nil {
-			}
-		}
-	} else {
-		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
-			// no err means found so delete
-			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
-			}
-		}
-	}
-}
+//func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+//
+//	var err error = nil
+//	var retrieveError error = nil
+//
+//	scaledown := &v2alpha1.ActiveMQArtemisScaledown{
+//		TypeMeta: metav1.TypeMeta{
+//			APIVersion: "v1",
+//			Kind:       "ActiveMQArtemisScaledown",
+//		},
+//		ObjectMeta: metav1.ObjectMeta{
+//			Labels:    selectors.LabelBuilder.Labels(),
+//			Name:      cr.Name,
+//			Namespace: cr.Namespace,
+//		},
+//		Spec: v2alpha1.ActiveMQArtemisScaledownSpec{
+//			LocalOnly:  true,
+//		},
+//		Status: v2alpha1.ActiveMQArtemisScaledownStatus{},
+//	}
+//
+//	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {
+//		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err != nil {
+//			// err means not found so create
+//			if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, scaledown); retrieveError == nil {
+//			}
+//		}
+//	} else {
+//		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
+//			// no err means found so delete
+//			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
+//			}
+//		}
+//	}
+//}
 
 func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 

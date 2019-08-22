@@ -3,7 +3,7 @@ package activemqartemisscaledown
 import (
 	"context"
 
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
+	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -113,13 +113,14 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 		return reconcile.Result{}, err
 	}
 	//the drain controller code
-	masterURL = instance.Spec.MasterURL
-	kubeconfig = instance.Spec.Kubeconfig
-	namespace = instance.Spec.Namespace
+	//masterURL = instance.Spec.MasterURL
+	//kubeconfig = instance.Spec.Kubeconfig
+	//namespace = instance.Spec.Namespace
+	namespace = request.Namespace
 	localOnly = instance.Spec.LocalOnly
 
-	reqLogger.Info("====", "masterUrl:", masterURL)
-	reqLogger.Info("====", "kubeconfig:", kubeconfig)
+	//reqLogger.Info("====", "masterUrl:", masterURL)
+	//reqLogger.Info("====", "kubeconfig:", kubeconfig)
 	reqLogger.Info("====", "namespace:", namespace)
 	reqLogger.Info("====", "localOnly:", localOnly)
 

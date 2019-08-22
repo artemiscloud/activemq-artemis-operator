@@ -11,7 +11,7 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.6.3
+            name: activemq-artemis-operator.v0.7.0
             namespace: placeholder
             annotations:
               categories: "Messaging"
@@ -23,7 +23,7 @@ items:
               tectonic-visibility: ocs
               alm-examples: >-
                   [{
-                      "apiVersion": "broker.amq.io/v1alpha1",
+                      "apiVersion": "broker.amq.io/v2alpha1",
                       "kind": "ActiveMQArtemis",
                       "metadata": {
                           "name": "example-activemqartemis",
@@ -33,16 +33,14 @@ items:
                           }
                       },
                       "spec": {
-                          "size": 1,
-                          "image": "registry.redhat.io/amq7/amq-broker:7.4",
-                          "commonConfig": {
-                              "userName": "admin",
-                              "password": "admin"
+                          "deploymentPlan": {
+                              "size": 1,
+                              "image": "registry.redhat.io/amq7/amq-broker:7.4"
                           }
                       }
                   },
                   {
-                      "apiVersion": "broker.amq.io/v1alpha1",
+                      "apiVersion": "broker.amq.io/v2alpha1",
                       "kind": "ActiveMQArtemisAddress",
                       "metadata": {
                           "name": "example-activemqartemisaddress",
@@ -52,37 +50,22 @@ items:
                           }
                       },
                       "spec": {
-                          "statefulsetName": "example-activemqartemis-ss",
                           "addressName": "myAddress0",
                           "queueName": "myQueue0",
                           "routingType": "anycast"
-                      }
-                  },
-                  {
-                      "apiVersion": "broker.amq.io/v1alpha1",
-                      "kind": "ActiveMQArtemisScaledown",
-                      "metadata": {
-                          "name": "example-activemqartemisscaledown",
-                          "labels": {
-                              "ActiveMQArtemis": "example-activemqartemis",
-                              "application": "example-activemqartemis-app"
-                          }
-                      },
-                      "spec": {
-                          "localOnly": true
                       }
                   }]
             labels:
               operator-activemqartemis: "true"
           spec:
             displayName: ActiveMQ Artemis
-            description: ActiveMQ Artemis Operator can deploy headless service environments which exposed each of the ports, along with the statefulset.
+            description: ActiveMQ Artemis Operator deploys the ActiveMQ Artemis broker or brokers on OpenShift via a statefulset.
             keywords:
               - activemqartemis
               - operator
-            version: 0.6.3
+            version: 0.7.0
             maturity: alpha
-            replaces: activemq-artemis-operator.v0.6.2
+            replaces: activemq-artemis-operator.v0.6.3
             maintainers:
               - name: Red Hat, Inc.
                 email: rkieley@redhat.com
@@ -98,12 +81,12 @@ items:
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.6.3
+              operated-by: activemq-artemis-operator.v0.7.0
             selector:
               matchLabels:
                 ActiveMQArtemis: example-activemqartemis
                 application: example-activemqartemis-app
-                operated-by: activemq-artemis-operator.v0.6.3
+                operated-by: activemq-artemis-operator.v0.7.0
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -116,7 +99,14 @@ items:
             customresourcedefinitions:
               owned:
                 - name: activemqartemises.broker.amq.io
-                  version: v1alpha1
+                  version: v2alpha1
+                  versions:
+                    - name: v2alpha1
+                      served: true
+                      storage: true
+                    - name: v1alpha1
+                      served: false
+                      storage: false
                   kind: ActiveMQArtemis
                   description: An instance of Active MQ Artemis
                   displayName: ActiveMQ Artemis
@@ -126,21 +116,21 @@ items:
                     - kind: Deployment
                       version: v1
                   specDescriptors:
-                    - description: The desired number of member pods for ActiveMQArtemis mesh
+                    - description: The settings required for the broker to be deployed
+                      displayName: DeploymentPlan
+                      path: deploymentPlan
+                    - description: The desired number of broker pods
                       displayName: Size
                       path: size
                     - description: The Image
                       displayName: Image
                       path: image
                 - name: activemqartemisaddresses.broker.amq.io
-                  version: v1alpha1
+                  version: v2alpha1
                   kind: ActiveMQArtemisAddress
-                  description: Adding and removing queues via custom resource definitions
+                  description: Adding and removing addresses via custom resource definitions
                   displayName: ActiveMQ Artemis Address
                   specDescriptors:
-                    - description: The Statefulset Name
-                      displayName: Statefulset Name
-                      path: statefulsetName
                     - description: The Queue Name
                       displayName: Queue Name
                       path: queueName
@@ -151,7 +141,7 @@ items:
                       displayName: Routing Type
                       path: routingType
                 - name: activemqartemisscaledowns.broker.amq.io
-                  version: v1alpha1
+                  version: v2alpha1
                   kind: ActiveMQArtemisScaledown
                   description: Provides message migration on clustered broker scaledown
                   displayName: ActiveMQ Artemis Scaledown
@@ -281,81 +271,109 @@ items:
                   metadata:
                     type: object
                   spec:
-                    properties:
-                      image:
-                        type: string
-                      size:
-                        type: integer
-                        minimum: 0
-                        maximum: 16
-                        description: The number of activemqartemis pods to deploy
-                      persistent:
-                        type: boolean
-                      aio:
-                        type: boolean
-                      sslConfig:
+                    deploymentPlan:
+                      type: object
+                      properties:
+                        image:
+                          type: string
+                          description: The image used for the broker deployment
+                        size:
+                          type: integer
+                          minimum: 0
+                          maximum: 16
+                          description: The number of broker pods to deploy
+                        user:
+                          type: string
+                          description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+                        password:
+                          type: string
+                          description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+                        role:
+                          type: string
+                          description: Rolename for the given user
+                        requireLogin:
+                          type: boolean
+                          description: If true require user password login credentials for broker protocol ports
+                        clustered:
+                          type: boolean
+                          description: If true brokers will cluster when scale > 1
+                        clusterUser:
+                          type: string
+                          description: Username used for clustering
+                        clusterPassword:
+                          type: string
+                          description: Password used for clustering
+                        persistenceEnabled:
+                          type: boolean
+                          description: If true use persistent volume via persistent volume claim for journal storage
+                        journalType:
+                          type: string
+                          description: If aio use ASYNCIO, if nio use NIO for journal IO
+                        messageMigration:
+                          type: boolean
+                          description: If true migrate messages on scaledown
+                    acceptors:
+                      type: array
+                      description: Configuration of all acceptors
+                      minItems: 0
+                      items:
                         type: object
-                        description: Configuration of the AMQ SSL deployment
-                        required:
-                          - secretName
-                          - trustStoreFilename
-                          - trustStorePassword
-                          - keystoreFilename
-                          - keyStorePassword
+                        description: A single acceptor configuration
                         properties:
-                          secretName:
+                          name:
                             type: string
-                            description:  Name of a secret containing SSL related files
-                          trustStoreFilename:
+                            description: The name of the acceptor
+                          port:
+                            type: integer
+                            description: Port number
+                          protocols:
                             type: string
-                            description:  SSL trust store filename
-                          trustStorePassword:
+                            description: The protocols to enable for this acceptor
+                          sslEnabled:
+                            type: boolean
+                            description: Whether or not to enable SSL on this port
+                          sslSecret:
                             type: string
-                            description:  SSL trust store password
-                          keystoreFilename:
-                            type: string
-                            description:  SSL key store filename
-                          keyStorePassword:
-                            type: string
-                            description:  Password for accessing SSL keystore
-                      clusterConfig:
+                            description: Name of the secret to use for ssl information
+                          expose:
+                            type: boolean
+                            description: Whether or not to expose this port
+                    connectors:
+                      type: array
+                      description: Configuration of all connectors
+                      minItems: 0
+                      items:
                         type: object
-                        description: Configuration of the AMQ cluster deployment
-                        required:
-                          - clusterUserName
-                          - clusterPassword
+                        description: A single connector configuration
                         properties:
-                          clusterUserName:
+                          name:
                             type: string
-                            description:  Cluster user
-                          clusterPassword:
+                            description: The name of the acceptor
+                          type:
                             type: string
-                            description: Cluster password
-                      commonConfig:
-                        type: object
-                        description: Common configuration of the AMQ
-                        required:
-                          - userName
-                          - password
-                        properties:
-                          userName:
+                            description: The type either tcp or vm
+                          host:
                             type: string
-                            description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
-                          password:
+                            description: Hostname or IP to connect to
+                          port:
+                            type: integer
+                            description: Port number
+                          sslEnabled:
+                            type: boolean
+                            description: Whether or not to enable SSL on this port
+                          sslSecret:
                             type: string
-                            description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
-                    required:
-                    - image
-                    - size
-                    - commonConfig
-                    type: object
+                            description: Name of the secret to use for ssl information
                   status:
                     type: object
-            version: v1alpha1
+            version: v2alpha1
             versions:
-            - name: v1alpha1
+            - name: v2alpha1
               served: true
               storage: true
+            - name: v1alpha1
+              served: false
+              storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -381,28 +399,20 @@ items:
                   metadata:
                     type: object
                   spec:
-                    properties:
-                      statefulsetName:
-                        type: string
-                      addressName:
-                        type: string
-                      queueName:
-                        type: string
-                      routingType:
-                        type: string
-                    required:
-                      - addressName
-                      - queueName
-                      - routingType
-                      - statefulsetName
                     type: object
                   status:
                     type: object
-            version: v1alpha1
+            version: v2alpha1
             versions:
-            - name: v1alpha1
+            - name: v2alpha1
               served: true
               storage: true
+            - name: v1alpha2
+              served: true
+              storage: false
+            - name: v1alpha1
+              served: false
+              storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -434,19 +444,6 @@ items:
                     type: object
                   spec:
                     properties:
-                      masterURL:
-                        description: 'The address of the Kubernetes API server. Overrides any 
-                          value in kubeconfig. Only required if out-of-cluster.'
-                        type: string
-                      kubeconfig:
-                        description: 'Path to a kubeconfig. Only required if out-of-cluster.'
-                        type: string
-                      namespace:
-                        description: 'Only used with --localOnly. When specified, the controller
-                          only handles StatefulSets in the specified namespace. If left empty,
-                          the controller defaults to the namespace it is running in (read from
-                          /var/run/secrets/kubernetes.io/serviceaccount/namespace).'
-                        type: string
                       localOnly:
                         description: 'If enabled, the controller only handles StatefulSets in a
                           single namespace instead of across all namespaces.'
@@ -454,17 +451,20 @@ items:
                     type: object
                   status:
                     type: object
-            version: v1alpha1
+            version: v2alpha1
             versions:
-            - name: v1alpha1
+            - name: v2alpha1
               served: true
               storage: true
+            - name: v1alpha1
+              served: false
+              storage: false
       packages: >
-        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.6.3.clusterserviceversion.yaml
+        - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.7.0.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
-              currentCSV: activemq-artemis-operator.v0.6.3
+              currentCSV: activemq-artemis-operator.v0.7.0
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource

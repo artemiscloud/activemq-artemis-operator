@@ -29,19 +29,6 @@ spec:
           type: object
         spec:
           properties:
-            masterURL:
-              description: 'The address of the Kubernetes API server. Overrides any 
-                value in kubeconfig. Only required if out-of-cluster.'
-              type: string
-            kubeconfig:
-              description: 'Path to a kubeconfig. Only required if out-of-cluster.'
-              type: string
-            namespace:
-              description: 'Only used with --localOnly. When specified, the controller
-                only handles StatefulSets in the specified namespace. If left empty,
-                the controller defaults to the namespace it is running in (read from
-                /var/run/secrets/kubernetes.io/serviceaccount/namespace).'
-              type: string
             localOnly:
               description: 'If enabled, the controller only handles StatefulSets in a
                 single namespace instead of across all namespaces.'
@@ -49,8 +36,11 @@ spec:
           type: object
         status:
           type: object
-  version: v1alpha1
+  version: v2alpha1
   versions:
-  - name: v1alpha1
+  - name: v2alpha1
     served: true
     storage: true
+  - name: v1alpha1
+    served: false
+    storage: false

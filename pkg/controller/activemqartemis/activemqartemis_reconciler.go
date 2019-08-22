@@ -2,7 +2,6 @@ package activemqartemis
 
 import (
 	"fmt"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v1alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
@@ -74,7 +73,7 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 		Namespace: customResource.Namespace,
 	}
 
-	scaledown := &v1alpha1.ActiveMQArtemisScaledown{
+	scaledown := &brokerv2alpha1.ActiveMQArtemisScaledown{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ActiveMQArtemisScaledown",
@@ -84,13 +83,10 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 			Name:      customResource.Name,
 			Namespace: customResource.Namespace,
 		},
-		Spec: v1alpha1.ActiveMQArtemisScaledownSpec{
-			MasterURL:  "",
-			Kubeconfig: "",
-			Namespace:  customResource.Namespace,
+		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
 			LocalOnly:  true,
 		},
-		Status: v1alpha1.ActiveMQArtemisScaledownStatus{},
+		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
 	}
 
 	if customResource.Spec.DeploymentPlan.MessageMigration {
