@@ -18,6 +18,7 @@ type ActiveMQArtemisSpec struct {
 	DeploymentPlan DeploymentPlanType `json:"deploymentPlan,omitempty"`
 	Acceptors      []AcceptorType     `json:"acceptors,omitempty"`
 	Connectors     []ConnectorType    `json:"connectors,omitempty"`
+	Console        ConsoleType        `json:"console,omitempty"`
 }
 
 type DeploymentPlanType struct {
@@ -51,6 +52,13 @@ type ConnectorType struct {
 	Port       int32  `json:"port"`
 	SSLEnabled bool   `json:"sslEnabled,omitempty"`
 	SSLSecret  string `json:"sslSecret,omitempty"`
+}
+
+type ConsoleType struct {
+	Expose	   		bool 	`json:"expose,omitempty"`
+	SSLEnabled 		bool   	`json:"sslEnabled,omitempty"`
+	SSLSecret  		string 	`json:"sslSecret,omitempty"`
+	UseClientAuth	bool 	`json:"useClientAuth,omitempty"`
 }
 
 // ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis

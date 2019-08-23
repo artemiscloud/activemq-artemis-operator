@@ -51,7 +51,7 @@ func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.Namespace
 
 	var err error = nil
 	if err = client.Get(context.TODO(), namespacedName, objectDefinition); err != nil {
-		if errors.IsNotFound(err) {
+		if errors.IsNotFound(err) || runtime.IsNotRegisteredError(err) {
 			reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
 		} else {
 			reqLogger.Info(objectTypeString+" found", "Namespace", cr.Namespace, "Name", cr.Name)
@@ -87,4 +87,53 @@ func Delete(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefi
 	}
 
 	return err
+}
+
+func Enable(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
+	causedUpdate, err := configureExposure(customResource, client, scheme, namespacedName, objectDefinition, true)
+	return causedUpdate, err
+}
+
+func Disable(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
+	causedUpdate, err := configureExposure(customResource, client, scheme, namespacedName, objectDefinition, false)
+	return causedUpdate, err
+}
+
+func configureExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object, enable bool) (bool, error) {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name ", customResource.Name)
+	objectTypeString := reflect.TypeOf(objectDefinition).String()
+	reqLogger.Info("Configuring " + objectTypeString)
+
+	var err error = nil
+	serviceIsNotFound := false
+	causedUpdate := true
+
+	if err = Retrieve(customResource, namespacedName, client, objectDefinition); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info(namespacedName.Name + " " + "not found")
+			serviceIsNotFound = true
+		}
+	}
+
+	// We want a service to be exposed and currently it is not found
+	if enable && serviceIsNotFound {
+		reqLogger.Info("Creating " + namespacedName.Name)
+		if err = Create(customResource, client, scheme, objectDefinition); err != nil {
+			//reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
+			causedUpdate = true
+		}
+	}
+
+	// We do NOT want a service to be exposed and the service IS found
+	if !enable && !serviceIsNotFound {
+		reqLogger.Info("Deleting " + namespacedName.Name)
+		if err = Delete(customResource, client, objectDefinition); err != nil {
+			//reqLogger.Info("Failure to delete " + baseServiceName + " service " + ordinalString)
+			causedUpdate = true
+		}
+	}
+
+	return causedUpdate, err
 }

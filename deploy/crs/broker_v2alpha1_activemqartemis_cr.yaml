@@ -8,7 +8,7 @@ metadata:
     application: example-activemqartemis-app
 spec:
   deploymentPlan:
-    size: 2
+    size: 1
     image: docker-registry.default.svc:5000/olm75-0/amq-broker-74-openshift:9.8
     #image: docker-registry.default.svc:5000/entmqbr-2687-0/amq-broker:7.4-5
     #image: registry.redhat.io/amq7/amq-broker:7.4
@@ -17,11 +17,16 @@ spec:
     role: admin
     requireLogin: false
     clustered: true
-    clusterUser: clusteruser1
-    clusterPassword: clusterpass1
-    persistenceEnabled: true
+    #clusterUser: clusteruser1
+    #clusterPassword: clusterpass1
+    persistenceEnabled: false
     journalType: nio
-    messageMigration: true
+    messageMigration: false
+  console:
+    expose: true
+    sslEnabled: true
+    sslSecret: ym-secret
+    useClientAuth: true
   acceptors:
     #- name: all-protocol
       #protocols: all
@@ -32,11 +37,11 @@ spec:
       sslEnabled: false
       #sslSecret: ym-secret
       expose: false
-  connectors:
-    - name: my-c
-      host: localhost
-      port: 22222
-      sslEnabled: false
+  #connectors:
+    #- name: my-c
+      #host: localhost
+      #port: 22222
+      #sslEnabled: false
       #sslSecret: c-ym-secret
     #- name: second-c
       #host: 127.0.0.1

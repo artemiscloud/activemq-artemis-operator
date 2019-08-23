@@ -1,14 +1,14 @@
 package activemqartemis
 
 import (
+	//"context"
 	"fmt"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-
-	extv1b1 "k8s.io/api/extensions/v1beta1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,7 +20,6 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 
-	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +29,7 @@ import (
 )
 
 const (
+	statefulSetNotUpdated			= 0
 	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
 	statefulSetImageUpdated         = 1 << 2
@@ -38,6 +38,9 @@ const (
 	statefulSetCommonConfigUpdated  = 1 << 5
 	statefulSetRequireLoginUpdated  = 1 << 6
 	statefulSetRoleUpdated          = 1 << 7
+	statefulSetAcceptorsUpdated		= 1 << 8
+	statefulSetConnectorsUpdated	= 1 << 9
+	statefulSetConsoleUpdated		= 1 << 10
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -46,19 +49,38 @@ type ActiveMQArtemisReconciler struct {
 
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client,  scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	SetDefaults(customResource *brokerv2alpha1.ActiveMQArtemis)
+}
+
+func (reconciler *ActiveMQArtemisReconciler) SetDefaults(customResource *brokerv2alpha1.ActiveMQArtemis) {
+
+	if "" == customResource.Spec.DeploymentPlan.User {
+		customResource.Spec.DeploymentPlan.User = random.GenerateRandomString(8)
+	}
+	if "" == customResource.Spec.DeploymentPlan.Password {
+		customResource.Spec.DeploymentPlan.Password = random.GenerateRandomString(8)
+	}
+
+	if "" == customResource.Spec.DeploymentPlan.ClusterUser {
+		customResource.Spec.DeploymentPlan.ClusterUser = random.GenerateRandomString(8)
+	}
+	if "" == customResource.Spec.DeploymentPlan.ClusterPassword {
+		customResource.Spec.DeploymentPlan.ClusterPassword = random.GenerateRandomString(8)
+	}
+	environments.GLOBAL_AMQ_CLUSTER_USER = customResource.Spec.DeploymentPlan.ClusterUser
+	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = customResource.Spec.DeploymentPlan.ClusterPassword
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
-	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, currentStatefulSet)
-	reconciler.ProcessAcceptors(customResource, client, scheme, currentStatefulSet)
-	reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
-
-	// TODO: Implement console settings
-	configureConsoleJolokiaExposure(customResource, client, scheme, true)
+	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, scheme, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessAcceptors(customResource, client, scheme, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessConsole(customResource, client, scheme, currentStatefulSet)
 
 	return statefulSetUpdates
 }
@@ -97,14 +119,14 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 		}
 	} else {
 		if err = resources.Retrieve(customResource, namespacedName, r.client, scaledown); err == nil {
-			// err means not found so create
+			// err means not found so delete
 			if retrieveError = resources.Delete(customResource, r.client, scaledown); retrieveError == nil {
 			}
 		}
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
@@ -114,7 +136,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if clusterConfigSyncCausedUpdateOn(customResource, client, currentStatefulSet) {
+	if clusterConfigSyncCausedUpdateOn(customResource, client, scheme, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
 	}
 
@@ -130,7 +152,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
 	}
 
-	if commonConfigSyncCausedUpdateOn(customResource, client, currentStatefulSet) {
+	if commonConfigSyncCausedUpdateOn(customResource, client, scheme, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetCommonConfigUpdated
 	}
 
@@ -147,7 +169,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	var retVal uint32 = statefulSetNotUpdated
 
 	ensureCOREOn61616Exists := customResource.Spec.DeploymentPlan.MessageMigration || customResource.Spec.DeploymentPlan.Clustered
 	acceptorEntry := ""
@@ -183,7 +207,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 			if "" != acceptor.SSLSecret {
 				secretName = acceptor.SSLSecret
 			}
-			acceptorEntry = acceptorEntry + ";" + generateSSLArguments(customResource, client, secretName)
+			acceptorEntry = acceptorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, client, secretName)
 		}
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
@@ -203,23 +227,26 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 	configureAcceptorsExposure(customResource, client, scheme)
 
 	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil != amqAcceptorsEnvVar {
-		if 0 == strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
-			return
+		if 0 != strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
+			environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS")
+			if "" != acceptorEntry {
+				acceptorsEnvVar := &corev1.EnvVar{
+					Name:      "AMQ_ACCEPTORS",
+					Value:     acceptorEntry,
+					ValueFrom: nil,
+				}
+				environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+			}
+			retVal = statefulSetAcceptorsUpdated
 		}
 	}
 
-	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS")
-	if "" != acceptorEntry {
-		acceptorsEnvVar := &corev1.EnvVar{
-			Name:      "AMQ_ACCEPTORS",
-			Value:     acceptorEntry,
-			ValueFrom: nil,
-		}
-		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
-	}
+	return retVal
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	var retVal uint32 = statefulSetNotUpdated
 
 	connectorEntry := ""
 	connectors := customResource.Spec.Connectors
@@ -237,69 +264,143 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *b
 			if "" != connector.SSLSecret {
 				secretName = connector.SSLSecret
 			}
-			connectorEntry = connectorEntry + ";" + generateSSLArguments(customResource, client, secretName)
+			connectorEntry = connectorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, client, secretName)
 		}
 		connectorEntry = connectorEntry + "<\\/connector>"
 	}
 
 	if amqConnectorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS"); amqConnectorsEnvVar != nil {
-		if 0 == strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
-			return
+		if 0 != strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
+			environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS")
+			if "" != connectorEntry {
+				connectorsEnvVar := &corev1.EnvVar{
+					Name:      "AMQ_CONNECTORS",
+					Value:     connectorEntry,
+					ValueFrom: nil,
+				}
+				environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
+			}
+			retVal = statefulSetAcceptorsUpdated
 		}
 	}
 
-	environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS")
-	if "" != connectorEntry {
-		connectorsEnvVar := &corev1.EnvVar{
-			Name:      "AMQ_CONNECTORS",
-			Value:     connectorEntry,
-			ValueFrom: nil,
-		}
-		environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
-	}
+	return retVal
 }
 
-func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	var retVal uint32 = statefulSetNotUpdated
+
+	sslFlags := ""
+	//newExtraArgsEnvVarValue := ""
+
+	if customResource.Spec.Console.SSLEnabled {
+		secretName := customResource.Name + "-" + "console" + "-secret"
+		if "" != customResource.Spec.Console.SSLSecret {
+			secretName = customResource.Spec.Console.SSLSecret
+		}
+		sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
+	}
+
+	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_EXTRA_ARGS"); nil != amqExtraArgsEnvVar {
+		//if customResource.Spec.Console.SSLEnabled {
+		//	newExtraArgsEnvVarValue = sslFlags
+		//}
+		//if !customResource.Spec.Console.SSLEnabled {
+		//	newExtraArgsEnvVarValue = ""
+		//}
+		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
+			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
+				Name:      "AMQ_EXTRA_ARGS",
+				Value: 		sslFlags,
+				ValueFrom: 	nil,
+			}
+			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedAmqExtraArgsEnvVar)
+			retVal = statefulSetConsoleUpdated
+		}
+	}
+
+	_, _ = configureConsoleExposure(customResource, client, scheme)
+
+	return retVal
+}
+
+func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
+	var err error = nil
 	ordinalString := ""
+	causedUpdate := false
 
-	labels := selectors.LabelBuilder.Labels()
+	originalLabels := selectors.LabelBuilder.Labels()
+	serviceRoutelabels := map[string]string{}
+	for k, v := range originalLabels {
+		serviceRoutelabels[k] = v
+	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
+		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, acceptor := range customResource.Spec.Acceptors {
-			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, acceptor.Name+"-"+ordinalString, acceptor.Port, labels)
-			configureServiceExposure(customResource, client, scheme, serviceDefinition, acceptor.Expose)
+			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels)
+			serviceNamespacedName := types.NamespacedName{
+				Name:      serviceDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if acceptor.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+			}
 			targetPortName := acceptor.Name + "-" + ordinalString
 			targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-			log.Info("Checking routeDefinition for " + targetPortName)
-			passthroughTLS := true
-			routeDefinition := routes.NewRouteDefinitionForCR(customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-			configureRouteExposure(customResource, client, scheme, routeDefinition, acceptor.Expose)
+			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
+			routeNamespacedName := types.NamespacedName{
+				Name:      routeDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if acceptor.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			}
 		}
 	}
+
+	return causedUpdate, err
 }
 
-func configureConsoleJolokiaExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, expose bool) {
+func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
+	var err error = nil
 	ordinalString := ""
+	causedUpdate := false
+	console := customResource.Spec.Console
 
-	labels := selectors.LabelBuilder.Labels()
+	originalLabels := selectors.LabelBuilder.Labels()
+	serviceRoutelabels := map[string]string{}
+	for k, v := range originalLabels {
+		serviceRoutelabels[k] = v
+	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
-		labels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
+		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
-		passthroughTLS := false
 		portNumber := int32(8161)
 		targetPortName := "wconsj" + "-" + ordinalString
 		targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-		log.Info("Checking route for " + targetPortName)
+		serviceDefinition := svc.NewServiceDefinitionForCR(customResource, targetPortName, portNumber, serviceRoutelabels)
 
-		serviceDefinition := svc.NewServiceDefinitionForCR(customResource, targetPortName, portNumber, labels)
-		configureServiceExposure(customResource, client, scheme, serviceDefinition, expose)
+		serviceNamespacedName := types.NamespacedName{
+			Name:      serviceDefinition.Name,
+			Namespace: customResource.Namespace,
+		}
+		if console.Expose {
+			causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+		} else {
+			causedUpdate, err = resources.Disable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+		}
 		var err error = nil
 		isOpenshift := false
 
@@ -309,81 +410,75 @@ func configureConsoleJolokiaExposure(customResource *brokerv2alpha1.ActiveMQArte
 		if isOpenshift {
 			log.Info("Environment is OpenShift")
 			log.Info("Checking routeDefinition for " + targetPortName)
-			routeDefinition := routes.NewRouteDefinitionForCR(customResource, selectors.LabelBuilder.Labels(), targetServiceName, targetPortName, passthroughTLS)
-			configureRouteExposure(customResource, client, scheme, routeDefinition, expose)
+			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
+			routeNamespacedName := types.NamespacedName{
+				Name:      routeDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if console.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			}
 		} else {
 			log.Info("Environment is not OpenShift, creating ingress")
 			ingressDefinition := ingresses.NewIngressForCR(customResource, "wconsj")
-			configureIngress(customResource, client, scheme, ingressDefinition)
-		}
-	}
-}
-
-func configureRouteExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, routeDefinition *routev1.Route, expose bool) {
-
-	var err error = nil
-
-	if expose {
-		namespacedName := types.NamespacedName{
-			Name:      routeDefinition.Name,
-			Namespace: customResource.Namespace,
-		}
-		if err = resources.Retrieve(customResource, namespacedName, client, routeDefinition); err != nil {
-			if errors.IsNotFound(err) {
-				if err = resources.Create(customResource, client, scheme, routeDefinition); err != nil {
-				}
+			ingressNamespacedName := types.NamespacedName{
+				Name:      ingressDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if console.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, ingressNamespacedName, ingressDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, ingressNamespacedName, ingressDefinition)
 			}
 		}
-	} else {
-		if err = resources.Delete(customResource, client, routeDefinition); err != nil {
-			//reqLogger.Info("Failure to delete " + routeDefinition.Name + " route " + ordinalString)
-		}
 	}
+
+	return causedUpdate, err
 }
 
-func configureIngress(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, ingressDefinition *extv1b1.Ingress) {
+func generateConsoleSSLFlags(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
 
-	var err error = nil
-
-	// Define the console-jolokia ingress for this Pod
+	sslFlags := ""
 	namespacedName := types.NamespacedName{
-		Name:      ingressDefinition.Name,
+		Name:      secretName,
 		Namespace: customResource.Namespace,
 	}
-	if err = resources.Retrieve(customResource, namespacedName, client, ingressDefinition); err != nil {
-		// err means not found, so create routes
-		if errors.IsNotFound(err) {
-			if err = resources.Create(customResource, client, scheme, ingressDefinition); err == nil {
-			}
+	stringDataMap := map[string]string{}
+	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+
+	keyStorePassword := "password"
+	keyStorePath := "/etc/" + secretName + "-volume/broker.ks"
+	trustStorePassword := "password"
+	trustStorePath := "/etc/" + secretName + "-volume/client.ts"
+	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
+		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
+			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
+			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
+			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
+		}
+		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
+			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
 		}
 	}
-}
 
-func configureServiceExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, serviceDefinition *corev1.Service, expose bool) {
-
-	var err error = nil
-
-	if expose {
-		namespacedName := types.NamespacedName{
-			Name:      serviceDefinition.Name,
-			Namespace: customResource.Namespace,
-		}
-
-		if err = resources.Retrieve(customResource, namespacedName, client, serviceDefinition); err != nil {
-			if errors.IsNotFound(err) {
-				if err = resources.Create(customResource, client, scheme, serviceDefinition); err != nil {
-					//reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
-				}
-			}
-		}
-	} else {
-		if err = resources.Delete(customResource, client, serviceDefinition); err != nil {
-			//reqLogger.Info("Failure to delete " + baseServiceName + " service " + ordinalString)
-		}
+	sslFlags = sslFlags + " " + "--ssl-key" + " " + keyStorePath
+	sslFlags = sslFlags + " " + "--ssl-key-password" + " " + keyStorePassword
+	sslFlags = sslFlags + " " + "--ssl-trust" + " " + trustStorePath
+	sslFlags = sslFlags + " " + "--ssl-trust-password" + " " + trustStorePassword
+	if customResource.Spec.Console.UseClientAuth {
+		sslFlags = sslFlags + " " + "--use-client-auth"
 	}
+
+	return sslFlags
 }
 
-func generateSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
+func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
 
 	sslArguments := "sslEnabled=true"
 	namespacedName := types.NamespacedName{
@@ -426,7 +521,10 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) bool {
+func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	var err error = nil
+	//causedUpdate := false
 
 	foundClustered := false
 	foundClusterUser := false
@@ -443,9 +541,26 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		Name:      secretName,
 		Namespace: currentStatefulSet.Namespace,
 	}
-	stringDataMap := map[string]string{}
-	secret := secrets.NewSecret(customResource, secretName, stringDataMap)
-	err := resources.Retrieve(customResource, namespacedName, client, secret)
+	//stringDataMap := map[string]string{}
+	//secret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	//clusterUserPasswordStringData := secrets.MakeStringDataMap("clusterUser", "clusterPassword", customResource.Spec.DeploymentPlan.ClusterUser, customResource.Spec.DeploymentPlan.ClusterPassword)
+	//clusterUserPasswordSecret := secrets.NewSecret(customResource, secretName, clusterUserPasswordStringData)
+//	if customResource.Spec.DeploymentPlan.Clustered {
+		//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
+	//_, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
+//	} else {
+//		causedUpdate, err = resources.Disable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
+//	}
+	stringDataMap := map[string]string{
+		"clusterUser":   customResource.Spec.DeploymentPlan.ClusterUser,
+		"clusterPassword": customResource.Spec.DeploymentPlan.ClusterPassword,
+	}
+	clusterUserPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	if err = resources.Retrieve(customResource, namespacedName, client, clusterUserPasswordSecret); err != nil {
+		if errors.IsNotFound(err) {
+			err = resources.Create(customResource, client, scheme, clusterUserPasswordSecret)
+		}
+	}
 
 	clusterUserEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
@@ -482,7 +597,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if v.Name == "AMQ_CLUSTER_USER" {
 			foundClusterUser = true
 			if err == nil {
-				secretClusterUser := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				secretClusterUser := string(clusterUserPasswordSecret.Data[v.ValueFrom.SecretKeyRef.Key])
 				if "" != secretClusterUser &&
 					"" != deploymentPlan.ClusterUser {
 					if 0 != strings.Compare(secretClusterUser, deploymentPlan.ClusterUser) {
@@ -494,7 +609,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		if v.Name == "AMQ_CLUSTER_PASSWORD" {
 			foundClusterPassword = true
 			if err == nil {
-				secretClusterPassword := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				secretClusterPassword := string(clusterUserPasswordSecret.Data[v.ValueFrom.SecretKeyRef.Key])
 				if "" != secretClusterPassword &&
 					"" != deploymentPlan.ClusterPassword {
 					if 0 != strings.Compare(secretClusterPassword, deploymentPlan.ClusterPassword) {
@@ -557,7 +672,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		}
 	}
 
-	return statefulSetUpdated
+	return statefulSetUpdated// || causedUpdate
 }
 
 func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
@@ -591,25 +706,30 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, cu
 		extraArgsNeedsUpdate = true
 	}
 
-	newExtraArgsValue := corev1.EnvVar{}
+	if !foundAio && !foundNio {
+		extraArgs = "--" + strings.ToLower(deploymentPlan.JournalType)
+		extraArgsNeedsUpdate = true
+	}
+
 	if extraArgsNeedsUpdate {
-		newExtraArgsValue = corev1.EnvVar{
+		//newExtraArgsValue := corev1.EnvVar{}
+		newExtraArgsValue := corev1.EnvVar{
 			"AMQ_EXTRA_ARGS",
 			extraArgs,
 			nil,
 		}
-
-		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-		for i := 0; i < containerArrayLen; i++ {
-			//for j := 0; j < envVarArrayLen; j++ {
-			for j := 0; j < len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env); j++ {
-				if "AMQ_EXTRA_ARGS" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-					currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, newExtraArgsValue)
-					break
-				}
-			}
-		}
+		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, &newExtraArgsValue)
+		//containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
+		//for i := 0; i < containerArrayLen; i++ {
+		//	//for j := 0; j < envVarArrayLen; j++ {
+		//	for j := 0; j < len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env); j++ {
+		//		if "AMQ_EXTRA_ARGS" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
+		//			currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
+		//			currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, newExtraArgsValue)
+		//			break
+		//		}
+		//	}
+		//}
 	}
 
 	return extraArgsNeedsUpdate
@@ -716,7 +836,10 @@ func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, 
 	return false
 }
 
-func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) bool {
+func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) bool {
+
+	var err error = nil
+	//causedUpdate := false
 
 	foundCommonUser := false
 	foundCommonPassword := false
@@ -731,9 +854,43 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		Name:      secretName,
 		Namespace: currentStatefulSet.Namespace,
 	}
-	stringDataMap := map[string]string{}
-	secret := secrets.NewSecret(customResource, secretName, stringDataMap)
-	err := resources.Retrieve(customResource, namespacedName, client, secret)
+	//stringDataMap := map[string]string{}
+	//secret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	//err := resources.Retrieve(customResource, namespacedName, client, secret)
+	//userPasswordStringData := secrets.MakeStringDataMap("user", "password", customResource.Spec.DeploymentPlan.User, customResource.Spec.DeploymentPlan.Password)
+	//userPasswordSecret := secrets.NewSecret(customResource, secretName, userPasswordStringData)
+	//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, userPasswordSecret)
+
+	stringDataMap := map[string]string{
+		"user":   customResource.Spec.DeploymentPlan.ClusterUser,
+		"password": customResource.Spec.DeploymentPlan.ClusterPassword,
+	}
+	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	if err = resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err != nil {
+		if errors.IsNotFound(err) {
+			err = resources.Create(customResource, client, scheme, userPasswordSecret)
+		}
+	}
+
+	userEnvVarSource := &corev1.EnvVarSource{
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretName,
+			},
+			Key:      "user",
+			Optional: nil,
+		},
+	}
+
+	passwordEnvVarSource := &corev1.EnvVarSource{
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretName,
+			},
+			Key:      "password",
+			Optional: nil,
+		},
+	}
 
 	// TODO: Remove yuck
 	envVarArray := []corev1.EnvVar{}
@@ -742,7 +899,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		if v.Name == "AMQ_USER" {
 			foundCommonUser = true
 			if err == nil {
-				secretCommonUser := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				secretCommonUser := string(userPasswordSecret.Data[v.ValueFrom.SecretKeyRef.Key])
 				if "" != secretCommonUser &&
 					"" != deploymentPlan.User {
 					if 0 != strings.Compare(secretCommonUser, deploymentPlan.User) {
@@ -754,7 +911,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		if v.Name == "AMQ_PASSWORD" {
 			foundCommonPassword = true
 			if err == nil {
-				secretCommonPassword := string(secret.Data[v.ValueFrom.SecretKeyRef.Key])
+				secretCommonPassword := string(userPasswordSecret.Data[v.ValueFrom.SecretKeyRef.Key])
 				if "" != secretCommonPassword &&
 					"" != deploymentPlan.Password {
 					if 0 != strings.Compare(secretCommonPassword, deploymentPlan.Password) {
@@ -768,8 +925,8 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 	if !foundCommonUser || commonUserNeedsUpdate {
 		newCommonedValue := corev1.EnvVar{
 			"AMQ_USER",
-			deploymentPlan.User,
-			nil,
+			"",
+			userEnvVarSource,
 		}
 		envVarArray = append(envVarArray, newCommonedValue)
 		statefulSetUpdated = true
@@ -778,8 +935,8 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 	if !foundCommonPassword || commonPasswordNeedsUpdate {
 		newCommonedValue := corev1.EnvVar{
 			"AMQ_PASSWORD",
-			deploymentPlan.Password,
-			nil,
+			"",
+			passwordEnvVarSource,
 		}
 		envVarArray = append(envVarArray, newCommonedValue)
 		statefulSetUpdated = true
@@ -806,5 +963,5 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		}
 	}
 
-	return statefulSetUpdated
+	return statefulSetUpdated// || causedUpdate
 }

@@ -3,9 +3,7 @@ package activemqartemis
 import (
 	"context"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -19,6 +17,10 @@ import (
 	"strconv"
 	"time"
 )
+
+var reconciler = ActiveMQArtemisReconciler{
+	statefulSetUpdates: 0,
+}
 
 // This is the state we should be in whenever something happens that
 // requires a change to the kubernetes resources
@@ -69,12 +71,14 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
+	reconciler.SetDefaults(rs.parentFSM.customResource)
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
+	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition)
 	// Check to see if the statefulset already exists
 	if err := resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
 		// err means not found, so create
-		if retrieveError := resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
+		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
 			rs.stepsComplete |= CreatedStatefulSet
 
 			//TODO: Remove this blatant hack
@@ -101,64 +105,8 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 		}
 	}
 
-	userPasswordStringData := secrets.MakeStringDataMap("user", "password", rs.parentFSM.customResource.Spec.DeploymentPlan.User, rs.parentFSM.customResource.Spec.DeploymentPlan.Password)
-	userPasswordSecret := secrets.NewSecret(rs.parentFSM.customResource, "amq-app-secret", userPasswordStringData)
-	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, userPasswordSecret); err != nil {
-		// err means not found so create
-		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, userPasswordSecret); retrieveError == nil {
-			rs.stepsComplete |= CreatedUserPasswordSecret
-		}
-	}
-
-	clusterUserPasswordStringData := secrets.MakeStringDataMap("clusterUser", "clusterPassword", rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser, rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword)
-	environments.GLOBAL_AMQ_CLUSTER_USER = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterUser
-	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = rs.parentFSM.customResource.Spec.DeploymentPlan.ClusterPassword
-	clusterUserPasswordSecret := secrets.NewSecret(rs.parentFSM.customResource, "amq-credentials-secret", clusterUserPasswordStringData)
-	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, clusterUserPasswordSecret); err != nil {
-		// err means not found so create
-		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, clusterUserPasswordSecret); retrieveError == nil {
-			rs.stepsComplete |= CreatedClusterUserPasswordSecret
-		}
-	}
-
 	return err
 }
-
-//func (rs *CreatingK8sResourcesState) syncMessageMigration(cr *v2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
-//
-//	var err error = nil
-//	var retrieveError error = nil
-//
-//	scaledown := &v2alpha1.ActiveMQArtemisScaledown{
-//		TypeMeta: metav1.TypeMeta{
-//			APIVersion: "v1",
-//			Kind:       "ActiveMQArtemisScaledown",
-//		},
-//		ObjectMeta: metav1.ObjectMeta{
-//			Labels:    selectors.LabelBuilder.Labels(),
-//			Name:      cr.Name,
-//			Namespace: cr.Namespace,
-//		},
-//		Spec: v2alpha1.ActiveMQArtemisScaledownSpec{
-//			LocalOnly:  true,
-//		},
-//		Status: v2alpha1.ActiveMQArtemisScaledownStatus{},
-//	}
-//
-//	if rs.parentFSM.customResource.Spec.DeploymentPlan.MessageMigration {
-//		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err != nil {
-//			// err means not found so create
-//			if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, scaledown); retrieveError == nil {
-//			}
-//		}
-//	} else {
-//		if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, scaledown); err == nil {
-//			// no err means found so delete
-//			if retrieveError = resources.Delete(rs.parentFSM.customResource, rs.parentFSM.r.client, scaledown); retrieveError == nil {
-//			}
-//		}
-//	}
-//}
 
 func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 
@@ -187,10 +135,6 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	var nextStateID int = CreatingK8sResourcesID
 	var statefulSetUpdates uint32 = 0
 
-	reconciler := ActiveMQArtemisReconciler{
-		statefulSetUpdates: 0,
-	}
-
 	currentStatefulSet := &appsv1.StatefulSet{}
 	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
 	for {
@@ -207,17 +151,18 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 			reconciler.SyncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r)
 			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
-			if 0 == statefulSetUpdates {
-				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
-					nextStateID = ScalingID
-				}
-				break
-			}
+			//if 0 == statefulSetUpdates {
 			if statefulSetUpdates > 0 {
 				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 					break
 				}
+			}
+			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size != currentStatefulSet.Status.ReadyReplicas {
+				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
+					nextStateID = ScalingID
+				}
+				break
 			}
 		} else {
 			// Not ready... requeue to wait? What other action is required - try to recreate?

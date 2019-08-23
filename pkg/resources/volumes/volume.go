@@ -60,6 +60,22 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
+	if cr.Spec.Console.SSLEnabled {
+		volumeMountName := cr.Name + "-" + "console" + "-secret-volume"
+		if "" != cr.Spec.Console.SSLSecret {
+			volumeMountName = cr.Spec.Console.SSLSecret + "-volume"
+		}
+		volumeMountMountPath := "/etc/" + volumeMountName
+		volumeMount := corev1.VolumeMount{
+			Name:             volumeMountName,
+			ReadOnly:         true,
+			MountPath:        volumeMountMountPath,
+			SubPath:          "",
+			MountPropagation: nil,
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
 	return volumeMounts
 }
 
@@ -100,6 +116,23 @@ func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 		secretName := cr.Name + "-" + connector.Name + "-secret"
 		if "" != connector.SSLSecret {
 			secretName = connector.SSLSecret
+		}
+		volumeName := secretName + "-volume"
+		volume := corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretName,
+				},
+			},
+		}
+		volumes = append(volumes, volume)
+	}
+
+	if cr.Spec.Console.SSLEnabled {
+		secretName := cr.Name + "-" + "console" + "-secret"
+		if "" != cr.Spec.Console.SSLSecret {
+			secretName = cr.Spec.Console.SSLSecret
 		}
 		volumeName := secretName + "-volume"
 		volume := corev1.Volume{
