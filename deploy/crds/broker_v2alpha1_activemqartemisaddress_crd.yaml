@@ -23,6 +23,17 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            addressName:
+              type: string
+            queueName:
+              type: string
+            routingType:
+              type: string
+          required:
+            - addressName
+            - queueName
+            - routingType
           type: object
         status:
           type: object

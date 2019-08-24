@@ -13,17 +13,17 @@ resource.
 ## Getting the code
 
 To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
-and checkout the 0.7.0 tag as per
+and checkout the 0.8.0 tag as per
 
 ```$xslt
 git clone https://github.com/rh-messaging/activemq-artemis-operator
-git checkout 0.7.0
+git checkout 0.8.0
 ```
 
 ## Deploying the operator
 
-In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.7.0/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.7.0/deploy/operator.yaml#L18-L19)
+In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.8.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.8.0/deploy/operator.yaml#L18-L19)
 with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -81,21 +81,21 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'example-activemqartemis' from [broker_v2alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.7.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml)
+resource instance for 'ex-aao' from [broker_v2alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.8.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
 apiVersion: broker.amq.io/v2alpha1
 kind: ActiveMQArtemis
 metadata:
-  name: example-activemqartemis
+  name: ex-aao
 spec:
   # Add fields here
   size: 4
   image: registry.redhat.io/amq7/amq-broker:7.4
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.7.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.8.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
@@ -104,13 +104,13 @@ To deploy the broker we simply execute
 kubectl create -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
 ```
 
-at which point you should now see the statefulset 'example-activemqartemis-ss' under Overview in the web console.
+at which point you should now see the statefulset 'ex-aao-ss' under Overview in the web console.
 
 ```$xslt
-activemqartemis.broker.amq.io "example-activemqartemis" created
+activemqartemis.broker.amq.io "ex-aao" created
 ```
 
-If you expand the example-activemqartemis-ss statefulset you should see that it has 1 pod running along with two services
+If you expand the ex-aao-ss statefulset you should see that it has 1 pod running along with two services
 under 'Networking'; hs which is short for headless service, and ping. The headless service provides access to all protocol
 ports that the broker is listening on. The ping service is a service utilized by the brokers for discovery and allows them
 to form a cluster properly within the OpenShift environment.
@@ -134,7 +134,7 @@ The headless service internally exposes all broker ports:
 
 The ping service, used internally by the brokers for clustering themselves, internally exposes the 8888 port.
 
-### example-activemqartemis-console-jolokia-service
+### ex-aao-console-jolokia-service
 
 The broker hosts its own web console at port 8161 and this service provides external access to it via a 
 [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
@@ -144,7 +144,7 @@ of 30000-32767 so you will want to click in here to get the actual port number n
 Once you have the port number using http://any.ocp.node.ip:consoleNodePortNumber should allow you to access the running
 brokers web console.
 
-### example-activemqartemis-mux-protocol-service
+### ex-aao-mux-protocol-service
 
 The broker has a multiplexed protocol port at 61616 supporting all protocols; AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP.
 This broker port is exposed via a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
@@ -155,19 +155,19 @@ you should be able to produce or consume messages to protocol://://any.ocp.node.
 
 ## Scaling
 
-The example-activemqartemis-ss-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
+The ex-aao-ss-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
 sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale' 
 command as per:
 
 ```$xslt
-oc scale --replicas 0 statefulset example-activemqartemis-ss
+oc scale --replicas 0 statefulset ex-aao-ss
 ```
 
 which would scale down the number of pods to zero. You can also scale the number to greater than one whereby the broker
 pods will form a broker cluster with default settings: 
 
 ```$xslt
-oc scale --replicas 2 statefulset example-activemqartemis-ss
+oc scale --replicas 2 statefulset ex-aao-ss
 ```
 
 One important caveat here is that upon scaledown the persistent
@@ -187,8 +187,8 @@ kind: Route
 metadata:
   annotations:
   labels:
-    ActiveMQArtemis: example-activemqartemis
-    application: example-activemqartemis-app
+    ActiveMQArtemis: ex-aao
+    application: ex-aao-app
   name: wildconsole-jolokia
   namespace: abo-2
 spec:
@@ -213,7 +213,7 @@ served from.
 ### Usage
 
 ```$xslt
-[rkieley@i7t450s ~]$ curl  http://admin:admin@example-activemqartemis-ss-0.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
+[rkieley@i7t450s ~]$ curl  http://admin:admin@ex-aao-ss-0.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current 
                                  Dload  Upload   Total   Spent    Left  Speed                                                                                                                
 100   191    0   191    0     0   4897      0 --:--:-- --:--:-- --:--:--  4897 
@@ -227,7 +227,7 @@ served from.
   "timestamp": 1553533881,                                                                                             
   "status": 200                                                                                                     
 }                                                                                                            
-[rkieley@i7t450s ~]$ curl  http://admin:admin@example-activemqartemis-ss-1.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
+[rkieley@i7t450s ~]$ curl  http://admin:admin@ex-aao-ss-1.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current                              
                                  Dload  Upload   Total   Spent    Left  Speed                                          
 100   191    0   191    0     0   5617      0 --:--:-- --:--:-- --:--:--  5617                                                                                                                                                                 
@@ -256,11 +256,11 @@ broker and you should see something similar to the following message regarding c
 broker 0
 
 >
-> 2019-03-22 16:59:46,406 INFO [org.apache.activemq.artemis.core.server] AMQ221027: Bridge ClusterConnectionBridge@6f13fb88 [name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085], temp=false]@6478aa targetConnector=ServerLocatorImpl (identity=(Cluster-connection-bridge::ClusterConnectionBridge@6f13fb88 [name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085], temp=false]@6478aa targetConnector=ServerLocatorImpl [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-1-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]]::ClusterConnectionImpl@1533123860[nodeUUID=958a8ea9-4cc3-11e9-b153-0a580a820085, connector=TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-0-hs-abo-2-svc-cluster-local, address=, server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085])) [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-1-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]] is connected
+> 2019-03-22 16:59:46,406 INFO [org.apache.activemq.artemis.core.server] AMQ221027: Bridge ClusterConnectionBridge@6f13fb88 [name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085], temp=false]@6478aa targetConnector=ServerLocatorImpl (identity=(Cluster-connection-bridge::ClusterConnectionBridge@6f13fb88 [name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.e0709987-4cc3-11e9-b53b-0a580a810099, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085], temp=false]@6478aa targetConnector=ServerLocatorImpl [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-1-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]]::ClusterConnectionImpl@1533123860[nodeUUID=958a8ea9-4cc3-11e9-b153-0a580a820085, connector=TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-0-hs-abo-2-svc-cluster-local, address=, server=ActiveMQServerImpl::serverUUID=958a8ea9-4cc3-11e9-b153-0a580a820085])) [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-1-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]] is connected
 
 broker 1
 >
-> 2019-03-22 16:59:46,668 INFO [org.apache.activemq.artemis.core.server] AMQ221027: Bridge ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl (identity=(Cluster-connection-bridge::ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]]::ClusterConnectionImpl@104716441[nodeUUID=e0709987-4cc3-11e9-b53b-0a580a810099, connector=TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-1-hs-abo-2-svc-cluster-local, address=, server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099])) [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=example-activemqartemis-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]] is connected
+> 2019-03-22 16:59:46,668 INFO [org.apache.activemq.artemis.core.server] AMQ221027: Bridge ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl (identity=(Cluster-connection-bridge::ClusterConnectionBridge@dcfadf [name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, queue=QueueImpl[name=$.artemis.internal.sf.my-cluster.958a8ea9-4cc3-11e9-b153-0a580a820085, postOffice=PostOfficeImpl [server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099], temp=false]@268b2b2c targetConnector=ServerLocatorImpl [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]]::ClusterConnectionImpl@104716441[nodeUUID=e0709987-4cc3-11e9-b53b-0a580a810099, connector=TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-1-hs-abo-2-svc-cluster-local, address=, server=ActiveMQServerImpl::serverUUID=e0709987-4cc3-11e9-b53b-0a580a810099])) [initialConnectors=[TransportConfiguration(name=artemis, factory=org-apache-activemq-artemis-core-remoting-impl-netty-NettyConnectorFactory) ?port=61616&host=ex-aao-ss-0-hs-abo-2-svc-cluster-local], discoveryGroupConfiguration=null]] is connected
 
 ## Undeploying the broker
 
@@ -270,11 +270,11 @@ To undeploy the broker we simply execute
 kubectl delete -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
 ```
 
-at which point you should no longer see the statefulset 'example-activemqartemis-ss' under Overview in the web console.
+at which point you should no longer see the statefulset 'ex-aao-ss' under Overview in the web console.
 On the command line you should see:
 
 ```$xslt
-activemqartemis.broker.amq.io "example-activemqartemis" deleted
+activemqartemis.broker.amq.io "ex-aao" deleted
 ```
 
 ## Managing Queues
@@ -370,7 +370,7 @@ kubectl create -f deploy/crds/broker_v2alpha1_activemqartemis_drainpod.yaml
 * Once the broker pod is up, scale it to 2.
 
 ```$xslt
-kubectl scale statefulset example-activemqartemis-ss --replicas 2
+kubectl scale statefulset ex-aao-ss --replicas 2
 ```
 
 * Now if you list the pods using `kubectl get pod` you will see 3 pods
@@ -378,18 +378,18 @@ are running. The output is like:
 
 ```$xslt
 activemq-artemis-operator-8566d9bf58-9g25l   1/1     Running   0          3m38s
-example-activemqartemis-ss-0                 1/1     Running   0          112s
-example-activemqartemis-ss-1                 1/1     Running   0          8s
+ex-aao-ss-0                 1/1     Running   0          112s
+ex-aao-ss-1                 1/1     Running   0          8s
 ```
 
 * Log into each pod and send some messages to each broker.
 
-On pod example-activemqartemis-ss-0 (suppose it's cluster IP is 172.17.0.6) run the following command
+On pod ex-aao-ss-0 (suppose it's cluster IP is 172.17.0.6) run the following command
 
 ```$xslt
 /opt/amq-broker/bin/artemis producer --url tcp://172.17.0.6:61616 --user admin --password admin
 ```
-On pod example-activemqartemis-ss-1 (suppose it's cluster IP is 172.17.0.7) run the following command
+On pod ex-aao-ss-1 (suppose it's cluster IP is 172.17.0.7) run the following command
 
 ```$xslt
 /opt/amq-broker/bin/artemis producer --url tcp://172.17.0.7:61616 --user admin --password admin
@@ -400,15 +400,15 @@ On pod example-activemqartemis-ss-1 (suppose it's cluster IP is 172.17.0.7) run 
 * Now scale down the cluster from 2 to 1
 
 ```$xslt
-kubectl scale statefulset example-activemqartemis-ss --replicas 1
+kubectl scale statefulset ex-aao-ss --replicas 1
 ```
 
-* Observe that the pod example-activemqartemis-ss-1 is shutdown and soon after a new drainer pod
+* Observe that the pod ex-aao-ss-1 is shutdown and soon after a new drainer pod
 of the same name is started by the controller. This drainer pod will shutdown itself once the 
-messages have been drained to the other pod (namely example-activemqartemis-ss-0).
+messages have been drained to the other pod (namely ex-aao-ss-0).
 
 * Wait until the drainer pos is shutdown. Then check on the message count on TEST queue at 
-pod example-activemqartemis-ss-0 and you will see the the messages at the queue is 2000, which
+pod ex-aao-ss-0 and you will see the the messages at the queue is 2000, which
 means the drainer pod has done its work.
 
 
