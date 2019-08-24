@@ -1,8 +1,8 @@
 package apis
 
 import (
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 )
 
 func init() {

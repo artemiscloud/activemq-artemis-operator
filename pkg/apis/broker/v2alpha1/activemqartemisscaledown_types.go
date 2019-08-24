@@ -14,7 +14,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	//Namespace  string `json:"namespace"`
-	LocalOnly  bool   `json:"localOnly"`
+	LocalOnly bool `json:"localOnly"`
 }
 
 // ActiveMQArtemisScaledownStatus defines the observed state of ActiveMQArtemisScaledown

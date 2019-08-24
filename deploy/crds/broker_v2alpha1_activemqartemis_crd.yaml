@@ -92,9 +92,39 @@ spec:
                 sslSecret:
                   type: string
                   description: Name of the secret to use for ssl information
+                enabledCipherSuites:
+                  type: string
+                  description: Comma separated list of cipher suites used for SSL communication.
+                enabledProtocols:
+                  type: string
+                  description: Comma separated list of protocols used for SSL communication.
+                needClientAuth:
+                  type: boolean
+                  description: Tells a client connecting to this acceptor that 2-way SSL is required. This property takes precedence over wantClientAuth.
+                wantClientAuth:
+                  type: boolean
+                  description: Tells a client connecting to this acceptor that 2-way SSL is requested but not required. Overridden by needClientAuth.
+                verifyHost:
+                  type: boolean
+                  description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+                sslProvider:
+                  type: string
+                  description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+                sniHost:
+                  type: string
+                  description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
                 expose:
                   type: boolean
-                  description: Whether or not to expose this port
+                  description: Whether or not to expose this acceptor
+                anycastPrefix:
+                  type: string
+                  description: To indicate which kind of routing type to use.
+                multicastPrefix:
+                  type: string
+                  description: To indicate which kind of routing type to use.
+                connectionsAllowed:
+                  type: integer
+                  description: Limits the number of connections which the acceptor will allow. When this limit is reached a DEBUG level message is issued to the log, and the connection is refused.
           connectors:
             type: array
             description: Configuration of all connectors
@@ -121,6 +151,30 @@ spec:
                 sslSecret:
                   type: string
                   description: Name of the secret to use for ssl information
+                enabledCipherSuites:
+                  type: string
+                  description: Comma separated list of cipher suites used for SSL communication.
+                enabledProtocols:
+                  type: string
+                  description: Comma separated list of protocols used for SSL communication.
+                needClientAuth:
+                  type: boolean
+                  description: Tells a client connecting to this acceptor that 2-way SSL is required. This property takes precedence over wantClientAuth.
+                wantClientAuth:
+                  type: boolean
+                  description: Tells a client connecting to this acceptor that 2-way SSL is requested but not required. Overridden by needClientAuth.
+                verifyHost:
+                  type: boolean
+                  description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+                sslProvider:
+                  type: string
+                  description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+                sniHost:
+                  type: string
+                  description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
+                expose:
+                  type: boolean
+                  description: Whether or not to expose this connector
           console:
             type: object
             description: Configuration for the embedded web console

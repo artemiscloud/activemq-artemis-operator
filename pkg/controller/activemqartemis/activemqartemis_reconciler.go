@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	statefulSetNotUpdated			= 0
+	statefulSetNotUpdated           = 0
 	statefulSetSizeUpdated          = 1 << 0
 	statefulSetClusterConfigUpdated = 1 << 1
 	statefulSetImageUpdated         = 1 << 2
@@ -38,9 +38,9 @@ const (
 	statefulSetCommonConfigUpdated  = 1 << 5
 	statefulSetRequireLoginUpdated  = 1 << 6
 	statefulSetRoleUpdated          = 1 << 7
-	statefulSetAcceptorsUpdated		= 1 << 8
-	statefulSetConnectorsUpdated	= 1 << 9
-	statefulSetConsoleUpdated		= 1 << 10
+	statefulSetAcceptorsUpdated     = 1 << 8
+	statefulSetConnectorsUpdated    = 1 << 9
+	statefulSetConsoleUpdated       = 1 << 10
 )
 
 type ActiveMQArtemisReconciler struct {
@@ -49,9 +49,9 @@ type ActiveMQArtemisReconciler struct {
 
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client,  scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
-	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	SetDefaults(customResource *brokerv2alpha1.ActiveMQArtemis)
 }
@@ -79,7 +79,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 
 	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessAcceptors(customResource, client, scheme, currentStatefulSet)
-	statefulSetUpdates |= reconciler.ProcessConnectors(customResource, client, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessConnectors(customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessConsole(customResource, client, scheme, currentStatefulSet)
 
 	return statefulSetUpdates
@@ -106,7 +106,7 @@ func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource
 			Namespace: customResource.Namespace,
 		},
 		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
-			LocalOnly:  true,
+			LocalOnly: true,
 		},
 		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
 	}
@@ -208,6 +208,21 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 				secretName = acceptor.SSLSecret
 			}
 			acceptorEntry = acceptorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, client, secretName)
+			sslOptionalArguments := generateAcceptorSSLOptionalArguments(acceptor)
+			if "" != sslOptionalArguments {
+				acceptorEntry = acceptorEntry + ";" + sslOptionalArguments
+			}
+		}
+		if "" != acceptor.AnycastPrefix {
+			safeAnycastPrefix := strings.Replace(acceptor.AnycastPrefix, "/", "\\/", -1)
+			acceptorEntry = acceptorEntry + ";" + "anycastPrefix=" + safeAnycastPrefix
+		}
+		if "" != acceptor.MulticastPrefix {
+			safeMulticastPrefix := strings.Replace(acceptor.MulticastPrefix, "/", "\\/", -1)
+			acceptorEntry = acceptorEntry + ";" + "multicastPrefix=" + safeMulticastPrefix
+		}
+		if acceptor.ConnectionsAllowed > 0 {
+			acceptorEntry = acceptorEntry + ";" + "connectionsAllowed=" + fmt.Sprintf("%d", acceptor.ConnectionsAllowed)
 		}
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 		// TODO: SSL
@@ -226,25 +241,25 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 
 	configureAcceptorsExposure(customResource, client, scheme)
 
-	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil != amqAcceptorsEnvVar {
-		if 0 != strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
-			environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS")
-			if "" != acceptorEntry {
-				acceptorsEnvVar := &corev1.EnvVar{
-					Name:      "AMQ_ACCEPTORS",
-					Value:     acceptorEntry,
-					ValueFrom: nil,
-				}
-				environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
-			}
+	acceptorsEnvVar := &corev1.EnvVar{
+		Name:      "AMQ_ACCEPTORS",
+		Value:     acceptorEntry,
+		ValueFrom: nil,
+	}
+	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil == amqAcceptorsEnvVar {
+		if "" != acceptorEntry {
+			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
 			retVal = statefulSetAcceptorsUpdated
 		}
+	} else if 0 != strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
+		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+		retVal = statefulSetAcceptorsUpdated
 	}
 
 	return retVal
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -258,30 +273,36 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *b
 		connectorEntry = connectorEntry + "<connector name=\"" + connector.Name + "\">"
 		connectorEntry = connectorEntry + strings.ToLower(connector.Type) + ":\\/\\/" + strings.ToLower(connector.Host) + ":"
 		connectorEntry = connectorEntry + fmt.Sprintf("%d", connector.Port)
-		// TODO: SSL
+
 		if connector.SSLEnabled {
 			secretName := customResource.Name + "-" + connector.Name + "-secret"
 			if "" != connector.SSLSecret {
 				secretName = connector.SSLSecret
 			}
 			connectorEntry = connectorEntry + ";" + generateAcceptorConnectorSSLArguments(customResource, client, secretName)
+			sslOptionalArguments := generateConnectorSSLOptionalArguments(connector)
+			if "" != sslOptionalArguments {
+				connectorEntry = connectorEntry + ";" + sslOptionalArguments
+			}
 		}
 		connectorEntry = connectorEntry + "<\\/connector>"
 	}
 
-	if amqConnectorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS"); amqConnectorsEnvVar != nil {
-		if 0 != strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
-			environments.Delete(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS")
-			if "" != connectorEntry {
-				connectorsEnvVar := &corev1.EnvVar{
-					Name:      "AMQ_CONNECTORS",
-					Value:     connectorEntry,
-					ValueFrom: nil,
-				}
-				environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
-			}
+	configureConnectorsExposure(customResource, client, scheme)
+
+	connectorsEnvVar := &corev1.EnvVar{
+		Name:      "AMQ_CONNECTORS",
+		Value:     connectorEntry,
+		ValueFrom: nil,
+	}
+	if amqConnectorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS"); nil == amqConnectorsEnvVar {
+		if "" != connectorEntry {
+			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
 			retVal = statefulSetAcceptorsUpdated
 		}
+	} else if 0 != strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
+		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
+		retVal = statefulSetAcceptorsUpdated
 	}
 
 	return retVal
@@ -312,8 +333,8 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
 			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
 				Name:      "AMQ_EXTRA_ARGS",
-				Value: 		sslFlags,
-				ValueFrom: 	nil,
+				Value:     sslFlags,
+				ValueFrom: nil,
 			}
 			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedAmqExtraArgsEnvVar)
 			retVal = statefulSetConsoleUpdated
@@ -360,6 +381,51 @@ func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, 
 				Namespace: customResource.Namespace,
 			}
 			if acceptor.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, routeNamespacedName, routeDefinition)
+			}
+		}
+	}
+
+	return causedUpdate, err
+}
+
+func configureConnectorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
+
+	var i int32 = 0
+	var err error = nil
+	ordinalString := ""
+	causedUpdate := false
+
+	originalLabels := selectors.LabelBuilder.Labels()
+	serviceRoutelabels := map[string]string{}
+	for k, v := range originalLabels {
+		serviceRoutelabels[k] = v
+	}
+	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
+		ordinalString = strconv.Itoa(int(i))
+		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
+
+		for _, connector := range customResource.Spec.Connectors {
+			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels)
+			serviceNamespacedName := types.NamespacedName{
+				Name:      serviceDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if connector.Expose {
+				causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+			} else {
+				causedUpdate, err = resources.Disable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
+			}
+			targetPortName := connector.Name + "-" + ordinalString
+			targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
+			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
+			routeNamespacedName := types.NamespacedName{
+				Name:      routeDefinition.Name,
+				Namespace: customResource.Namespace,
+			}
+			if connector.Expose {
 				causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(customResource, client, scheme, routeNamespacedName, routeDefinition)
@@ -514,6 +580,64 @@ func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha1.Active
 	return sslArguments
 }
 
+func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha1.AcceptorType) string {
+
+	sslOptionalArguments := ""
+
+	if "" != acceptor.EnabledCipherSuites {
+		sslOptionalArguments = sslOptionalArguments + "enabledCipherSuites=" + acceptor.EnabledCipherSuites
+	}
+	if "" != acceptor.EnabledProtocols {
+		sslOptionalArguments = sslOptionalArguments + ";" + "enabledProtocols=" + acceptor.EnabledProtocols
+	}
+	if acceptor.NeedClientAuth {
+		sslOptionalArguments = sslOptionalArguments + ";" + "needClientAuth=true"
+	}
+	if acceptor.WantClientAuth {
+		sslOptionalArguments = sslOptionalArguments + ";" + "wantClientAuth=true"
+	}
+	if acceptor.VerifyHost {
+		sslOptionalArguments = sslOptionalArguments + ";" + "verifyHost=true"
+	}
+	if "" != acceptor.SSLProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "sslProvider=" + acceptor.SSLProvider
+	}
+	if "" != acceptor.SNIHost {
+		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + acceptor.SNIHost
+	}
+
+	return sslOptionalArguments
+}
+
+func generateConnectorSSLOptionalArguments(connector brokerv2alpha1.ConnectorType) string {
+
+	sslOptionalArguments := ""
+
+	if "" != connector.EnabledCipherSuites {
+		sslOptionalArguments = sslOptionalArguments + "enabledCipherSuites=" + connector.EnabledCipherSuites
+	}
+	if "" != connector.EnabledProtocols {
+		sslOptionalArguments = sslOptionalArguments + ";" + "enabledProtocols=" + connector.EnabledProtocols
+	}
+	if connector.NeedClientAuth {
+		sslOptionalArguments = sslOptionalArguments + ";" + "needClientAuth=true"
+	}
+	if connector.WantClientAuth {
+		sslOptionalArguments = sslOptionalArguments + ";" + "wantClientAuth=true"
+	}
+	if connector.VerifyHost {
+		sslOptionalArguments = sslOptionalArguments + ";" + "verifyHost=true"
+	}
+	if "" != connector.SSLProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "sslProvider=" + connector.SSLProvider
+	}
+	if "" != connector.SNIHost {
+		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + connector.SNIHost
+	}
+
+	return sslOptionalArguments
+}
+
 // https://stackoverflow.com/questions/37334119/how-to-delete-an-element-from-a-slice-in-golang
 func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	s[i] = s[len(s)-1]
@@ -545,14 +669,14 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 	//secret := secrets.NewSecret(customResource, secretName, stringDataMap)
 	//clusterUserPasswordStringData := secrets.MakeStringDataMap("clusterUser", "clusterPassword", customResource.Spec.DeploymentPlan.ClusterUser, customResource.Spec.DeploymentPlan.ClusterPassword)
 	//clusterUserPasswordSecret := secrets.NewSecret(customResource, secretName, clusterUserPasswordStringData)
-//	if customResource.Spec.DeploymentPlan.Clustered {
-		//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
+	//	if customResource.Spec.DeploymentPlan.Clustered {
+	//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
 	//_, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
-//	} else {
-//		causedUpdate, err = resources.Disable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
-//	}
+	//	} else {
+	//		causedUpdate, err = resources.Disable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
+	//	}
 	stringDataMap := map[string]string{
-		"clusterUser":   customResource.Spec.DeploymentPlan.ClusterUser,
+		"clusterUser":     customResource.Spec.DeploymentPlan.ClusterUser,
 		"clusterPassword": customResource.Spec.DeploymentPlan.ClusterPassword,
 	}
 	clusterUserPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
@@ -672,7 +796,7 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		}
 	}
 
-	return statefulSetUpdated// || causedUpdate
+	return statefulSetUpdated // || causedUpdate
 }
 
 func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
@@ -862,7 +986,7 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 	//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, userPasswordSecret)
 
 	stringDataMap := map[string]string{
-		"user":   customResource.Spec.DeploymentPlan.ClusterUser,
+		"user":     customResource.Spec.DeploymentPlan.ClusterUser,
 		"password": customResource.Spec.DeploymentPlan.ClusterPassword,
 	}
 	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
@@ -963,5 +1087,5 @@ func commonConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArtem
 		}
 	}
 
-	return statefulSetUpdated// || causedUpdate
+	return statefulSetUpdated // || causedUpdate
 }
