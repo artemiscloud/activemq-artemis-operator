@@ -25,7 +25,7 @@ metadata:
             "spec": {
                 "deploymentPlan": {
                     "size": 1,
-                    "image": "registry.redhat.io/amq7/amq-broker:7.4"
+                    "image": "registry.redhat.io/amq7/amq-broker:7.5"
                 }
             }
         },
@@ -103,18 +103,37 @@ spec:
         resources:
           - kind: Service
             version: v1
-          - kind: Deployment
+          - kind: Route
+            version: v1
+          - kind: StatefulSet
+            version: v1
+          - kind: Secret
             version: v1
         specDescriptors:
           - description: The settings required for the broker to be deployed
             displayName: DeploymentPlan
             path: deploymentPlan
-          - description: The desired number of broker pods
+          - description: The number of broker pods to deploy
             displayName: Size
             path: size
-          - description: The Image
+          - description: The image used for the broker deployment
             displayName: Image
             path: image
+          - description: If true require user password login credentials for broker protocol ports
+            displayName: boolean
+            path: requireLogin
+          - description: If true brokers will cluster when scale > 1
+            displayName: boolean
+            path: clustered
+          - description: If true use persistent volume via persistent volume claim for journal storage
+            displayName: boolean
+            path: persistenceEnabled
+          - description: If aio use ASYNCIO, if nio use NIO for journal IO
+            displayName: string
+            path: journalType
+          - description: If true migrate messages on scaledown
+            displayName: boolean
+            path: messageMigration
       - name: activemqartemisaddresses.broker.amq.io
         version: v2alpha1
         kind: ActiveMQArtemisAddress
@@ -138,7 +157,7 @@ spec:
         specDescriptors:
           - displayName: Local Namespace Only
             path: localOnly
-            description: REQUIRED the controller only handles StatefulSets in a single namespace.
+            description: Triggered by main ActiveMQArtemis CRD messageMigration entry
   install:
     strategy: deployment
     spec:
@@ -215,7 +234,7 @@ spec:
                 containers:
                   - name: activemq-artemis-operator
                     # Replace this with the built image name
-                    image: quay.io/artemiscloud/activemq-artemis-operator:latest
+                    image: quay.io/artemiscloud/activemq-artemis-operator:0.8.0
                     command:
                       -  /home/activemq-artemis-operator/bin/entrypoint
                     imagePullPolicy: Always

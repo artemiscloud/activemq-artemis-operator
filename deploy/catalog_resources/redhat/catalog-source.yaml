@@ -17,7 +17,7 @@ items:
               categories: "Messaging"
               certified: "false"
               description: ActiveMQ Artemis Operator can deploy headless service environments which exposed each of the ports, along with the statefulset.
-              containerImage: quay.io/artemiscloud/activemq-artemis-operator:latest
+              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.8.0
               createdAt: 2019-07-04T15:55:00Z
               support: Red Hat, Inc.
               tectonic-visibility: ocs
@@ -35,7 +35,7 @@ items:
                       "spec": {
                           "deploymentPlan": {
                               "size": 1,
-                              "image": "registry.redhat.io/amq7/amq-broker:7.4"
+                              "image": "registry.redhat.io/amq7/amq-broker:7.5"
                           }
                       }
                   },
@@ -110,21 +110,39 @@ items:
                   kind: ActiveMQArtemis
                   description: An instance of Active MQ Artemis
                   displayName: ActiveMQ Artemis
-                  resources:
                     - kind: Service
                       version: v1
-                    - kind: Deployment
+                    - kind: Route
+                      version: v1
+                    - kind: StatefulSet
+                      version: v1
+                    - kind: Secret
                       version: v1
                   specDescriptors:
                     - description: The settings required for the broker to be deployed
                       displayName: DeploymentPlan
                       path: deploymentPlan
-                    - description: The desired number of broker pods
+                    - description: The number of broker pods to deploy
                       displayName: Size
                       path: size
-                    - description: The Image
+                    - description: The image used for the broker deployment
                       displayName: Image
                       path: image
+                    - description: If true require user password login credentials for broker protocol ports
+                      displayName: boolean
+                      path: requireLogin
+                    - description: If true brokers will cluster when scale > 1
+                      displayName: boolean
+                      path: clustered
+                    - description: If true use persistent volume via persistent volume claim for journal storage
+                      displayName: boolean
+                      path: persistenceEnabled
+                    - description: If aio use ASYNCIO, if nio use NIO for journal IO
+                      displayName: string
+                      path: journalType
+                    - description: If true migrate messages on scaledown
+                      displayName: boolean
+                      path: messageMigration
                 - name: activemqartemisaddresses.broker.amq.io
                   version: v2alpha1
                   kind: ActiveMQArtemisAddress
@@ -148,7 +166,7 @@ items:
                   specDescriptors:
                     - displayName: Local Namespace Only
                       path: localOnly
-                      description: REQUIRED the controller only handles StatefulSets in a single namespace.
+                      description: Triggered by main ActiveMQArtemis CRD messageMigration entry
             install:
               strategy: deployment
               spec:
@@ -225,7 +243,7 @@ items:
                           containers:
                             - name: activemq-artemis-operator
                               # Replace this with the built image name
-                              image: quay.io/artemiscloud/activemq-artemis-operator:latest
+                              image: quay.io/artemiscloud/activemq-artemis-operator:0.8.0
                               command:
                                 -  /home/activemq-artemis-operator/bin/entrypoint
                               imagePullPolicy: Always
@@ -335,9 +353,39 @@ items:
                           sslSecret:
                             type: string
                             description: Name of the secret to use for ssl information
+                          enabledCipherSuites:
+                            type: string
+                            description: Comma separated list of cipher suites used for SSL communication.
+                          enabledProtocols:
+                            type: string
+                            description: Comma separated list of protocols used for SSL communication.
+                          needClientAuth:
+                            type: boolean
+                            description: Tells a client connecting to this acceptor that 2-way SSL is required. This property takes precedence over wantClientAuth.
+                          wantClientAuth:
+                            type: boolean
+                            description: Tells a client connecting to this acceptor that 2-way SSL is requested but not required. Overridden by needClientAuth.
+                          verifyHost:
+                            type: boolean
+                            description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+                          sslProvider:
+                            type: string
+                            description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+                          sniHost:
+                            type: string
+                            description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
                           expose:
                             type: boolean
-                            description: Whether or not to expose this port
+                            description: Whether or not to expose this acceptor
+                          anycastPrefix:
+                            type: string
+                            description: To indicate which kind of routing type to use.
+                          multicastPrefix:
+                            type: string
+                            description: To indicate which kind of routing type to use.
+                          connectionsAllowed:
+                            type: integer
+                            description: Limits the number of connections which the acceptor will allow. When this limit is reached a DEBUG level message is issued to the log, and the connection is refused.
                     connectors:
                       type: array
                       description: Configuration of all connectors
@@ -364,16 +412,56 @@ items:
                           sslSecret:
                             type: string
                             description: Name of the secret to use for ssl information
+                          enabledCipherSuites:
+                            type: string
+                            description: Comma separated list of cipher suites used for SSL communication.
+                          enabledProtocols:
+                            type: string
+                            description: Comma separated list of protocols used for SSL communication.
+                          needClientAuth:
+                            type: boolean
+                            description: Tells a client connecting to this acceptor that 2-way SSL is required. This property takes precedence over wantClientAuth.
+                          wantClientAuth:
+                            type: boolean
+                            description: Tells a client connecting to this acceptor that 2-way SSL is requested but not required. Overridden by needClientAuth.
+                          verifyHost:
+                            type: boolean
+                            description: The CN of the connecting client's SSL certificate will be compared to its hostname to verify they match. This is useful only for 2-way SSL.
+                          sslProvider:
+                            type: string
+                            description: Used to change the SSL Provider between JDK and OPENSSL. The default is JDK.
+                          sniHost:
+                            type: string
+                            description: A regular expression used to match the server_name extension on incoming SSL connections. If the name doesn't match then the connection to the acceptor will be rejected.
+                          expose:
+                            type: boolean
+                            description: Whether or not to expose this connector
+                    console:
+                      type: object
+                      description: Configuration for the embedded web console
+                      properties:
+                        expose:
+                          type: boolean
+                          description: Whether or not to expose this port
+                        sslEnabled:
+                          type: boolean
+                          description: Whether or not to enable SSL on this port
+                        sslSecret:
+                          type: string
+                          description: Name of the secret to use for ssl information
+                        useClientAuth:
+                          type: boolean
+                          description: If the embedded server requires client authentication
                   status:
                     type: object
             version: v2alpha1
             versions:
-            - name: v2alpha1
-              served: true
-              storage: true
-            - name: v1alpha1
-              served: false
-              storage: false
+              - name: v2alpha1
+                served: true
+                storage: true
+              - name: v1alpha1
+                served: false
+                storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -399,20 +487,31 @@ items:
                   metadata:
                     type: object
                   spec:
+                    properties:
+                      addressName:
+                        type: string
+                      queueName:
+                        type: string
+                      routingType:
+                        type: string
+                    required:
+                      - addressName
+                      - queueName
+                      - routingType
                     type: object
                   status:
                     type: object
             version: v2alpha1
             versions:
-            - name: v2alpha1
-              served: true
-              storage: true
-            - name: v1alpha2
-              served: true
-              storage: false
-            - name: v1alpha1
-              served: false
-              storage: false
+              - name: v2alpha1
+                served: true
+                storage: true
+              - name: v1alpha2
+                served: true
+                storage: false
+              - name: v1alpha1
+                served: false
+                storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -453,19 +552,18 @@ items:
                     type: object
             version: v2alpha1
             versions:
-            - name: v2alpha1
-              served: true
-              storage: true
-            - name: v1alpha1
-              served: false
-              storage: false
+              - name: v2alpha1
+                served: true
+                storage: true
+              - name: v1alpha1
+                served: false
+                storage: false
       packages: >
         - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.8.0.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
               currentCSV: activemq-artemis-operator.v0.8.0
-
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
