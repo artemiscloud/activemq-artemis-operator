@@ -8,34 +8,21 @@ metadata:
     application: ex-aao-app
 spec:
   deploymentPlan:
-    size: 0
-    image: docker-registry.default.svc:5000/entmqbr-2687-0/amq-broker-74-openshift:9.8
-    #image: docker-registry.default.svc:5000/entmqbr-2687-0/amq-broker:7.4-5
-    #image: registry.redhat.io/amq7/amq-broker:7.4
-    #user: adminUser
-    #password: adminPass
+    size: 2
+    image: registry.redhat.io/amq7/amq-broker:7.5
     role: admin
     requireLogin: false
     clustered: true
-    #clusterUser: clusteruser1
-    #clusterPassword: clusterpass1
     persistenceEnabled: true
     journalType: nio
     messageMigration: true
   console:
     expose: true
-    #sslEnabled: true
-    #sslSecret: ym-secret
-    #useClientAuth: true
   acceptors:
-    #- name: all-protocol
-      #protocols: all
-      #port: 61616
     - name: my
       protocols: amqp
       port: 5672
       sslEnabled: true
-      #sslSecret: ym-secret
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
@@ -46,13 +33,11 @@ spec:
       expose: true
       anycastPrefix: jms.topic.
       multicastPrefix: /queue/
-      #connectionsAllowed: 100
   connectors:
     - name: my-c
       host: localhost
       port: 22222
       sslEnabled: true
-      #sslSecret: c-ym-secret
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
@@ -61,6 +46,3 @@ spec:
       sslProvider: JDK
       sniHost: localhost
       expose: true
-    #- name: second-c
-      #host: 127.0.0.1
-      #port: 33333

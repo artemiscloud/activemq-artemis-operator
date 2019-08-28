@@ -17,7 +17,7 @@ items:
               categories: "Messaging"
               certified: "false"
               description: ActiveMQ Artemis Operator can deploy headless service environments which exposed each of the ports, along with the statefulset.
-              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.8.0
+              containerImage: quay.io/artemiscloud/activemq-artemis-operator:latest
               createdAt: 2019-07-04T15:55:00Z
               support: Red Hat, Inc.
               tectonic-visibility: ocs
@@ -110,6 +110,7 @@ items:
                   kind: ActiveMQArtemis
                   description: An instance of Active MQ Artemis
                   displayName: ActiveMQ Artemis
+                  resources:
                     - kind: Service
                       version: v1
                     - kind: Route
@@ -456,12 +457,12 @@ items:
                     type: object
             version: v2alpha1
             versions:
-              - name: v2alpha1
-                served: true
-                storage: true
-              - name: v1alpha1
-                served: false
-                storage: false
+            - name: v2alpha1
+              served: true
+              storage: true
+            - name: v1alpha1
+              served: false
+              storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -503,15 +504,15 @@ items:
                     type: object
             version: v2alpha1
             versions:
-              - name: v2alpha1
-                served: true
-                storage: true
-              - name: v1alpha2
-                served: true
-                storage: false
-              - name: v1alpha1
-                served: false
-                storage: false
+            - name: v2alpha1
+              served: true
+              storage: true
+            - name: v1alpha2
+              served: true
+              storage: false
+            - name: v1alpha1
+              served: false
+              storage: false
         - apiVersion: apiextensions.k8s.io/v1beta1
           kind: CustomResourceDefinition
           metadata:
@@ -552,18 +553,19 @@ items:
                     type: object
             version: v2alpha1
             versions:
-              - name: v2alpha1
-                served: true
-                storage: true
-              - name: v1alpha1
-                served: false
-                storage: false
+            - name: v2alpha1
+              served: true
+              storage: true
+            - name: v1alpha1
+              served: false
+              storage: false
       packages: >
         - #! package-manifest: deploy/catalog_resources/redhat/activemq-artemis-operator.v0.8.0.clusterserviceversion.yaml
           packageName: activemq-artemis
           channels:
             - name: alpha
               currentCSV: activemq-artemis-operator.v0.8.0
+
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:

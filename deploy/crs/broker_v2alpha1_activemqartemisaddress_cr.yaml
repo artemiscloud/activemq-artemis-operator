@@ -6,7 +6,6 @@ metadata:
     ActiveMQArtemis: ex-aao
     application: ex-aao-app
 spec:
-  # Add fields here
   addressName: myAddress0
   queueName: myQueue0
   routingType: anycast

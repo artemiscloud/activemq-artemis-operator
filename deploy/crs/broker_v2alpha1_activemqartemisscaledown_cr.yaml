@@ -6,5 +6,4 @@ metadata:
     ActiveMQArtemis: ex-aao
     application: ex-aao-app
 spec:
-  # Add fields here
   localOnly: true
