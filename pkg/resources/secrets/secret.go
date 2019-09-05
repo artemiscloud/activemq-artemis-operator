@@ -53,3 +53,4 @@ func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string
 
 	return &userPasswordSecret
 }
+

@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
 	"time"
 )
 
@@ -81,11 +82,13 @@ func (ss *ScalingState) Update() (error, int) {
 		}
 
 		//if currentStatefulSet.Status.Replicas == currentStatefulSet.Status.ReadyReplicas {
-		if *currentStatefulSet.Spec.Replicas == currentStatefulSet.Status.ReadyReplicas {
+		if (*currentStatefulSet.Spec.Replicas == currentStatefulSet.Status.ReadyReplicas) &&
+			(0 == strings.Compare(currentStatefulSet.Status.CurrentRevision, currentStatefulSet.Status.UpdateRevision)) {
 			ss.parentFSM.r.result = reconcile.Result{Requeue: true}
 			reqLogger.Info("ScalingState requesting reconcile requeue for immediate reissue due to scaling completion")
 
-			if *currentStatefulSet.Spec.Replicas > 0 {
+			if *currentStatefulSet.Spec.Replicas > 0 &&
+				(currentStatefulSet.Status.ObservedGeneration > ss.enteringObservedGeneration) {
 				nextStateID = ContainerRunningID
 			}
 

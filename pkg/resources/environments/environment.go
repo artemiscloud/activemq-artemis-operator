@@ -3,6 +3,7 @@ package environments
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -262,6 +263,11 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 			"",
 			nil,
 		},
+		{
+			"TRIGGERED_ROLL_COUNT",
+			"0",
+			nil,
+		},
 	}
 
 	return envVarArray
@@ -434,6 +440,33 @@ func StringSyncCausedUpdateOn(containers []corev1.Container, envVarName string, 
 	return retEnvVar
 }
 
+func IncrementTriggeredRollCount(containers []corev1.Container) error {
+
+	// Find the existing values
+	var err error = nil
+	var triggeredRollCount int = 0
+	for _, v := range containers[0].Env {
+		if v.Name == "TRIGGERED_ROLL_COUNT" {
+			if triggeredRollCount, err = strconv.Atoi(v.Value); err == nil {
+				triggeredRollCount++
+				if math.MaxInt32 == triggeredRollCount {
+					triggeredRollCount = 0
+				}
+			}
+			break
+		}
+	}
+
+	newTriggeredRollCountEnvVar := corev1.EnvVar{
+		"TRIGGERED_ROLL_COUNT",
+		strconv.Itoa(triggeredRollCount),
+		nil,
+	}
+	Update(containers, &newTriggeredRollCountEnvVar)
+
+	return err
+}
+
 func Create(containers []corev1.Container, envVar *corev1.EnvVar) {
 
 	for i := 0; i < len(containers); i++ {
@@ -478,3 +511,4 @@ func Delete(containers []corev1.Container, envVarName string) {
 		}
 	}
 }
+

@@ -173,6 +173,116 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 
 	var retVal uint32 = statefulSetNotUpdated
 
+	acceptorEntry := generateAcceptorsString(customResource, client)
+	configureAcceptorsExposure(customResource, client, scheme)
+	envVarName := "AMQ_ACCEPTORS"
+	secretNamePrefix := customResource.Name + "-netty"
+	retVal = sourceEnvVarFromSecret(customResource, currentStatefulSet, acceptorEntry, envVarName, secretNamePrefix, client, scheme)
+
+	return retVal
+}
+
+func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	var retVal uint32 = statefulSetNotUpdated
+
+	connectorEntry := generateConnectorsString(customResource, client)
+	configureConnectorsExposure(customResource, client, scheme)
+	envVarName := "AMQ_CONNECTORS"
+	secretNamePrefix := customResource.Name + "-netty"
+	retVal = sourceEnvVarFromSecret(customResource, currentStatefulSet, connectorEntry, envVarName, secretNamePrefix, client, scheme)
+
+	return retVal
+}
+
+func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+
+	var retVal uint32 = statefulSetNotUpdated
+
+	sslFlags := ""
+
+	if customResource.Spec.Console.SSLEnabled {
+		secretName := customResource.Name + "-" + "console" + "-secret"
+		if "" != customResource.Spec.Console.SSLSecret {
+			secretName = customResource.Spec.Console.SSLSecret
+		}
+		sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
+	}
+
+	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONSOLE_ARGS"); nil != amqExtraArgsEnvVar {
+		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
+			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
+				Name:      "AMQ_CONSOLE_ARGS",
+				Value:     sslFlags,
+				ValueFrom: nil,
+			}
+			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedAmqExtraArgsEnvVar)
+			retVal = statefulSetConsoleUpdated
+		}
+	}
+
+	_, _ = configureConsoleExposure(customResource, client, scheme)
+
+	return retVal
+}
+
+func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, acceptorEntry string, envVarName string, secretNamePrefix string, client client.Client, scheme *runtime.Scheme) uint32 {
+
+	var err error = nil
+	var retVal uint32 = statefulSetNotUpdated
+
+	secretName := secretNamePrefix + "-secret"
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: currentStatefulSet.Namespace,
+	}
+	acceptorsEnvVarSource := &corev1.EnvVarSource{
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: secretName,
+			},
+			Key:      envVarName,
+			Optional: nil,
+		},
+	}
+	acceptorsEnvVar := &corev1.EnvVar{
+		Name:      envVarName,
+		Value:     "",
+		ValueFrom: acceptorsEnvVarSource,
+	}
+	// Attempt to retrieve the secret
+	stringDataMap := map[string]string{
+		envVarName: acceptorEntry,
+	}
+	nettySecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	if err = resources.Retrieve(customResource, namespacedName, client, nettySecret); err != nil {
+		if errors.IsNotFound(err) {
+			err = resources.Create(customResource, client, scheme, nettySecret)
+			if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == amqAcceptorsEnvVar {
+				environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+				retVal = statefulSetAcceptorsUpdated
+			}
+		}
+	} else { // err == nil so it already exists
+		// Exists now
+		// Check the contents against what we just got above
+		if 0 != strings.Compare(string(nettySecret.Data[envVarName]), acceptorEntry) {
+			nettySecret.Data[envVarName] = []byte(acceptorEntry)
+
+			// These updates alone do not trigger a rolling update due to env var update as it's from a secret
+			err = resources.Update(customResource, client, nettySecret)
+			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
+
+			// Force the rolling update to occur
+			environments.IncrementTriggeredRollCount(currentStatefulSet.Spec.Template.Spec.Containers)
+			retVal = statefulSetAcceptorsUpdated
+		}
+	}
+	return retVal
+}
+
+func generateAcceptorsString(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client) string {
+
 	ensureCOREOn61616Exists := customResource.Spec.DeploymentPlan.MessageMigration || customResource.Spec.DeploymentPlan.Clustered
 	acceptorEntry := ""
 	defaultArgs := "tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;useEpoll=true;amqpCredits=1000;amqpMinCredits=300"
@@ -239,33 +349,13 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
 	}
 
-	configureAcceptorsExposure(customResource, client, scheme)
-
-	acceptorsEnvVar := &corev1.EnvVar{
-		Name:      "AMQ_ACCEPTORS",
-		Value:     acceptorEntry,
-		ValueFrom: nil,
-	}
-	if amqAcceptorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ACCEPTORS"); nil == amqAcceptorsEnvVar {
-		if "" != acceptorEntry {
-			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
-			retVal = statefulSetAcceptorsUpdated
-		}
-	} else if 0 != strings.Compare(amqAcceptorsEnvVar.Value, acceptorEntry) {
-		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, acceptorsEnvVar)
-		retVal = statefulSetAcceptorsUpdated
-	}
-
-	return retVal
+	return acceptorEntry
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
-
-	var retVal uint32 = statefulSetNotUpdated
+func generateConnectorsString(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client) string {
 
 	connectorEntry := ""
 	connectors := customResource.Spec.Connectors
-
 	for _, connector := range connectors {
 		if connector.Type == "" {
 			connector.Type = "tcp"
@@ -288,62 +378,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *b
 		connectorEntry = connectorEntry + "<\\/connector>"
 	}
 
-	configureConnectorsExposure(customResource, client, scheme)
-
-	connectorsEnvVar := &corev1.EnvVar{
-		Name:      "AMQ_CONNECTORS",
-		Value:     connectorEntry,
-		ValueFrom: nil,
-	}
-	if amqConnectorsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONNECTORS"); nil == amqConnectorsEnvVar {
-		if "" != connectorEntry {
-			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
-			retVal = statefulSetAcceptorsUpdated
-		}
-	} else if 0 != strings.Compare(amqConnectorsEnvVar.Value, connectorEntry) {
-		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, connectorsEnvVar)
-		retVal = statefulSetAcceptorsUpdated
-	}
-
-	return retVal
-}
-
-func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
-
-	var retVal uint32 = statefulSetNotUpdated
-
-	sslFlags := ""
-	//newExtraArgsEnvVarValue := ""
-
-	if customResource.Spec.Console.SSLEnabled {
-		secretName := customResource.Name + "-" + "console" + "-secret"
-		if "" != customResource.Spec.Console.SSLSecret {
-			secretName = customResource.Spec.Console.SSLSecret
-		}
-		sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
-	}
-
-	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONSOLE_ARGS"); nil != amqExtraArgsEnvVar {
-		//if customResource.Spec.Console.SSLEnabled {
-		//	newExtraArgsEnvVarValue = sslFlags
-		//}
-		//if !customResource.Spec.Console.SSLEnabled {
-		//	newExtraArgsEnvVarValue = ""
-		//}
-		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
-			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
-				Name:      "AMQ_CONSOLE_ARGS",
-				Value:     sslFlags,
-				ValueFrom: nil,
-			}
-			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedAmqExtraArgsEnvVar)
-			retVal = statefulSetConsoleUpdated
-		}
-	}
-
-	_, _ = configureConsoleExposure(customResource, client, scheme)
-
-	return retVal
+	return connectorEntry
 }
 
 func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
@@ -665,16 +700,6 @@ func clusterConfigSyncCausedUpdateOn(customResource *brokerv2alpha1.ActiveMQArte
 		Name:      secretName,
 		Namespace: currentStatefulSet.Namespace,
 	}
-	//stringDataMap := map[string]string{}
-	//secret := secrets.NewSecret(customResource, secretName, stringDataMap)
-	//clusterUserPasswordStringData := secrets.MakeStringDataMap("clusterUser", "clusterPassword", customResource.Spec.DeploymentPlan.ClusterUser, customResource.Spec.DeploymentPlan.ClusterPassword)
-	//clusterUserPasswordSecret := secrets.NewSecret(customResource, secretName, clusterUserPasswordStringData)
-	//	if customResource.Spec.DeploymentPlan.Clustered {
-	//causedUpdate, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
-	//_, err = resources.Enable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
-	//	} else {
-	//		causedUpdate, err = resources.Disable(customResource, client, scheme, namespacedName, clusterUserPasswordSecret)
-	//	}
 	stringDataMap := map[string]string{
 		"clusterUser":     customResource.Spec.DeploymentPlan.ClusterUser,
 		"clusterPassword": customResource.Spec.DeploymentPlan.ClusterPassword,
