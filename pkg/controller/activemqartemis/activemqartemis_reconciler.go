@@ -323,7 +323,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 		sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
 	}
 
-	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_EXTRA_ARGS"); nil != amqExtraArgsEnvVar {
+	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONSOLE_ARGS"); nil != amqExtraArgsEnvVar {
 		//if customResource.Spec.Console.SSLEnabled {
 		//	newExtraArgsEnvVarValue = sslFlags
 		//}
@@ -332,7 +332,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 		//}
 		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
 			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
-				Name:      "AMQ_EXTRA_ARGS",
+				Name:      "AMQ_CONSOLE_ARGS",
 				Value:     sslFlags,
 				ValueFrom: nil,
 			}
@@ -808,11 +808,11 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, cu
 
 	// Find the existing values
 	for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
-		if v.Name == "AMQ_EXTRA_ARGS" {
-			if strings.Index(v.Value, "--aio") > -1 {
+		if v.Name == "AMQ_JOURNAL_TYPE" {
+			if strings.Index(v.Value, "aio") > -1 {
 				foundAio = true
 			}
-			if strings.Index(v.Value, "--nio") > -1 {
+			if strings.Index(v.Value, "nio") > -1 {
 				foundNio = true
 			}
 			extraArgs = v.Value
@@ -821,12 +821,12 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, cu
 	}
 
 	if "aio" == strings.ToLower(deploymentPlan.JournalType) && foundNio {
-		extraArgs = strings.Replace(extraArgs, "--nio", "--aio", 1)
+		extraArgs = strings.Replace(extraArgs, "nio", "aio", 1)
 		extraArgsNeedsUpdate = true
 	}
 
 	if !("aio" == strings.ToLower(deploymentPlan.JournalType)) && foundAio {
-		extraArgs = strings.Replace(extraArgs, "--aio", "--nio", 1)
+		extraArgs = strings.Replace(extraArgs, "aio", "nio", 1)
 		extraArgsNeedsUpdate = true
 	}
 
@@ -836,24 +836,12 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, cu
 	}
 
 	if extraArgsNeedsUpdate {
-		//newExtraArgsValue := corev1.EnvVar{}
 		newExtraArgsValue := corev1.EnvVar{
-			"AMQ_EXTRA_ARGS",
+			"AMQ_JOURNAL_TYPE",
 			extraArgs,
 			nil,
 		}
 		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, &newExtraArgsValue)
-		//containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
-		//for i := 0; i < containerArrayLen; i++ {
-		//	//for j := 0; j < envVarArrayLen; j++ {
-		//	for j := 0; j < len(currentStatefulSet.Spec.Template.Spec.Containers[i].Env); j++ {
-		//		if "AMQ_EXTRA_ARGS" == currentStatefulSet.Spec.Template.Spec.Containers[i].Env[j].Name {
-		//			currentStatefulSet.Spec.Template.Spec.Containers[i].Env = remove(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, j)
-		//			currentStatefulSet.Spec.Template.Spec.Containers[i].Env = append(currentStatefulSet.Spec.Template.Spec.Containers[i].Env, newExtraArgsValue)
-		//			break
-		//		}
-		//	}
-		//}
 	}
 
 	return extraArgsNeedsUpdate

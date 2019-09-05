@@ -119,11 +119,11 @@ func GetPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defau
 		if false { // "TODO-FIX-REPLACE"
 			//result = cr.Spec.SSLConfig.KeyStorePassword
 		}
-	case "AMQ_EXTRA_ARGS":
+	case "AMQ_JOURNAL_TYPE":
 		if "aio" == strings.ToLower(cr.Spec.DeploymentPlan.JournalType) {
-			result = "--aio"
+			result = "aio"
 		} else {
-			result = "--nio"
+			result = "nio"
 		}
 	}
 	return result
@@ -250,6 +250,16 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		{
 			"POD_NAMESPACE",
 			"", // Set to the field metadata.namespace in current object
+			nil,
+		},
+		{
+			"AMQ_JOURNAL_TYPE",
+			GetPropertyForCR("AMQ_JOURNAL_TYPE", cr, "nio"),
+			nil,
+		},
+		{
+			"AMQ_CONSOLE_ARGS",
+			"",
 			nil,
 		},
 	}
