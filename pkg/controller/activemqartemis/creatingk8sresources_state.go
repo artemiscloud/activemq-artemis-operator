@@ -149,9 +149,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
 			(rs.stepsComplete&CreatedPingService > 0) {
 
-			reconciler.SyncMessageMigration(rs.parentFSM.customResource, rs.parentFSM.r)
 			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
-			//if 0 == statefulSetUpdates {
 			if statefulSetUpdates > 0 {
 				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)

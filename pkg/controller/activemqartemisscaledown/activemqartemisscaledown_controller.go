@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/draincontroller"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/signals"
 	"io/ioutil"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -34,6 +33,8 @@ var (
 	namespace  string
 	localOnly  bool
 )
+
+var StopCh chan struct{}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -125,7 +126,7 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 	reqLogger.Info("====", "localOnly:", localOnly)
 
 	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
+	StopCh = make(chan struct{})
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
@@ -160,10 +161,10 @@ func (r *ReconcileActiveMQArtemisScaledown) Reconcile(request reconcile.Request)
 	drainControllerInstance := draincontroller.NewController(kubeClient, kubeInformerFactory, namespace, localOnly)
 
 	reqLogger.Info("==== Starting async factory...")
-	go kubeInformerFactory.Start(stopCh)
+	go kubeInformerFactory.Start(StopCh)
 
 	reqLogger.Info("==== Running drain controller...")
-	if err = drainControllerInstance.Run(1, stopCh); err != nil {
+	if err = drainControllerInstance.Run(1, StopCh); err != nil {
 		reqLogger.Info("===== failed to run drainer", "error", err.Error())
 		reqLogger.Error(err, "Error running controller: %s", err.Error())
 		return reconcile.Result{}, err

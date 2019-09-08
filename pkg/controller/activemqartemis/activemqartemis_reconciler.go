@@ -3,6 +3,7 @@ package activemqartemis
 import (
 	//"context"
 	"fmt"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemisscaledown"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
@@ -85,47 +86,6 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	return statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) SyncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, r *ReconcileActiveMQArtemis) {
-
-	var err error = nil
-	var retrieveError error = nil
-
-	namespacedName := types.NamespacedName{
-		Name:      customResource.Name,
-		Namespace: customResource.Namespace,
-	}
-
-	scaledown := &brokerv2alpha1.ActiveMQArtemisScaledown{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ActiveMQArtemisScaledown",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    selectors.LabelBuilder.Labels(),
-			Name:      customResource.Name,
-			Namespace: customResource.Namespace,
-		},
-		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
-			LocalOnly: true,
-		},
-		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
-	}
-
-	if customResource.Spec.DeploymentPlan.MessageMigration {
-		if err = resources.Retrieve(customResource, namespacedName, r.client, scaledown); err != nil {
-			// err means not found so create
-			if retrieveError = resources.Create(customResource, r.client, r.scheme, scaledown); retrieveError == nil {
-			}
-		}
-	} else {
-		if err = resources.Retrieve(customResource, namespacedName, r.client, scaledown); err == nil {
-			// err means not found so delete
-			if retrieveError = resources.Delete(customResource, r.client, scaledown); retrieveError == nil {
-			}
-		}
-	}
-}
-
 func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
@@ -165,6 +125,8 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedEnvVar)
 		reconciler.statefulSetUpdates |= statefulSetRoleUpdated
 	}
+
+	syncMessageMigration(customResource, client, scheme)
 
 	return reconciler.statefulSetUpdates
 }
@@ -224,6 +186,48 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 	_, _ = configureConsoleExposure(customResource, client, scheme)
 
 	return retVal
+}
+
+func syncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+
+	var err error = nil
+	var retrieveError error = nil
+
+	namespacedName := types.NamespacedName{
+		Name:      customResource.Name,
+		Namespace: customResource.Namespace,
+	}
+
+	scaledown := &brokerv2alpha1.ActiveMQArtemisScaledown{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ActiveMQArtemisScaledown",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    selectors.LabelBuilder.Labels(),
+			Name:      customResource.Name,
+			Namespace: customResource.Namespace,
+		},
+		Spec: brokerv2alpha1.ActiveMQArtemisScaledownSpec{
+			LocalOnly: true,
+		},
+		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
+	}
+
+	if customResource.Spec.DeploymentPlan.MessageMigration {
+		if err = resources.Retrieve(customResource, namespacedName, client, scaledown); err != nil {
+			// err means not found so create
+			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {
+			}
+		}
+	} else {
+		if err = resources.Retrieve(customResource, namespacedName, client, scaledown); err == nil {
+			close(activemqartemisscaledown.StopCh)
+			// err means not found so delete
+			if retrieveError = resources.Delete(customResource, client, scaledown); retrieveError == nil {
+			}
+		}
+	}
 }
 
 func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, acceptorEntry string, envVarName string, secretNamePrefix string, client client.Client, scheme *runtime.Scheme) uint32 {
