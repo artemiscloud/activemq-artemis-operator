@@ -15,6 +15,8 @@ type ActiveMQArtemisSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
+	AdminUser      string             `json:"adminUser,omitempty"`
+	AdminPassword  string             `json:"adminPassword,omitempty"`
 	DeploymentPlan DeploymentPlanType `json:"deploymentPlan,omitempty"`
 	Acceptors      []AcceptorType     `json:"acceptors,omitempty"`
 	Connectors     []ConnectorType    `json:"connectors,omitempty"`
@@ -24,13 +26,7 @@ type ActiveMQArtemisSpec struct {
 type DeploymentPlanType struct {
 	Image              string `json:"image,omitempty"`
 	Size               int32  `json:"size,omitempty"`
-	User               string `json:"user,omitempty"`
-	Password           string `json:"password,omitempty"`
-	Role               string `json:"role,omitempty"`
 	RequireLogin       bool   `json:"requireLogin,omitempty"`
-	Clustered          bool   `json:"clustered,omitempty"`
-	ClusterUser        string `json:"clusterUser,omitempty"`
-	ClusterPassword    string `json:"clusterPassword,omitempty"`
 	PersistenceEnabled bool   `json:"persistenceEnabled,omitempty"`
 	JournalType        string `json:"journalType,omitempty"`
 	MessageMigration   bool   `json:"messageMigration,omitempty"`

@@ -204,7 +204,16 @@ func schema_pkg_apis_broker_v2alpha1_ActiveMQArtemisScaledownSpec(ref common.Ref
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ActiveMQArtemisScaledownSpec defines the desired state of ActiveMQArtemisScaledown",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"localOnly": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html Namespace  string `json:\"namespace\"`",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"localOnly"},
 			},
 		},
 		Dependencies: []string{},
@@ -258,11 +267,16 @@ func schema_pkg_apis_broker_v2alpha1_ActiveMQArtemisSpec(ref common.ReferenceCal
 							},
 						},
 					},
+					"console": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.ConsoleType"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.AcceptorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.ConnectorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.DeploymentPlanType"},
+			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.AcceptorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.ConnectorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.ConsoleType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1.DeploymentPlanType"},
 	}
 }
 

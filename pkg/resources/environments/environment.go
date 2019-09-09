@@ -2,6 +2,8 @@ package environments
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
 	"math"
 	"os"
@@ -23,6 +25,22 @@ var log = logf.Log.WithName("package environments")
 //TODO: Remove this blatant hack
 var GLOBAL_AMQ_CLUSTER_USER string = ""
 var GLOBAL_AMQ_CLUSTER_PASSWORD string = ""
+
+type defaults struct {
+	AMQ_USER     string
+	AMQ_PASSWORD string
+}
+
+var Defaults defaults
+
+func init() {
+	if "" == Defaults.AMQ_USER {
+		Defaults.AMQ_USER = random.GenerateRandomString(8)
+	}
+	if "" == Defaults.AMQ_PASSWORD {
+		Defaults.AMQ_PASSWORD = random.GenerateRandomString(8)
+	}
+}
 
 func DetectOpenshift() (bool, error) {
 
@@ -76,24 +94,6 @@ func GetPropertyForCR(propName string, cr *brokerv2alpha1.ActiveMQArtemis, defau
 			result = "true"
 		} else {
 			result = "false"
-		}
-	case "AMQ_USER":
-		if len(cr.Spec.DeploymentPlan.User) > 0 {
-			result = cr.Spec.DeploymentPlan.User
-		}
-	case "AMQ_PASSWORD":
-		if len(cr.Spec.DeploymentPlan.Password) > 0 {
-			result = cr.Spec.DeploymentPlan.Password
-		}
-	case "AMQ_CLUSTER_USER":
-		if len(cr.Spec.DeploymentPlan.ClusterUser) > 0 {
-			result = cr.Spec.DeploymentPlan.ClusterUser
-			//GLOBAL_AMQ_CLUSTER_USER = result
-		}
-	case "AMQ_CLUSTER_PASSWORD":
-		if len(cr.Spec.DeploymentPlan.ClusterPassword) > 0 {
-			result = cr.Spec.DeploymentPlan.ClusterPassword
-			//GLOBAL_AMQ_CLUSTER_PASSWORD = result
 		}
 	case "AMQ_KEYSTORE_TRUSTSTORE_DIR":
 		//if checkSSLEnabled(cr) && len(cr.Spec.SSLConfig.SecretName) > 0 {
@@ -157,47 +157,17 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		envVarArrayForPresistent := addEnvVarForPersistent(cr)
 		envVar = append(envVar, envVarArrayForPresistent...)
 	}
-	if cr.Spec.DeploymentPlan.Clustered {
-		envVarArrayForCluster := addEnvVarForCluster(cr)
-		envVar = append(envVar, envVarArrayForCluster...)
-	}
+
+	// TODO: Optimize for the single broker configuration
+	envVarArrayForCluster := addEnvVarForCluster(cr)
+	envVar = append(envVar, envVarArrayForCluster...)
 
 	return envVar
 }
 
 func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 
-	userEnvVarSource := &corev1.EnvVarSource{
-		SecretKeyRef: &corev1.SecretKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-app-secret",
-			},
-			Key:      "user",
-			Optional: nil,
-		},
-	}
-
-	passwordEnvVarSource := &corev1.EnvVarSource{
-		SecretKeyRef: &corev1.SecretKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-app-secret",
-			},
-			Key:      "password",
-			Optional: nil,
-		},
-	}
-
 	envVarArray := []corev1.EnvVar{
-		{
-			"AMQ_USER",
-			"",
-			userEnvVarSource,
-		},
-		{
-			"AMQ_PASSWORD",
-			"",
-			passwordEnvVarSource,
-		},
 		{
 			"AMQ_ROLE",
 			GetPropertyForCR("AMQ_ROLE", cr, "admin"),
@@ -330,7 +300,7 @@ func addEnvVarForCluster(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	clusterUserEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-credentials-secret",
+				Name: secrets.CredentialsNameBuilder.Name(),
 			},
 			Key:      "clusterUser",
 			Optional: nil,
@@ -340,7 +310,7 @@ func addEnvVarForCluster(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 	clusterPasswordEnvVarSource := &corev1.EnvVarSource{
 		SecretKeyRef: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "amq-credentials-secret",
+				Name: secrets.CredentialsNameBuilder.Name(),
 			},
 			Key:      "clusterPassword",
 			Optional: nil,
@@ -511,4 +481,3 @@ func Delete(containers []corev1.Container, envVarName string) {
 		}
 	}
 }
-

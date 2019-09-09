@@ -6,16 +6,5 @@ metadata:
     ActiveMQArtemis: ex-aao
     application: ex-aao-app
 spec:
-  # Add fields here
   size: 4
   image: registry.redhat.io/amq7/amq-broker:7.4
-  sslConfig:
-    secretName: amq-app-secret
-    trustStoreFilename: broker.ts
-    trustStorePassword: changeit
-    keystoreFilename: broker.ks
-    keyStorePassword: changeit
-  commonConfig:
-    userName: admin
-    password: admin
-

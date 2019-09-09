@@ -28,6 +28,12 @@ spec:
         metadata:
           type: object
         spec:
+          adminUser:
+            type: string
+            description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
+          adminPassword:
+            type: string
+            description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
           deploymentPlan:
             type: object
             properties:
@@ -39,27 +45,9 @@ spec:
                 minimum: 0
                 maximum: 16
                 description: The number of broker pods to deploy
-              user:
-                type: string
-                description: User name for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
-              password:
-                type: string
-                description: Password for standard broker user. It is required for connecting to the broker. If left empty, it will be generated.
-              role:
-                type: string
-                description: Rolename for the given user
               requireLogin:
                 type: boolean
                 description: If true require user password login credentials for broker protocol ports
-              clustered:
-                type: boolean
-                description: If true brokers will cluster when scale > 1
-              clusterUser:
-                type: string
-                description: Username used for clustering
-              clusterPassword:
-                type: string
-                description: Password used for clustering
               persistenceEnabled:
                 type: boolean
                 description: If true use persistent volume via persistent volume claim for journal storage
@@ -192,6 +180,24 @@ spec:
                 type: boolean
                 description: If the embedded server requires client authentication
         status:
+          properties:
+            podStatus:
+              properties:
+                ready:
+                  items:
+                    type: string
+                  type: array
+                starting:
+                  items:
+                    type: string
+                  type: array
+                stopped:
+                  items:
+                    type: string
+                  type: array
+              type: object
+          required:
+            - podStatus
           type: object
   version: v2alpha1
   versions:

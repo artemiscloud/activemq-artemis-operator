@@ -9,10 +9,3 @@ spec:
   # Add fields here
   size: 4
   image: registry.redhat.io/amq7/amq-broker:7.4
-  clusterConfig:
-    clusterUserName: clusteruser
-    clusterPassword: clusterpass
-  commonConfig:
-    userName: admin
-    password: admin
-

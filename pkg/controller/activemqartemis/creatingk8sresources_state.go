@@ -3,11 +3,14 @@ package activemqartemis
 import (
 	"context"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -61,6 +64,46 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
 	svc.HeadlessNameBuilder.Prefix("amq-broker").Base("amq").Suffix("headless").Generate()
 	pods.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("container").Generate()
+	secrets.CredentialsNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("credentials").Suffix("secret").Generate()
+	secrets.ConsoleNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("console").Suffix("secret").Generate()
+	secrets.NettyNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("netty").Suffix("secret").Generate()
+}
+
+func (rs *CreatingK8sResourcesState) generateSecrets() {
+
+	credentialsSecretName := secrets.CredentialsNameBuilder.Name()
+	namespacedName := types.NamespacedName{
+		Name:      credentialsSecretName,
+		Namespace: rs.namespacedName.Namespace,
+	}
+
+	clusterUser := random.GenerateRandomString(8)
+	clusterPassword := random.GenerateRandomString(8)
+	adminUser := ""
+	adminPassword := ""
+
+	if "" == rs.parentFSM.customResource.Spec.AdminUser {
+		adminUser = environments.Defaults.AMQ_USER
+	} else {
+		adminUser = rs.parentFSM.customResource.Spec.AdminUser
+	}
+	if "" == rs.parentFSM.customResource.Spec.AdminPassword {
+		adminPassword = environments.Defaults.AMQ_PASSWORD
+	} else {
+		adminPassword = rs.parentFSM.customResource.Spec.AdminPassword
+	}
+
+	stringDataMap := map[string]string{
+		"clusterUser":     clusterUser,
+		"clusterPassword": clusterPassword,
+		"AMQ_USER":        adminUser,
+		"AMQ_PASSWORD":    adminPassword,
+	}
+	// TODO: Remove this hack
+	environments.GLOBAL_AMQ_CLUSTER_USER = clusterUser
+	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = clusterPassword
+
+	secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
 }
 
 // First time entering state
@@ -71,7 +114,7 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	reconciler.SetDefaults(rs.parentFSM.customResource)
+	rs.generateSecrets()
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
 	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition)

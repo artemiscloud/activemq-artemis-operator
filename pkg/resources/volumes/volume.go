@@ -3,6 +3,7 @@ package volumes
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -61,7 +62,7 @@ func MakeVolumeMounts(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 	}
 
 	if cr.Spec.Console.SSLEnabled {
-		volumeMountName := cr.Name + "-" + "console" + "-secret-volume"
+		volumeMountName := secrets.ConsoleNameBuilder.Name() + "-volume"
 		if "" != cr.Spec.Console.SSLSecret {
 			volumeMountName = cr.Spec.Console.SSLSecret + "-volume"
 		}
@@ -130,7 +131,7 @@ func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 	}
 
 	if cr.Spec.Console.SSLEnabled {
-		secretName := cr.Name + "-" + "console" + "-secret"
+		secretName := secrets.ConsoleNameBuilder.Name()
 		if "" != cr.Spec.Console.SSLSecret {
 			secretName = cr.Spec.Console.SSLSecret
 		}
