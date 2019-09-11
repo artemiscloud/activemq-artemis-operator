@@ -144,29 +144,19 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 
 	var retVal uint32 = statefulSetNotUpdated
 
-	sslFlags := ""
-
-	if customResource.Spec.Console.SSLEnabled {
-		secretName := secrets.ConsoleNameBuilder.Name()
-		if "" != customResource.Spec.Console.SSLSecret {
-			secretName = customResource.Spec.Console.SSLSecret
-		}
-		sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
-	}
-
-	if amqExtraArgsEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_CONSOLE_ARGS"); nil != amqExtraArgsEnvVar {
-		if !strings.Contains(amqExtraArgsEnvVar.Value, sslFlags) {
-			updatedAmqExtraArgsEnvVar := &corev1.EnvVar{
-				Name:      "AMQ_CONSOLE_ARGS",
-				Value:     sslFlags,
-				ValueFrom: nil,
-			}
-			environments.Update(currentStatefulSet.Spec.Template.Spec.Containers, updatedAmqExtraArgsEnvVar)
-			retVal = statefulSetConsoleUpdated
-		}
-	}
-
 	_, _ = configureConsoleExposure(customResource, client, scheme)
+	if !customResource.Spec.Console.SSLEnabled {
+		return retVal
+	}
+
+	sslFlags := ""
+	envVarName := "AMQ_CONSOLE_ARGS"
+	secretName := secrets.ConsoleNameBuilder.Name()
+	if "" != customResource.Spec.Console.SSLSecret {
+		secretName = customResource.Spec.Console.SSLSecret
+	}
+	sslFlags = generateConsoleSSLFlags(customResource, client, secretName)
+	retVal = sourceEnvVarFromSecret(customResource, currentStatefulSet, sslFlags, envVarName, secretName, client, scheme)
 
 	return retVal
 }
@@ -234,7 +224,8 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, curr
 	} else { // err == nil so it already exists
 		// Exists now
 		// Check the contents against what we just got above
-		if 0 != strings.Compare(string(nettySecret.Data[envVarName]), acceptorEntry) {
+		elem, ok := nettySecret.Data[envVarName]
+		if 0 != strings.Compare(string(elem), acceptorEntry) || !ok {
 			nettySecret.Data[envVarName] = []byte(acceptorEntry)
 
 			// These updates alone do not trigger a rolling update due to env var update as it's from a secret

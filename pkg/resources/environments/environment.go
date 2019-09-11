@@ -229,11 +229,6 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 			nil,
 		},
 		{
-			"AMQ_CONSOLE_ARGS",
-			"",
-			nil,
-		},
-		{
 			"TRIGGERED_ROLL_COUNT",
 			"0",
 			nil,
