@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // This is the state we should be in whenever kubernetes
@@ -76,8 +77,14 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
+		if *currentStatefulSet.Spec.Replicas != currentStatefulSet.Status.ReadyReplicas {
+			rs.parentFSM.r.result = reconcile.Result{Requeue: true}
+			reqLogger.Info("ContainerRunningState requesting reconcile requeue for immediate reissue due to continued scaling")
+			nextStateID = ScalingID
+			break
+		}
 
+		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
 		break
 	}
 

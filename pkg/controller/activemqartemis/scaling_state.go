@@ -81,22 +81,20 @@ func (ss *ScalingState) Update() (error, int) {
 			break
 		}
 
-		//if currentStatefulSet.Status.Replicas == currentStatefulSet.Status.ReadyReplicas {
 		if (*currentStatefulSet.Spec.Replicas == currentStatefulSet.Status.ReadyReplicas) &&
 			(0 == strings.Compare(currentStatefulSet.Status.CurrentRevision, currentStatefulSet.Status.UpdateRevision)) {
 			ss.parentFSM.r.result = reconcile.Result{Requeue: true}
 			reqLogger.Info("ScalingState requesting reconcile requeue for immediate reissue due to scaling completion")
 
-			if *currentStatefulSet.Spec.Replicas > 0 &&
-				(currentStatefulSet.Status.ObservedGeneration > ss.enteringObservedGeneration) {
-				nextStateID = ContainerRunningID
-			}
-
 			if 0 == *currentStatefulSet.Spec.Replicas {
 				nextStateID = CreatingK8sResourcesID
+				break
 			}
 
-			break
+			if *currentStatefulSet.Spec.Replicas > 0 {
+				nextStateID = ContainerRunningID
+				break
+			}
 		}
 
 		// Do we have an incoming change to the custom resource and not just an update?
