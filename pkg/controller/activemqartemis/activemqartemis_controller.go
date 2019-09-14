@@ -113,11 +113,11 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// When deleting before creation reconcile won't be called
 	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
+			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking for request NamespacedName " + request.NamespacedName.String())
 
 			// See if we have been tracking this NamespacedName
 			if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM != nil {
-				reqLogger.Error(err, "Removing namespacedName tracking", "request.Namespace", request.Namespace, "request.Name", request.Name)
+				reqLogger.Info("Removing namespacedName tracking for " + namespacedName.String())
 				// If so we should no longer track it
 				amqbfsm = namespacedNameToFSM[namespacedName]
 				amqbfsm.Exit()
@@ -141,6 +141,11 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// for the given fsm, do an update
 	// - update first level sets? what if the operator has gone away and come back? stateless?
 	if namespacedNameFSM = namespacedNameToFSM[namespacedName]; namespacedNameFSM == nil {
+		// TODO: Fix multiple fsm's post ENTMQBR-2875
+		if len(namespacedNameToFSM) > 0 {
+			reqLogger.Info("ActiveMQArtemis Controller Reconcile does not yet support more than one custom resource instance per namespace!")
+			return r.result, nil
+		}
 		amqbfsm = NewActiveMQArtemisFSM(instance, namespacedName, r)
 		namespacedNameToFSM[namespacedName] = amqbfsm
 

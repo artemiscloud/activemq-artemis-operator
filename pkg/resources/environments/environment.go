@@ -4,6 +4,7 @@ import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	corev1 "k8s.io/api/core/v1"
 	"math"
 	"os"
@@ -231,6 +232,11 @@ func addEnvVarForBasic(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.EnvVar {
 		{
 			"TRIGGERED_ROLL_COUNT",
 			"0",
+			nil,
+		},
+		{
+			"PING_SVC_NAME",
+			svc.PingNameBuilder.Name(),
 			nil,
 		},
 	}

@@ -62,7 +62,8 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 
 	// Initialize the kubernetes names
 	ss.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("ss").Generate()
-	svc.HeadlessNameBuilder.Prefix("amq-broker").Base("amq").Suffix("headless").Generate()
+	svc.HeadlessNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("hdls").Suffix("svc").Generate()
+	svc.PingNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("ping").Suffix("svc").Generate()
 	pods.NameBuilder.Base(rs.parentFSM.customResource.Name).Suffix("container").Generate()
 	secrets.CredentialsNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("credentials").Suffix("secret").Generate()
 	secrets.ConsoleNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("console").Suffix("secret").Generate()

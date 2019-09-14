@@ -13,6 +13,7 @@ import (
 var log = logf.Log.WithName("package services")
 
 var HeadlessNameBuilder namer.NamerData
+var PingNameBuilder namer.NamerData
 
 //var ServiceNameBuilderArray []namer.NamerData
 //var RouteNameBuilderArray []namer.NamerData
@@ -99,7 +100,7 @@ func NewPingServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, labels ma
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      labels,
-			Name:        "ping",
+			Name:        PingNameBuilder.Name(),
 			Namespace:   cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
