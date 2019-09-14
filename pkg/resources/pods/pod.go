@@ -87,17 +87,17 @@ func NewPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTempl
 }
 
 // TODO: Test namespacedName to ensure it's the right namespacedName
-func UpdatePodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) error {
+func UpdatePodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Updating pods status")
+	reqLogger.Info("Updating status for pods")
 
-	podStatus := getPodStatus(cr, client, namespacedName)
+	podStatus := getPodStatus(cr, client, ssNamespacedName)
 
-	reqLogger.Info("PodStatus are to be updated.............................", "info:", podStatus)
-	reqLogger.Info("Ready Count........................", "info:", len(podStatus.Ready))
-	reqLogger.Info("Stopped Count........................", "info:", len(podStatus.Stopped))
-	reqLogger.Info("Starting Count........................", "info:", len(podStatus.Starting))
+	reqLogger.V(5).Info("PodStatus are to be updated.............................", "info:", podStatus)
+	reqLogger.V(5).Info("Ready Count........................", "info:", len(podStatus.Ready))
+	reqLogger.V(5).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
+	reqLogger.V(5).Info("Starting Count........................", "info:", len(podStatus.Starting))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		cr.Status.PodStatus = podStatus

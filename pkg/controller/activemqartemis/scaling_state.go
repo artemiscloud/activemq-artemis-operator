@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
@@ -73,7 +74,8 @@ func (ss *ScalingState) Update() (error, int) {
 	var nextStateID int = ScalingID
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = ss.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}, currentStatefulSet)
+	ssNamespacedName := types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: ss.parentFSM.customResource.Namespace}
+	err = ss.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -106,6 +108,7 @@ func (ss *ScalingState) Update() (error, int) {
 
 		break
 	}
+	pods.UpdatePodStatus(ss.parentFSM.customResource, ss.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

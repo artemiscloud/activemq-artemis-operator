@@ -179,7 +179,8 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	var statefulSetUpdates uint32 = 0
 
 	currentStatefulSet := &appsv1.StatefulSet{}
-	err = rs.parentFSM.r.client.Get(context.TODO(), types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}, currentStatefulSet)
+	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
+	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -215,7 +216,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 		break
 	}
-	pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.namespacedName)
+	pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }
