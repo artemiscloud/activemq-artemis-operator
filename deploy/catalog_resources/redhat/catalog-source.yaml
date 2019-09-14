@@ -19,7 +19,7 @@ items:
               description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
               containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.9.0
               createdAt: 2019-12-09T08:16:32Z
-              capabilities: Seamless Upgrades
+              capabilities: Basic Install
               repository: https://github.com/rh-messaging/activemq-artemis-operator
               support: Red Hat, Inc.
               tectonic-visibility: ocs
