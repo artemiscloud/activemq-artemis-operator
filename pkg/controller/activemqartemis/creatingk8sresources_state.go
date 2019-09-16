@@ -122,7 +122,8 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
 
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
-	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition)
+	firstTime := true
+	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition, firstTime)
 	// Check to see if the statefulset already exists
 	if err := resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
 		// err means not found, so create
@@ -198,7 +199,8 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
 			(rs.stepsComplete&CreatedPingService > 0) {
 
-			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
+			firstTime := false
+			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet, firstTime)
 			if statefulSetUpdates > 0 {
 				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)

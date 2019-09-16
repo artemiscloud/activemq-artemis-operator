@@ -72,6 +72,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
 	currentStatefulSet := &appsv1.StatefulSet{}
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
+	firstTime := false
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -86,7 +87,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet)
+		statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet, firstTime)
 		break
 	}
 

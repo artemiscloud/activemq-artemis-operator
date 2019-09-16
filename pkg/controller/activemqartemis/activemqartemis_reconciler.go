@@ -48,14 +48,14 @@ type ActiveMQArtemisReconciler struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
+	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
+	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
 	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 }
 
-func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
 
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := secrets.CredentialsNameBuilder.Name()
@@ -74,7 +74,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	}
 	statefulSetUpdates |= sourceEnvVarFromSecret(customResource, currentStatefulSet, adminPassword, envVarName, secretName, client, scheme)
 
-	statefulSetUpdates |= reconciler.ProcessDeploymentPlan(customResource, client, scheme, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessDeploymentPlan(customResource, client, scheme, currentStatefulSet, firstTime)
 	statefulSetUpdates |= reconciler.ProcessAcceptors(customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessConnectors(customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessConsole(customResource, client, scheme, currentStatefulSet)
@@ -82,7 +82,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	return statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
@@ -100,8 +100,10 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetAioUpdated
 	}
 
-	if persistentSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
-		reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
+	if firstTime {
+		if persistentSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+			reconciler.statefulSetUpdates |= statefulSetPersistentUpdated
+		}
 	}
 
 	if updatedEnvVar := environments.BoolSyncCausedUpdateOn(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_REQUIRE_LOGIN", deploymentPlan.RequireLogin); updatedEnvVar != nil {
