@@ -2,7 +2,6 @@ package volumes
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -169,8 +168,6 @@ func makePersistentVolume(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 
 func makePersistentVolumeMount(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.VolumeMount {
 
-	// TODO: Ensure consistent path usage
-	GLOBAL_DATA_PATH := environments.GetPropertyForCR("AMQ_DATA_DIR", cr, "/opt/"+cr.Name+"/data")
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      cr.Name,

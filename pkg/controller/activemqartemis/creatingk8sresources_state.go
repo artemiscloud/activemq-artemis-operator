@@ -9,6 +9,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/serviceports"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
@@ -116,8 +117,11 @@ func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
 	rs.generateSecrets()
-	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 
+	// TODO: Ensure consistent path usage; remove this hack
+	volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
+
+	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
 	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition)
 	// Check to see if the statefulset already exists
 	if err := resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {

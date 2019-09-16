@@ -726,7 +726,7 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanT
 		for _, v := range currentStatefulSet.Spec.Template.Spec.Containers[0].Env {
 			if v.Name == "AMQ_DATA_DIR" {
 				foundDataDir = true
-				if v.Value == "false" {
+				if v.Value != volumes.GLOBAL_DATA_PATH {
 					dataDirNeedsUpdate = true
 				}
 			}
