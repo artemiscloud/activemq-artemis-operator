@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 )
 
 var log = logf.Log.WithName("package ingresses")
@@ -35,7 +36,7 @@ func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingre
 								extv1b1.HTTPIngressPath{
 									Path: "/",
 									Backend: extv1b1.IngressBackend{
-										ServiceName: "amq-broker-amq-headless", //"hs",
+										ServiceName: svc.HeadlessNameBuilder.Name(),
 										ServicePort: intstr.FromString(target),
 									},
 								},
