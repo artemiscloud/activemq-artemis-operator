@@ -3,21 +3,18 @@ kind: ActiveMQArtemis
 metadata:
   name: ex-aao
   application: ex-aao-app
-  labels:
-    ActiveMQArtemis: ex-aao
-    application: ex-aao-app
 spec:
   deploymentPlan:
     size: 2
     image: registry.redhat.io/amq7/amq-broker:7.5
     requireLogin: false
-    persistenceEnabled: true
+    persistenceEnabled: false
     journalType: nio
-    messageMigration: true
+    messageMigration: false
   console:
     expose: true
   acceptors:
-    - name: my
+    - name: amqp
       protocols: amqp
       port: 5672
       sslEnabled: true
@@ -32,7 +29,7 @@ spec:
       anycastPrefix: jms.topic.
       multicastPrefix: /queue/
   connectors:
-    - name: my-c
+    - name: connector0
       host: localhost
       port: 22222
       sslEnabled: true
