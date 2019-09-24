@@ -6,6 +6,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +39,7 @@ func NewPodTemplateSpecForCR(cr *brokerv2alpha1.ActiveMQArtemis) corev1.PodTempl
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
-			Labels:    cr.Labels,
+			Labels:    selectors.LabelBuilder.Labels(),
 		},
 	}
 	Spec := corev1.PodSpec{}
