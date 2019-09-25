@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.1 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,7 +31,7 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.0 ahameed amqoperator 0.9.0 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/catalog_resources/courier/bundle_dir/0.9.1 ahameed amqoperator 0.9.1 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
 ```
 
 
@@ -71,7 +71,7 @@ This will create a new `CatalogSource` and `ConfigMap`, allowing the OLM Catalog
 Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, deploy the the operator in your namespace by deploying the cluster service version. First edit
 
 ```bash
-deploy/catalog_resources/courier/bundle_dir/0.9.0/activemq-artemis-operator.v0.9.0.clusterserviceversion.yaml
+deploy/catalog_resources/courier/bundle_dir/0.9.1/activemq-artemis-operator.v0.9.1.clusterserviceversion.yaml
 ```
 
 and update
