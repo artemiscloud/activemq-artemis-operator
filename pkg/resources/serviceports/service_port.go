@@ -9,18 +9,22 @@ import (
 
 func GetDefaultPorts(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
 
-	ports := []corev1.ServicePort{}
-	basicPorts := setBasicPorts()
-	ports = append(ports, basicPorts...)
-
-	// if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
-	if false { // "TODO-FIX-REPLACE"
-		sslPorts := setSSLPorts()
-		ports = append(ports, sslPorts...)
-
+	ports := []corev1.ServicePort{
+		{
+			Name:       "console-jolokia",
+			Protocol:   "TCP",
+			Port:       8161,
+			TargetPort: intstr.FromInt(int(8161)),
+		},
+		{
+			Name:       "all",
+			Protocol:   "TCP",
+			Port:       61616,
+			TargetPort: intstr.FromInt(int(61616)),
+		},
 	}
-	return &ports
 
+	return &ports
 }
 
 func setSSLPorts() []corev1.ServicePort {
