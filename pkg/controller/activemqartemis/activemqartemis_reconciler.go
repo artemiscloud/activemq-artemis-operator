@@ -43,6 +43,8 @@ const (
 	statefulSetConsoleUpdated    = 1 << 10
 )
 
+var defaultMessageMigration bool = true
+
 type ActiveMQArtemisReconciler struct {
 	statefulSetUpdates uint32
 }
@@ -189,7 +191,11 @@ func syncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, client
 		Status: brokerv2alpha1.ActiveMQArtemisScaledownStatus{},
 	}
 
-	if customResource.Spec.DeploymentPlan.MessageMigration {
+	if nil == customResource.Spec.DeploymentPlan.MessageMigration {
+		customResource.Spec.DeploymentPlan.MessageMigration = &defaultMessageMigration
+	}
+
+	if *customResource.Spec.DeploymentPlan.MessageMigration {
 		if err = resources.Retrieve(customResource, namespacedName, client, scaledown); err != nil {
 			// err means not found so create
 			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {

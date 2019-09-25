@@ -29,7 +29,7 @@ type DeploymentPlanType struct {
 	RequireLogin       bool   `json:"requireLogin,omitempty"`
 	PersistenceEnabled bool   `json:"persistenceEnabled,omitempty"`
 	JournalType        string `json:"journalType,omitempty"`
-	MessageMigration   bool   `json:"messageMigration,omitempty"`
+	MessageMigration   *bool  `json:"messageMigration,omitempty"`
 }
 
 type AcceptorType struct {
