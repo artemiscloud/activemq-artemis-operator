@@ -1,4 +1,4 @@
-FROM devtools/go-toolset-rhel7:1.11.13-10 AS build-env
+FROM registry.access.redhat.com/ubi7/go-toolset:1.11.13-11 AS build-env
 
 USER root
 
@@ -16,7 +16,7 @@ RUN scl enable go-toolset-1.11 "go build -gcflags \"all=-N -l\" -v -o ${OPERATOR
 # as we aren't using Go Modules yet
 RUN scl enable go-toolset-1.11 "go get github.com/go-delve/delve/cmd/dlv"
 
-FROM ubi7/ubi-minimal:7.7-98
+FROM registry.access.redhat.com/ubi7/ubi-minimal:7.7-138
 
 USER root
 

@@ -1,4 +1,4 @@
-FROM devtools/go-toolset-rhel7:1.11.13-10 AS build-env
+FROM registry.access.redhat.com/ubi7/go-toolset:1.11.13-11 AS build-env
 
 USER root
 
@@ -12,7 +12,7 @@ ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 RUN scl enable go-toolset-1.11 "go build -v -o ${OPERATOR} ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager"
 
-FROM ubi7/ubi-minimal:7.7-98
+FROM registry.access.redhat.com/ubi7/ubi-minimal:7.7-138
 
 USER root
 
