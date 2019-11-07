@@ -4,7 +4,7 @@ metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
-  version: 7.5.0
+  version: 7.6.0
   deploymentPlan:
     size: 2
     image: quay.io/artemiscloud/activemq-artemis-operator:latest
@@ -18,7 +18,7 @@ spec:
     - name: amqp
       protocols: amqp
       port: 5672
-      sslEnabled: true
+      sslEnabled: false
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
@@ -33,7 +33,7 @@ spec:
     - name: connector0
       host: localhost
       port: 22222
-      sslEnabled: true
+      sslEnabled: false
       enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
