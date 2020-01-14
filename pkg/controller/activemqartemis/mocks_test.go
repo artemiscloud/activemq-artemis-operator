@@ -30,9 +30,10 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha1.DeploymentPlanType{
 				Size:               3,
-				Image:              "registry.redhat.io/amq7/amq-broker:7.5",
+				Image:              "quay.io/artemiscloud/activemq-artemis-operator:latest",
 				PersistenceEnabled: false,
 				RequireLogin:       false,
+				// TODO: Fix *bool vs bool
 				MessageMigration:   false,
 			},
 			Console: brokerv2alpha1.ConsoleType{
@@ -86,10 +87,11 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha1.DeploymentPlanType{
 				Size:               0,
-				Image:              "registry.redhat.io/amq7/amq-broker:7.4",
+				Image:              "quay.io/artemiscloud/activemq-artemis-operator:latest",
 				PersistenceEnabled: false,
 				JournalType:        "nio",
 				RequireLogin:       false,
+				// TODO: Fix *bool vs bool
 				MessageMigration:   false,
 			},
 			Console: brokerv2alpha1.ConsoleType{

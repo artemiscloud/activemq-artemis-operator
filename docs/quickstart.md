@@ -90,9 +90,9 @@ kind: ActiveMQArtemis
 metadata:
   name: ex-aao
 spec:
-  # Add fields here
-  size: 4
-  image: registry.redhat.io/amq7/amq-broker:7.5
+  deploymentPlan:
+    size: 2
+    image: quay.io/artemiscloud/activemq-artemis-operator:latest
 ```  
 
 Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.10.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)

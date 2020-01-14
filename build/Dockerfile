@@ -14,7 +14,7 @@ WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 RUN /opt/rh/go-toolset-1.11/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
 
 
-FROM registry.access.redhat.com/ubi8:8.1-277 AS base-env
+FROM registry.access.redhat.com/ubi8:8.1-328 AS base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
@@ -23,12 +23,13 @@ ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="0.10"
+ENV JBOSS_IMAGE_VERSION="0.11"
 
 WORKDIR /
 
 RUN mkdir -p /manifests/0.9.1
 RUN mkdir -p /manifests/0.10.0
+RUN mkdir -p /manifests/0.11.0
 RUN chown -R `id -u`:0 /manifests
 COPY --from=build-env /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/build/bin/entrypoint /home/${BROKER_NAME}-operator/bin
@@ -36,7 +37,8 @@ COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-opera
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/${BROKER_NAME}.package.yaml /manifests
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.9.1/ /manifests/0.9.1
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.10.0/ /manifests/0.10.0
-COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.10.0
+COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.11.0/ /manifests/0.11.0
+COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.11.0
 
 RUN useradd ${BROKER_NAME}-operator
 RUN mkdir -p /home/${BROKER_NAME}-operator/bin && chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
@@ -47,13 +49,13 @@ ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 LABEL \
       com.redhat.component="amq-broker-rhel8-operator-container"  \
       com.redhat.delivery.appregistry="true" \
-      description="Red Hat AMQ Broker 7.5 Operator"  \
+      description="ActiveMQ Artemis Broker Operator"  \
       io.k8s.description="An associated operator that handles broker installation, updates and scaling."  \
-      io.k8s.display-name="Red Hat AMQ Broker 7.5 Operator"  \
+      io.k8s.display-name="ActiveMQ Artemis Broker Operator"  \
       io.openshift.expose-services=""  \
       io.openshift.s2i.scripts-url="image:///usr/local/s2i"  \
       io.openshift.tags="messaging,amq,integration,operator,golang"  \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
       name="amq7/amq-broker-rhel8-operator" \
-      summary="Red Hat AMQ Broker 7.5 Operator"  \
-      version="0.10"
+      summary="ActiveMQ Artemis Broker Operator"  \
+      version="0.11"
