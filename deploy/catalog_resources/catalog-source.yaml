@@ -61,6 +61,8 @@ items:
                 }]
           labels:
             operator-activemqartemis: "true"
+            operatorframework.io/arch.amd64: supported
+            operatorframework.io/arch.s390x: supported
           spec:
             displayName: ActiveMQ Artemis
             description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
