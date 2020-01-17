@@ -60,7 +60,7 @@ spec:
     - activemqartemis
     - operator
   version: 0.11.0
-  replaces: activemq-artemis-operator.v0.10.0
+  replaces: activemq-artemis-operator.v0.10.0-on-z
   maturity: alpha
   maintainers:
     - name: Red Hat, Inc.
