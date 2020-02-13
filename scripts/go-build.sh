@@ -1,7 +1,7 @@
 #!/bin/sh
 REGISTRY=localhost.localdomain:5000/activemq-artemis
 IMAGE=activemq-artemis-operator
-TAG=0.10.0
+TAG=0.12.0
 CFLAGS="--redhat --build-tech-preview"
 
 go generate ./...

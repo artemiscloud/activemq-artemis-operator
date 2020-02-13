@@ -11,13 +11,13 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.11.0
+            name: activemq-artemis-operator.v0.12.0
             namespace: placeholder
             annotations:
               categories: "Streaming & Messaging"
               certified: "false"
               description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
-              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.11.0
+              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
               createdAt: 2019-12-09T08:16:32Z
               capabilities: Basic Install
               repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -74,7 +74,7 @@ items:
             keywords:
               - activemqartemis
               - operator
-            version: 0.11.0
+            version: 0.12.0
             maturity: alpha
             maintainers:
               - name: Red Hat, Inc.
@@ -91,12 +91,12 @@ items:
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.11.0
+              operated-by: activemq-artemis-operator.v0.12.0
             selector:
               matchLabels:
                 ActiveMQArtemis: ex-aao
                 application: ex-aao-app
-                operated-by: activemq-artemis-operator.v0.11.0
+                operated-by: activemq-artemis-operator.v0.12.0
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -505,7 +505,7 @@ items:
                           serviceAccountName: activemq-artemis-operator
                           containers:
                             - name: activemq-artemis-operator
-                              image: quay.io/artemiscloud/activemq-artemis-operator:0.11.0
+                              image: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
                               command:
                                 -  /home/activemq-artemis-operator/bin/entrypoint
                               imagePullPolicy: Always
@@ -852,7 +852,7 @@ items:
             - name: stable-75-on-z
               currentCSV: activemq-artemis-operator.v0.10.0-on-z
             - name: stable-76
-              currentCSV: activemq-artemis-operator.v0.11.0
+              currentCSV: activemq-artemis-operator.v0.12.0
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource

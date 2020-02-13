@@ -1,13 +1,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: activemq-artemis-operator.v0.11.0
+  name: activemq-artemis-operator.v0.12.0
   namespace: placeholder
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
     description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
-    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.11.0
+    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
     createdAt: 2019-11-25T08:16:32Z
     capabilities: Basic Install
     repository: https://github.com/rh-messaging/activemq-artemis-operator
@@ -64,7 +64,7 @@ spec:
   keywords:
     - activemqartemis
     - operator
-  version: 0.11.0
+  version: 0.12.0
   replaces: activemq-artemis-operator.v0.10.0-on-z
   maturity: alpha
   maintainers:
@@ -82,12 +82,12 @@ spec:
       mediatype: image/png
   labels:
     alm-owner-amq-broker: activemq-artemis-operator
-    operated-by: activemq-artemis-operator.v0.11.0
+    operated-by: activemq-artemis-operator.v0.12.0
   selector:
     matchLabels:
       ActiveMQArtemis: ex-aao
       application: ex-aao-app
-      operated-by: activemq-artemis-operator.v0.11.0
+      operated-by: activemq-artemis-operator.v0.12.0
   installModes:
     - type: OwnNamespace
       supported: true
@@ -496,7 +496,7 @@ spec:
                 serviceAccountName: activemq-artemis-operator
                 containers:
                   - name: activemq-artemis-operator
-                    image: quay.io/artemiscloud/activemq-artemis-operator:0.11.0
+                    image: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
                     command:
                       -  /home/activemq-artemis-operator/bin/entrypoint
                     imagePullPolicy: Always

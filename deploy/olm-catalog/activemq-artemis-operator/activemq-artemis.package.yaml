@@ -5,5 +5,5 @@ channels:
   - name: stable-75-on-z
     currentCSV: activemq-artemis-operator.v0.10.0-on-z
   - name: stable-76
-    currentCSV: activemq-artemis-operator.v0.11.0
+    currentCSV: activemq-artemis-operator.v0.12.0
 defaultChannel: stable-76
