@@ -1,8 +1,8 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"fmt"
-	api "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	api "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/rh-messaging/activemq-artemis-operator/version"
 	"strings"
 )

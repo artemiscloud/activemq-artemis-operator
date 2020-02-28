@@ -13,17 +13,17 @@ resource.
 ## Getting the code
 
 To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
-and checkout the 0.12.0 tag as per
+and checkout the 0.13.0 tag as per
 
 ```$xslt
 git clone https://github.com/rh-messaging/activemq-artemis-operator
-git checkout 0.12.0
+git checkout 0.13.0
 ```
 
 ## Deploying the operator
 
-In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.12.0/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.12.0/deploy/operator.yaml#L18-L19)
+In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.13.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.13.0/deploy/operator.yaml#L18-L19)
 with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -36,9 +36,9 @@ $ kubectl create -f deploy/service_account.yaml
 $ kubectl create -f deploy/role.yaml
 $ kubectl create -f deploy/role_binding.yaml
 # Setup the ActiveMQArtemis CRD
-$ kubectl create -f deploy/crds/broker_v2alpha1_activemqartemis_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemis_crd.yaml
 # Setup the ActiveMQArtemisAddress CRD
-$ kubectl create -f deploy/crds/broker_v2alpha1_activemqartemisaddress_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemisaddress_crd.yaml
 ```
 
 Note that the CRDs should be installed before the operator starts, if not the operator will log messages informing
@@ -81,11 +81,11 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'ex-aao' from [broker_v2alpha1_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.12.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml)
+resource instance for 'ex-aao' from [broker_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.13.0/deploy/crs/broker_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
-apiVersion: broker.amq.io/v2alpha1
+apiVersion: broker.amq.io/v2alpha2
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
@@ -95,13 +95,13 @@ spec:
     image: quay.io/artemiscloud/activemq-artemis-operator:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.12.0/deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.13.0/deploy/crs/broker_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
 
 ```$xslt
-kubectl create -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
+kubectl create -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 
 at which point you should now see the statefulset 'ex-aao-ss' under Overview in the web console.
@@ -264,7 +264,7 @@ broker 1
 To undeploy the broker we simply execute
 
 ```$xslt
-kubectl delete -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
+kubectl delete -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 
 at which point you should no longer see the statefulset 'ex-aao-ss' under Overview in the web console.
@@ -279,9 +279,9 @@ activemqartemis.broker.amq.io "ex-aao" deleted
 ### Overview
 
 Very basic, non-robust, functionality for adding and removing queues via custom resource definitions has been added. Of interest are two
-additional yaml files, [broker_v2alpha1_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v2alpha1_activemqartemisaddress_crd.yaml)
+additional yaml files, [broker_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml)
 which provides the custom resource definition for an ActiveMQArtemisAddress and an example implementation of a custom
-resource based on this crd, [broker_v2alpha1_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crs/broker_v2alpha1_activemqartemisaddress_cr.yaml)
+resource based on this crd, [broker_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crs/broker_activemqartemisaddress_cr.yaml)
 
 In the implemented custom resource you will note the following of interest:
 
@@ -294,7 +294,7 @@ spec:
 ```
 
 Note that for the moment in this initial implementation each of the three fields; addressName, queueName,
-and routingType are required as per the [crd](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_v2alpha1_activemqartemisaddress_crd.yaml#L35-L39).
+and routingType are required as per the [crd](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml#L35-L39).
 This will possibly be relaxed in the future when the feature is more mature.
 
 ### Deploying the ActiveMQArtemisAddress crd
@@ -302,7 +302,7 @@ This will possibly be relaxed in the future when the feature is more mature.
 To deploy the crd itself, prior to starting the operator execute:
 
 ```$xslt
-kubectl create -f deploy/crds/broker_v2alpha1_activemqartemisaddress_crd.yaml
+kubectl create -f deploy/crds/broker_activemqartemisaddress_crd.yaml
 ```
 
 ### Creating a queue across the running broker cluster
@@ -312,7 +312,7 @@ via the operator FIRST. With the running broker cluster you can utilize the incl
 create an address on every RUNNING broker via:
 
 ```$xslt
-kubectl create -f deploy/crs/broker_v2alpha1_activemqartemisaddress_cr.yaml
+kubectl create -f deploy/crs/broker_activemqartemisaddress_cr.yaml
 ```
 
 This will create an address 'myAddress0' with an 'anycast' routed queue named 'myQueue0' on every RUNNING broker. NOTE
@@ -324,13 +324,13 @@ the operator. This requires further development.
 Deleting a queue deployed via an ActiveMQArtemisAddress custom resource is straightforward:
 
 ```$xslt
-kubectl delete -f deploy/crs/broker_v2alpha1_activemqartemisaddress_cr.yaml
+kubectl delete -f deploy/crs/broker_activemqartemisaddress_cr.yaml
 ```
 
 ## Draining messages on scale down
 
 A scaledown controller can be deployed with the operator that supports message draining on scale down.
-The custom scale down resource definition is in `deploy/crds/broker_v2alpha1_activemqartemisscaledown_crd.yaml`.
+The custom scale down resource definition is in `deploy/crds/broker_activemqartemisscaledown_crd.yaml`.
 
 When a broker pod is scaled down, the scale down controller detects the event and started a drainer pod.
 The drainer pod will contact one of the live pods in the cluster and drain the messages over to it.
@@ -347,9 +347,9 @@ $ kubectl create -f deploy/service_account.yaml
 $ kubectl create -f deploy/role.yaml
 $ kubectl create -f deploy/role_binding.yaml
 # Setup the ActiveMQArtemis CRD
-$ kubectl create -f deploy/crds/broker_v2alpha1_activemqartemis_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemis_crd.yaml
 # Setup the ActiveMQArtemisScaledown CRD
-$ kubectl create -f deploy/crds/broker_v2alpha1_activemqartemisscaledown_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemisscaledown_crd.yaml
 ```
 
 * Deploy the operator
@@ -361,7 +361,7 @@ $ kubectl create -f deploy/operator.yaml
 * Deploy the clustered broker
 
 ```$xslt
-kubectl create -f deploy/crds/broker_v2alpha1_activemqartemis_drainpod.yaml
+kubectl create -f deploy/crds/broker_activemqartemis_drainpod.yaml
 ```
 
 * Once the broker pod is up, scale it to 2.

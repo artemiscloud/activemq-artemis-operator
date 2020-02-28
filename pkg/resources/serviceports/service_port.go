@@ -1,13 +1,13 @@
 package serviceports
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
-func GetDefaultPorts(cr *brokerv2alpha1.ActiveMQArtemis) *[]corev1.ServicePort {
+
+func GetDefaultPorts() *[]corev1.ServicePort {
 
 	ports := []corev1.ServicePort{
 		{

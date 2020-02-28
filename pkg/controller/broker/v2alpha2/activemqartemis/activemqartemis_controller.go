@@ -1,8 +1,8 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"context"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/rh-messaging/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_activemqartemis")
+var log = logf.Log.WithName("controller_v2alpha2activemqartemis")
 
 var namespacedNameToFSM = make(map[types.NamespacedName]*ActiveMQArtemisFSM)
 
@@ -41,13 +41,13 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("activemqartemis-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("v2alpha2activemqartemis-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to primary resource ActiveMQArtemis
-	err = c.Watch(&source.Kind{Type: &brokerv2alpha1.ActiveMQArtemis{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &brokerv2alpha2.ActiveMQArtemis{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv2alpha1.ActiveMQArtemis{},
+		OwnerType:    &brokerv2alpha2.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner ActiveMQArtemis
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &brokerv2alpha1.ActiveMQArtemis{},
+		OwnerType:    &brokerv2alpha2.ActiveMQArtemis{},
 	})
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	var namespacedNameFSM *ActiveMQArtemisFSM = nil
 	var amqbfsm *ActiveMQArtemisFSM = nil
 
-	instance := &brokerv2alpha1.ActiveMQArtemis{}
+	instance := &brokerv2alpha2.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
 		Name:      request.Name,
 		Namespace: request.Namespace,

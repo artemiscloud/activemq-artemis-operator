@@ -1,4 +1,4 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"fmt"

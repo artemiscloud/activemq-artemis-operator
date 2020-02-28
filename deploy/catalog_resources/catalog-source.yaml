@@ -11,21 +11,21 @@ items:
         - apiVersion: operators.coreos.com/v1alpha1
           kind: ClusterServiceVersion
           metadata:
-            name: activemq-artemis-operator.v0.12.0
+            name: activemq-artemis-operator.v0.13.0
             namespace: placeholder
             annotations:
               categories: "Streaming & Messaging"
               certified: "false"
               description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
-              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
+              containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.13.0
               createdAt: 2019-12-09T08:16:32Z
-              capabilities: Basic Install
+              capabilities: Seamless Upgrades
               repository: https://github.com/rh-messaging/activemq-artemis-operator
-              support: Red Hat, Inc.
+              support: Red Hat
               tectonic-visibility: ocs
               alm-examples: >-
                 [{
-                    "apiVersion": "broker.amq.io/v2alpha1",
+                    "apiVersion": "broker.amq.io/v2alpha2",
                     "kind": "ActiveMQArtemis",
                     "metadata": {
                        "name": "ex-aao",
@@ -74,13 +74,13 @@ items:
             keywords:
               - activemqartemis
               - operator
-            version: 0.12.0
+            version: 0.13.0
             maturity: alpha
             maintainers:
-              - name: Red Hat, Inc.
+              - name: Red Hat
                 email: rkieley@redhat.com
             provider:
-              name: Red Hat, Inc.
+              name: Red Hat
             links:
               - name: Product Page
                 url: https://access.redhat.com/products/red-hat-amq/
@@ -91,12 +91,12 @@ items:
                 mediatype: image/png
             labels:
               alm-owner-amq-broker: activemq-artemis-operator
-              operated-by: activemq-artemis-operator.v0.12.0
+              operated-by: activemq-artemis-operator.v0.13.0
             selector:
               matchLabels:
                 ActiveMQArtemis: ex-aao
                 application: ex-aao-app
-                operated-by: activemq-artemis-operator.v0.12.0
+                operated-by: activemq-artemis-operator.v0.13.0
             installModes:
               - type: OwnNamespace
                 supported: true
@@ -109,11 +109,14 @@ items:
             customresourcedefinitions:
               owned:
                 - name: activemqartemises.broker.amq.io
-                  version: v2alpha1
+                  version: v2alpha2
                   versions:
-                    - name: v2alpha1
+                    - name: v2alpha2
                       served: true
                       storage: true
+                    - name: v2alpha1
+                      served: true
+                      storage: false
                     - name: v1alpha1
                       served: false
                       storage: false
@@ -505,7 +508,7 @@ items:
                           serviceAccountName: activemq-artemis-operator
                           containers:
                             - name: activemq-artemis-operator
-                              image: quay.io/artemiscloud/activemq-artemis-operator:0.12.0
+                              image: quay.io/artemiscloud/activemq-artemis-operator:0.13.0
                               command:
                                 -  /home/activemq-artemis-operator/bin/entrypoint
                               imagePullPolicy: Always
@@ -737,11 +740,14 @@ items:
                     required:
                       - podStatus
                     type: object
-            version: v2alpha1
+            version: v2alpha2
             versions:
-            - name: v2alpha1
+            - name: v2alpha2
               served: true
               storage: true
+            - name: v2alpha1
+              served: true
+              storage: false
             - name: v1alpha1
               served: false
               storage: false
@@ -849,10 +855,8 @@ items:
           channels:
             - name: alpha
               currentCSV: activemq-artemis-operator.v0.9.1
-            - name: stable-75-on-z
-              currentCSV: activemq-artemis-operator.v0.10.0-on-z
-            - name: stable-76
-              currentCSV: activemq-artemis-operator.v0.12.0
+            - name: current-76
+              currentCSV: activemq-artemis-operator.v0.13.0
 
   - apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource

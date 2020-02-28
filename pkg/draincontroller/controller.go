@@ -47,7 +47,7 @@ import (
 	"strings"
 )
 
-var log = logf.Log.WithName("controller_activemqartemisscaledown")
+var log = logf.Log.WithName("controller_v2alpha1activemqartemisscaledown")
 
 const controllerAgentName = "statefulset-drain-controller"
 const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner" // TODO: can we replace this with an OwnerReference with the StatefulSet as the owner?

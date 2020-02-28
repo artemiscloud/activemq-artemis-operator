@@ -2,7 +2,6 @@ package resources
 
 import (
 	"context"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,17 +14,18 @@ import (
 
 var log = logf.Log.WithName("package k8s_actions")
 
-func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, objectDefinition runtime.Object) error {
+//func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, objectDefinition runtime.Object) error {
+func Create(owner v1.Object, namespacedName types.NamespacedName, client client.Client, scheme *runtime.Scheme, objectDefinition runtime.Object) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition).String()
 	reqLogger.Info("Creating new " + objectTypeString)
 
 	// Define the headless Service for the StatefulSet
 	// Set ActiveMQArtemis instance as the owner and controller
 	var err error = nil
-	if err = controllerutil.SetControllerReference(cr, objectDefinition.(v1.Object), scheme); err != nil {
+	if err = controllerutil.SetControllerReference(owner, objectDefinition.(v1.Object), scheme); err != nil {
 		// Add error detail for use later
 		reqLogger.Info("Failed to set controller reference for new " + objectTypeString)
 	}
@@ -42,28 +42,30 @@ func Create(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *ru
 }
 
 // TODO: Evaluate performance impact of using reflect
-func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
+//func Retrieve(cr *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
+func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition).String()
 	reqLogger.Info("Retrieving " + objectTypeString)
 
 	var err error = nil
 	if err = client.Get(context.TODO(), namespacedName, objectDefinition); err != nil {
 		if errors.IsNotFound(err) || runtime.IsNotRegisteredError(err) {
-			reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			//reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info(objectTypeString+" IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
-			reqLogger.Info(objectTypeString+" found", "Namespace", cr.Namespace, "Name", cr.Name)
+			reqLogger.Info(objectTypeString+" found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		}
 	}
 
 	return err
 }
 
-func Update(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefinition runtime.Object) error {
+func Update(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition).String()
 	reqLogger.Info("Updating " + objectTypeString)
 
@@ -75,9 +77,9 @@ func Update(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefi
 	return err
 }
 
-func Delete(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefinition runtime.Object) error {
+func Delete(namespacedName types.NamespacedName, client client.Client, objectDefinition runtime.Object) error {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition).String()
 	reqLogger.Info("Deleting " + objectTypeString)
 
@@ -89,20 +91,20 @@ func Delete(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, objectDefi
 	return err
 }
 
-func Enable(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
-	causedUpdate, err := configureExposure(customResource, client, scheme, namespacedName, objectDefinition, true)
+func Enable(owner v1.Object, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
+	causedUpdate, err := configureExposure(owner, client, scheme, namespacedName, objectDefinition, true)
 	return causedUpdate, err
 }
 
-func Disable(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
-	causedUpdate, err := configureExposure(customResource, client, scheme, namespacedName, objectDefinition, false)
+func Disable(owner v1.Object, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object) (bool, error) {
+	causedUpdate, err := configureExposure(owner, client, scheme, namespacedName, objectDefinition, false)
 	return causedUpdate, err
 }
 
-func configureExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object, enable bool) (bool, error) {
+func configureExposure(owner v1.Object, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, objectDefinition runtime.Object, enable bool) (bool, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name ", customResource.Name)
+	reqLogger := log.WithValues("ActiveMQArtemis Name ", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition).String()
 	reqLogger.Info("Configuring " + objectTypeString)
 
@@ -110,7 +112,8 @@ func configureExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client cl
 	serviceIsNotFound := false
 	causedUpdate := true
 
-	if err = Retrieve(customResource, namespacedName, client, objectDefinition); err != nil {
+	//if err = Retrieve(customResource, namespacedName, client, objectDefinition); err != nil {
+	if err = Retrieve(namespacedName, client, objectDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info(namespacedName.Name + " " + "not found")
 			serviceIsNotFound = true
@@ -120,7 +123,7 @@ func configureExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client cl
 	// We want a service to be exposed and currently it is not found
 	if enable && serviceIsNotFound {
 		reqLogger.Info("Creating " + namespacedName.Name)
-		if err = Create(customResource, client, scheme, objectDefinition); err != nil {
+		if err = Create(owner, namespacedName, client, scheme, objectDefinition); err != nil {
 			//reqLogger.Info("Failure to create " + baseServiceName + " service " + ordinalString)
 			causedUpdate = true
 		}
@@ -129,7 +132,7 @@ func configureExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client cl
 	// We do NOT want a service to be exposed and the service IS found
 	if !enable && !serviceIsNotFound {
 		reqLogger.Info("Deleting " + namespacedName.Name)
-		if err = Delete(customResource, client, objectDefinition); err != nil {
+		if err = Delete(namespacedName, client, objectDefinition); err != nil {
 			//reqLogger.Info("Failure to delete " + baseServiceName + " service " + ordinalString)
 			causedUpdate = true
 		}

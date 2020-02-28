@@ -1,8 +1,7 @@
-package activemqartemisaddress
+package v2alpha1activemqartemisaddress
 
 import (
 	"context"
-	"fmt"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/roddiekieley/activemq-artemis-management"
@@ -20,7 +19,7 @@ import (
 	"strconv"
 )
 
-var log = logf.Log.WithName("controller_activemqartemisaddress")
+var log = logf.Log.WithName("controller_v2alpha1activemqartemisaddress")
 var namespacedNameToAddressName = make(map[types.NamespacedName]brokerv2alpha1.ActiveMQArtemisAddress)
 
 /**
@@ -42,7 +41,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("activemqartemisaddress-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("v2alpha1activemqartemisaddress-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -199,7 +198,6 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
 	} else {
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " found")
-		fmt.Printf("%v+", statefulset)
 
 		pod := &corev1.Pod{}
 		podNamespacedName := types.NamespacedName{

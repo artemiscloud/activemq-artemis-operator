@@ -1,7 +1,8 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,12 +60,12 @@ const (
 type ActiveMQArtemisFSM struct {
 	m              fsm.IMachine
 	namespacedName types.NamespacedName
-	customResource *brokerv2alpha1.ActiveMQArtemis
+	customResource *brokerv2alpha2.ActiveMQArtemis
 	r              *ReconcileActiveMQArtemis
 }
 
 // Need to deep-copy the instance?
-func MakeActiveMQArtemisFSM(instance *brokerv2alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
+func MakeActiveMQArtemisFSM(instance *brokerv2alpha2.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) ActiveMQArtemisFSM {
 
 	var creatingK8sResourceIState fsm.IState
 	var containerRunningIState fsm.IState
@@ -94,7 +95,7 @@ func MakeActiveMQArtemisFSM(instance *brokerv2alpha1.ActiveMQArtemis, _namespace
 	return amqbfsm
 }
 
-func NewActiveMQArtemisFSM(instance *brokerv2alpha1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+func NewActiveMQArtemisFSM(instance *brokerv2alpha2.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
 
 	amqbfsm := MakeActiveMQArtemisFSM(instance, _namespacedName, r)
 
@@ -130,6 +131,8 @@ func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
 	// Was the current state complete?
 	amqbfsm.r.result = reconcile.Result{}
 	err, nextStateID := amqbfsm.m.Update()
+	ssNamespacedName := types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: amqbfsm.customResource.Namespace}
+	UpdatePodStatus(amqbfsm.customResource, amqbfsm.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

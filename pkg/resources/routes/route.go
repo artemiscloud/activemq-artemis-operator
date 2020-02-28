@@ -2,16 +2,17 @@ package routes
 
 import (
 	routev1 "github.com/openshift/api/route/v1"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("package routes")
 
 // Create newRouteForCR method to create exposed route
-func NewRouteDefinitionForCR(cr *v2alpha1.ActiveMQArtemis, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
+//func NewRouteDefinitionForCR(cr *v2alpha1.ActiveMQArtemis, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
+func NewRouteDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) *routev1.Route {
 
 	route := &routev1.Route{
 		TypeMeta: metav1.TypeMeta{
@@ -21,7 +22,7 @@ func NewRouteDefinitionForCR(cr *v2alpha1.ActiveMQArtemis, labels map[string]str
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    labels,
 			Name:      targetServiceName + "-rte",
-			Namespace: cr.Namespace,
+			Namespace: namespacedName.Namespace,
 		},
 		Spec: routev1.RouteSpec{
 			Port: &routev1.RoutePort{

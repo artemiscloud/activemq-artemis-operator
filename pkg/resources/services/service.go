@@ -1,12 +1,12 @@
 package services
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -19,7 +19,7 @@ var PingNameBuilder namer.NamerData
 //var RouteNameBuilderArray []namer.NamerData
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func NewHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[]corev1.ServicePort) *corev1.Service {
+func NewHeadlessServiceForCR(namespacedName types.NamespacedName, servicePorts *[]corev1.ServicePort) *corev1.Service {
 
 	labels := selectors.LabelBuilder.Labels()
 
@@ -32,7 +32,7 @@ func NewHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[
 			Annotations: nil,
 			Labels:      labels,
 			Name:        HeadlessNameBuilder.Name(),
-			Namespace:   cr.Namespace,
+			Namespace:   namespacedName.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     "ClusterIP",
@@ -47,7 +47,8 @@ func NewHeadlessServiceForCR(cr *brokerv2alpha1.ActiveMQArtemis, servicePorts *[
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
+//func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
+func NewServiceDefinitionForCR(namespacedName types.NamespacedName, nameSuffix string, portNumber int32, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Name:       nameSuffix,
@@ -66,8 +67,8 @@ func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix st
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      selectors.LabelBuilder.Labels(),
-			Name:        cr.Name + "-" + nameSuffix + "-svc",
-			Namespace:   cr.Namespace,
+			Name:        namespacedName.Name + "-" + nameSuffix + "-svc",
+			Namespace:   namespacedName.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     "ClusterIP",
@@ -82,7 +83,7 @@ func NewServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, nameSuffix st
 }
 
 // newServiceForPod returns an activemqartemis service for the pod just created
-func NewPingServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
+func NewPingServiceDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Protocol:   "TCP",
@@ -101,7 +102,7 @@ func NewPingServiceDefinitionForCR(cr *brokerv2alpha1.ActiveMQArtemis, labels ma
 			Annotations: nil,
 			Labels:      labels,
 			Name:        PingNameBuilder.Name(),
-			Namespace:   cr.Namespace,
+			Namespace:   namespacedName.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     "ClusterIP",

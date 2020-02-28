@@ -1,8 +1,7 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"context"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
@@ -108,7 +107,7 @@ func (ss *ScalingState) Update() (error, int) {
 
 		break
 	}
-	pods.UpdatePodStatus(ss.parentFSM.customResource, ss.parentFSM.r.client, ssNamespacedName)
+	//pods.UpdatePodStatus(ss.parentFSM.customResource, ss.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

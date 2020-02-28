@@ -2,9 +2,6 @@ package statefulsets
 
 import (
 	"context"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	pvc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
@@ -13,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -20,12 +18,8 @@ import (
 var log = logf.Log.WithName("package statefulsets")
 var NameBuilder namer.NamerData
 
-func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet {
 
-	// Log where we are and what we're doing
-	reqLogger := log.WithName(cr.Name)
-	reqLogger.Info("Creating new statefulset for custom resource")
-	replicas := cr.Spec.DeploymentPlan.Size
+func MakeStatefulSet(namespacedName types.NamespacedName, annotations map[string]string, replicas int32, pts corev1.PodTemplateSpec) (*appsv1.StatefulSet, appsv1.StatefulSetSpec) {
 
 	labels := selectors.LabelBuilder.Labels()
 	ss := &appsv1.StatefulSet{
@@ -35,9 +29,9 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        NameBuilder.Name(),
-			Namespace:   cr.Namespace,
+			Namespace:   namespacedName.Namespace,
 			Labels:      labels,
-			Annotations: cr.Annotations,
+			Annotations: annotations,
 		},
 	}
 	Spec := appsv1.StatefulSetSpec{
@@ -46,15 +40,10 @@ func NewStatefulSetForCR(cr *brokerv2alpha1.ActiveMQArtemis) *appsv1.StatefulSet
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,
 		},
-		Template: pods.NewPodTemplateSpecForCR(cr),
+		Template: pts,//pods.NewPodTemplateSpecForCR(cr),
 	}
 
-	if cr.Spec.DeploymentPlan.PersistenceEnabled {
-		Spec.VolumeClaimTemplates = *pvc.NewPersistentVolumeClaimArrayForCR(cr, 1)
-	}
-	ss.Spec = Spec
-
-	return ss
+	return ss, Spec
 }
 
 var GLOBAL_CRNAME string = ""

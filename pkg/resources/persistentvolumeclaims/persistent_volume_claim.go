@@ -1,17 +1,17 @@
 package persistentvolumeclaims
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("package persistentvolumeclaims")
 
-func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName) *corev1.PersistentVolumeClaim {
 
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -21,8 +21,8 @@ func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.P
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: nil,
 			Labels:      selectors.LabelBuilder.Labels(),
-			Name:        cr.Name,
-			Namespace:   cr.Namespace,
+			Name:        namespacedName.Name,
+			Namespace:   namespacedName.Namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
@@ -35,18 +35,6 @@ func newPersistentVolumeClaimForCR(cr *brokerv2alpha1.ActiveMQArtemis) *corev1.P
 	}
 
 	return pvc
-}
-func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha1.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
-
-	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
-
-	var pvc *corev1.PersistentVolumeClaim = nil
-	for i := 0; i < arrayLength; i++ {
-		pvc = newPersistentVolumeClaimForCR(cr)
-		pvcArray = append(pvcArray, *pvc)
-	}
-
-	return &pvcArray
 }
 
 // TODO: Evaluate if local Create and Retrieve are required for more precise control of pvc creation and deletion

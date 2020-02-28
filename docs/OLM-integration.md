@@ -23,7 +23,7 @@ To install this operator on OpenShift 4 for end-to-end testing, make sure you ha
 Push the operator bundle to your quay application repository as follows:
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.12.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.13.0 <quay.io account> <application repo name> <version> "basic YWhhbWVlZDpIYW1lZWRAMTIz" "basic XXXXXXXXX"
 ```
 
 If pushing to another quay repository, replace with your username or other repot name. 
@@ -31,7 +31,7 @@ If pushing to another quay repository, replace with your username or other repot
 for example : 
 
 ```bash
-operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.12.0 ahameed amqoperator 0.12.0 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
+operator-courier push deploy/olm-catalog/activemq-artemis-operator/0.13.0 ahameed amqoperator 0.13.0 "basic YWhhbWVlZDpIYW1lZWRAMTIz"
 ```
 
 
@@ -71,7 +71,7 @@ This will create a new `CatalogSource` and `ConfigMap`, allowing the OLM Catalog
 Use the OLM console to subscribe to the `ActiveMQ Artemis` Operator Catalog Source within your namespace. Once subscribed, deploy the the operator in your namespace by deploying the cluster service version. First edit
 
 ```bash
-deploy/olm-catalog/activemq-artemis-operator/0.12.0/activemq-artemis-operator.v0.12.0.clusterserviceversion.yaml
+deploy/olm-catalog/activemq-artemis-operator/0.13.0/activemq-artemis-operator.v0.13.0.clusterserviceversion.yaml
 ```
 
 and update
@@ -82,12 +82,12 @@ namespace: placeholder
 to be your your namespace name. Then use the console to `Create Broker` or create one manually as seen below:
 
 ```bash
-$ oc create -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
+$ oc create -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 
 ### Clean up a ActiveMQ Artemis deployment
 
 ```bash
-oc delete -f deploy/crs/broker_v2alpha1_activemqartemis_cr.yaml
+oc delete -f deploy/crs/broker_activemqartemis_cr.yaml
 ```
 

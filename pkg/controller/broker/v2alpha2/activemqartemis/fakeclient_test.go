@@ -1,4 +1,4 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	routev1 "github.com/openshift/api/route/v1"

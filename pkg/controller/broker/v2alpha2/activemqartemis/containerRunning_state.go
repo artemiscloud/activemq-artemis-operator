@@ -1,10 +1,9 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"context"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
@@ -96,12 +95,12 @@ func (rs *ContainerRunningState) Update() (error, int) {
 	}
 
 	if statefulSetUpdates > 0 {
-		if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
+		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 		}
 		nextStateID = ScalingID
 	}
-	pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, ssNamespacedName)
+	//pods.UpdatePodStatus(rs.parentFSM.namespacedName, rs.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

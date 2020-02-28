@@ -1,16 +1,19 @@
-package activemqartemis
+package v2alpha2activemqartemis
 
 import (
 	"context"
-
 	"fmt"
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/RHsyseng/operator-utils/pkg/resource/write"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemisscaledown"
+	activemqartemisscaledown "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/persistentvolumeclaims"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -21,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/volumes"
@@ -63,14 +67,14 @@ type ActiveMQArtemisReconciler struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
-	ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
-	ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
-	ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
-	ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	Process(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
+	ProcessDeploymentPlan(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
+	ProcessAcceptors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConnectors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	ProcessConsole(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 }
 
-func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool, allObjects []resource.KubernetesResource) (uint32, uint8) {
+func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool, allObjects []resource.KubernetesResource) (uint32, uint8) {
 
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := secrets.CredentialsNameBuilder.Name()
@@ -99,7 +103,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	return statefulSetUpdates, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
@@ -133,7 +137,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -146,7 +150,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptors(customResource *br
 	return retVal
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -159,7 +163,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConnectors(customResource *b
 	return retVal
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -180,7 +184,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 	return retVal
 }
 
-func syncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
+func syncMessageMigration(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) {
 
 	var err error = nil
 	var retrieveError error = nil
@@ -211,22 +215,22 @@ func syncMessageMigration(customResource *brokerv2alpha1.ActiveMQArtemis, client
 	}
 
 	if *customResource.Spec.DeploymentPlan.MessageMigration {
-		if err = resources.Retrieve(customResource, namespacedName, client, scaledown); err != nil {
+		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
 			// err means not found so create
-			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {
+			if retrieveError = resources.Create(customResource, namespacedName, client, scheme, scaledown); retrieveError == nil {
 			}
 		}
 	} else {
-		if err = resources.Retrieve(customResource, namespacedName, client, scaledown); err == nil {
+		if err = resources.Retrieve(namespacedName, client, scaledown); err == nil {
 			close(activemqartemisscaledown.StopCh)
 			// err means not found so delete
-			if retrieveError = resources.Delete(customResource, client, scaledown); retrieveError == nil {
+			if retrieveError = resources.Delete(namespacedName, client, scaledown); retrieveError == nil {
 			}
 		}
 	}
 }
 
-func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, acceptorEntry string, envVarName string, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
+func sourceEnvVarFromSecret(customResource *brokerv2alpha2.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet, acceptorEntry string, envVarName string, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
 
 	var err error = nil
 	var retVal uint32 = statefulSetNotUpdated
@@ -239,8 +243,8 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, curr
 	stringDataMap := map[string]string{
 		envVarName: acceptorEntry,
 	}
-	nettySecret := secrets.NewSecret(customResource, secretName, stringDataMap)
-	if err = resources.Retrieve(customResource, namespacedName, client, nettySecret); err != nil {
+	nettySecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	if err = resources.Retrieve(namespacedName, client, nettySecret); err != nil {
 		if errors.IsNotFound(err) {
 			requestedResources = append(requestedResources, nettySecret)
 			//err = resources.Create(customResource, client, scheme, nettySecret)
@@ -253,7 +257,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, curr
 			nettySecret.Data[envVarName] = []byte(acceptorEntry)
 
 			// These updates alone do not trigger a rolling update due to env var update as it's from a secret
-			err = resources.Update(customResource, client, nettySecret)
+			err = resources.Update(namespacedName, client, nettySecret)
 
 			// Force the rolling update to occur
 			environments.IncrementTriggeredRollCount(currentStatefulSet.Spec.Template.Spec.Containers)
@@ -282,7 +286,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha1.ActiveMQArtemis, curr
 	return retVal
 }
 
-func generateAcceptorsString(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client) string {
+func generateAcceptorsString(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client) string {
 
 	// TODO: Optimize for the single broker configuration
 	ensureCOREOn61616Exists := true // as clustered is no longer an option but true by default
@@ -355,7 +359,7 @@ func generateAcceptorsString(customResource *brokerv2alpha1.ActiveMQArtemis, cli
 	return acceptorEntry
 }
 
-func generateConnectorsString(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client) string {
+func generateConnectorsString(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client) string {
 
 	connectorEntry := ""
 	connectors := customResource.Spec.Connectors
@@ -384,7 +388,7 @@ func generateConnectorsString(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 	return connectorEntry
 }
 
-func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureAcceptorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -396,12 +400,16 @@ func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, 
 	for k, v := range originalLabels {
 		serviceRoutelabels[k] = v
 	}
+	namespacedName := types.NamespacedName{
+		Name:		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, acceptor := range customResource.Spec.Acceptors {
-			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels)
+			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels)
 			serviceNamespacedName := types.NamespacedName{
 				Name:      serviceDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -414,7 +422,7 @@ func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, 
 			}
 			targetPortName := acceptor.Name + "-" + ordinalString
 			targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
+			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
 			routeNamespacedName := types.NamespacedName{
 				Name:      routeDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -431,7 +439,7 @@ func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, 
 	return causedUpdate, err
 }
 
-func configureConnectorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureConnectorsExposure(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -443,12 +451,16 @@ func configureConnectorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis,
 	for k, v := range originalLabels {
 		serviceRoutelabels[k] = v
 	}
+	namespacedName := types.NamespacedName{
+		Name:		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
 
 		for _, connector := range customResource.Spec.Connectors {
-			serviceDefinition := svc.NewServiceDefinitionForCR(customResource, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels)
+			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels)
 
 			serviceNamespacedName := types.NamespacedName{
 				Name:      serviceDefinition.Name,
@@ -462,7 +474,7 @@ func configureConnectorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis,
 			}
 			targetPortName := connector.Name + "-" + ordinalString
 			targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
+			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
 
 			routeNamespacedName := types.NamespacedName{
 				Name:      routeDefinition.Name,
@@ -480,7 +492,7 @@ func configureConnectorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis,
 	return causedUpdate, err
 }
 
-func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -493,6 +505,10 @@ func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 	for k, v := range originalLabels {
 		serviceRoutelabels[k] = v
 	}
+	namespacedName := types.NamespacedName{
+		Name:		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
 		serviceRoutelabels["statefulset.kubernetes.io/pod-name"] = statefulsets.NameBuilder.Name() + "-" + ordinalString
@@ -500,7 +516,8 @@ func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 		portNumber := int32(8161)
 		targetPortName := "wconsj" + "-" + ordinalString
 		targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-		serviceDefinition := svc.NewServiceDefinitionForCR(customResource, targetPortName, portNumber, serviceRoutelabels)
+
+		serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, targetPortName, portNumber, serviceRoutelabels)
 
 		serviceNamespacedName := types.NamespacedName{
 			Name:      serviceDefinition.Name,
@@ -521,7 +538,7 @@ func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 		if isOpenshift {
 			log.Info("Environment is OpenShift")
 			log.Info("Checking routeDefinition for " + targetPortName)
-			routeDefinition := routes.NewRouteDefinitionForCR(customResource, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
+			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			routeNamespacedName := types.NamespacedName{
 				Name:      routeDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -534,7 +551,7 @@ func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 			}
 		} else {
 			log.Info("Environment is not OpenShift, creating ingress")
-			ingressDefinition := ingresses.NewIngressForCR(customResource, "wconsj")
+			ingressDefinition := ingresses.NewIngressForCR(namespacedName, "wconsj")
 			ingressNamespacedName := types.NamespacedName{
 				Name:      ingressDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -551,21 +568,25 @@ func configureConsoleExposure(customResource *brokerv2alpha1.ActiveMQArtemis, cl
 	return causedUpdate, err
 }
 
-func generateConsoleSSLFlags(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
+func generateConsoleSSLFlags(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, secretName string) string {
 
 	sslFlags := ""
-	namespacedName := types.NamespacedName{
+	secretNamespacedName := types.NamespacedName{
 		Name:      secretName,
 		Namespace: customResource.Namespace,
 	}
+	namespacedName := types.NamespacedName{
+		Name:		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
 	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
 
 	keyStorePassword := "password"
 	keyStorePath := "/etc/" + secretName + "-volume/broker.ks"
 	trustStorePassword := "password"
 	trustStorePath := "/etc/" + secretName + "-volume/client.ts"
-	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
+	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
 		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
 			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
 		}
@@ -591,21 +612,25 @@ func generateConsoleSSLFlags(customResource *brokerv2alpha1.ActiveMQArtemis, cli
 	return sslFlags
 }
 
-func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, secretName string) string {
+func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, secretName string) string {
 
 	sslArguments := "sslEnabled=true"
-	namespacedName := types.NamespacedName{
+	secretNamespacedName := types.NamespacedName{
 		Name:      secretName,
 		Namespace: customResource.Namespace,
 	}
+	namespacedName := types.NamespacedName{
+		Name:		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
 	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(customResource, secretName, stringDataMap)
+	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
 
 	keyStorePassword := "password"
 	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
 	trustStorePassword := "password"
 	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
-	if err := resources.Retrieve(customResource, namespacedName, client, userPasswordSecret); err == nil {
+	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
 		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
 			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
 		}
@@ -627,7 +652,7 @@ func generateAcceptorConnectorSSLArguments(customResource *brokerv2alpha1.Active
 	return sslArguments
 }
 
-func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha1.AcceptorType) string {
+func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha2.AcceptorType) string {
 
 	sslOptionalArguments := ""
 
@@ -656,7 +681,7 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha1.AcceptorType) 
 	return sslOptionalArguments
 }
 
-func generateConnectorSSLOptionalArguments(connector brokerv2alpha1.ConnectorType) string {
+func generateConnectorSSLOptionalArguments(connector brokerv2alpha2.ConnectorType) string {
 
 	sslOptionalArguments := ""
 
@@ -692,7 +717,7 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundAio := false
 	foundNio := false
@@ -740,7 +765,7 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, cu
 	return extraArgsNeedsUpdate
 }
 
-func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundDataDir := false
 	foundDataDirLogging := false
@@ -827,7 +852,7 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanT
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	// At implementation time only one container
 	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
@@ -841,7 +866,7 @@ func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha1.DeploymentPlanType, 
 	return false
 }
 
-func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
+func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
 	reqLogger.Info("Entering into  Process Upgrade")
@@ -882,28 +907,28 @@ func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brok
 			added = true
 			switch kind {
 			case ss.NameBuilder.Name():
-				if err := resources.Retrieve(customResource, namespacedName, client, requested); err != nil {
-					if createError = resources.Create(customResource, client, scheme, requested); createError == nil {
+				if err := resources.Retrieve(namespacedName, client, requested); err != nil {
+					if createError = resources.Create(customResource, namespacedName, client, scheme, requested); createError == nil {
 						stepsComplete |= CreatedStatefulSet
 						ss.GLOBAL_CRNAME = customResource.Name
 					}
 				}
 			case svc.HeadlessNameBuilder.Name():
-				if err = resources.Retrieve(customResource, namespacedName, client, requested); err != nil {
-					if createError = resources.Create(customResource, client, scheme, requested); createError == nil {
+				if err = resources.Retrieve(namespacedName, client, requested); err != nil {
+					if createError = resources.Create(customResource, namespacedName, client, scheme, requested); createError == nil {
 						stepsComplete |= CreatedHeadlessService
 					}
 				}
 			case svc.PingNameBuilder.Name():
-				if err = resources.Retrieve(customResource, namespacedName, client, requested); err != nil {
-					if createError = resources.Create(customResource, client, scheme, requested); createError == nil {
+				if err = resources.Retrieve(namespacedName, client, requested); err != nil {
+					if createError = resources.Create(customResource, namespacedName, client, scheme, requested); createError == nil {
 						stepsComplete |= CreatedPingService
 					}
 				}
 			default:
-				if err := resources.Retrieve(customResource, namespacedName, client, requested); err != nil {
+				if err := resources.Retrieve(namespacedName, client, requested); err != nil {
 					if errors.IsNotFound(err) {
-						resources.Create(customResource, client, scheme, requested)
+						resources.Create(customResource, namespacedName, client, scheme, requested)
 					}
 
 				}
@@ -934,8 +959,8 @@ func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brok
 	return stepsComplete
 }
 
-func getDeployedResources(instance *brokerv2alpha1.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
-	var log = logf.Log.WithName("controller_activemqartemis")
+func getDeployedResources(instance *brokerv2alpha2.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
+	var log = logf.Log.WithName("controller_v2alpha2activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
 	resourceMap, err := reader.ListAll(
@@ -976,4 +1001,290 @@ func getDeployedResources(instance *brokerv2alpha1.ActiveMQArtemis, client clien
 	resourceMap[reflect.TypeOf(corev1.Secret{})] = secrets
 
 	return resourceMap, nil
+}
+
+func getServiceObjects(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, allObjects []resource.KubernetesResource) (error, []resource.KubernetesResource) {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
+	reqLogger.Info("Updating ContainerRunningState")
+	var err error = nil
+
+	headlessService := &corev1.Service{}
+	HeadlessServiceName := types.NamespacedName{Name: svc.HeadlessNameBuilder.Name(), Namespace: customResource.Namespace}
+	err = client.Get(context.TODO(), HeadlessServiceName, headlessService)
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Error(err, "Failed to get HeadlessService.", "Deployment.Namespace", headlessService.Namespace, "Deployment.Name", headlessService.Name)
+		err = nil
+	}
+	allObjects = append(allObjects, headlessService)
+	pingService := &corev1.Service{}
+	PingServiceName := types.NamespacedName{Name: svc.PingNameBuilder.Name(), Namespace: customResource.Namespace}
+	err = client.Get(context.TODO(), PingServiceName, pingService)
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Error(err, "Failed to get HeadlessService.", "Deployment.Namespace", pingService.Namespace, "Deployment.Name", pingService.Name)
+		err = nil
+	}
+	allObjects = append(allObjects, pingService)
+	return err, allObjects
+}
+
+func MakeVolumes(cr *brokerv2alpha2.ActiveMQArtemis) []corev1.Volume {
+
+	volumeDefinitions := []corev1.Volume{}
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
+		basicCRVolume := volumes.MakePersistentVolume(cr.Name)
+		volumeDefinitions = append(volumeDefinitions, basicCRVolume...)
+	}
+
+	// Scan acceptors for any with sslEnabled
+	for _, acceptor := range cr.Spec.Acceptors {
+		if !acceptor.SSLEnabled {
+			continue
+		}
+		secretName := cr.Name + "-" + acceptor.Name + "-secret"
+		if "" != acceptor.SSLSecret {
+			secretName = acceptor.SSLSecret
+		}
+		volume := volumes.MakeVolume(secretName)
+		volumeDefinitions = append(volumeDefinitions, volume)
+	}
+
+	// Scan connectors for any with sslEnabled
+	for _, connector := range cr.Spec.Connectors {
+		if !connector.SSLEnabled {
+			continue
+		}
+		secretName := cr.Name + "-" + connector.Name + "-secret"
+		if "" != connector.SSLSecret {
+			secretName = connector.SSLSecret
+		}
+		volume := volumes.MakeVolume(secretName)
+		volumeDefinitions = append(volumeDefinitions, volume)
+	}
+
+	if cr.Spec.Console.SSLEnabled {
+		secretName := secrets.ConsoleNameBuilder.Name()
+		if "" != cr.Spec.Console.SSLSecret {
+			secretName = cr.Spec.Console.SSLSecret
+		}
+		volume := volumes.MakeVolume(secretName)
+		volumeDefinitions = append(volumeDefinitions, volume)
+	}
+
+	return volumeDefinitions
+}
+
+func MakeVolumeMounts(cr *brokerv2alpha2.ActiveMQArtemis) []corev1.VolumeMount {
+
+	volumeMounts := []corev1.VolumeMount{}
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
+		persistentCRVlMnt := volumes.MakePersistentVolumeMount(cr.Name)
+		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
+	}
+
+	// Scan acceptors for any with sslEnabled
+	for _, acceptor := range cr.Spec.Acceptors {
+		if !acceptor.SSLEnabled {
+			continue
+		}
+		volumeMountName := cr.Name + "-" + acceptor.Name + "-secret-volume"
+		if "" != acceptor.SSLSecret {
+			volumeMountName = acceptor.SSLSecret + "-volume"
+		}
+		volumeMount := volumes.MakeVolumeMount(volumeMountName)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	// Scan connectors for any with sslEnabled
+	for _, connector := range cr.Spec.Connectors {
+		if !connector.SSLEnabled {
+			continue
+		}
+		volumeMountName := cr.Name + "-" + connector.Name + "-secret-volume"
+		if "" != connector.SSLSecret {
+			volumeMountName = connector.SSLSecret + "-volume"
+		}
+		volumeMount := volumes.MakeVolumeMount(volumeMountName)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	if cr.Spec.Console.SSLEnabled {
+		volumeMountName := secrets.ConsoleNameBuilder.Name() + "-volume"
+		if "" != cr.Spec.Console.SSLSecret {
+			volumeMountName = cr.Spec.Console.SSLSecret + "-volume"
+		}
+		volumeMount := volumes.MakeVolumeMount(volumeMountName)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	return volumeMounts
+}
+
+func NewPodTemplateSpecForCR(customResource *brokerv2alpha2.ActiveMQArtemis) corev1.PodTemplateSpec {
+
+	namespacedName := types.NamespacedName{
+		Name: 		customResource.Name,
+		Namespace:	customResource.Namespace,
+	}
+	// Log where we are and what we're doing
+	reqLogger := log.WithName(namespacedName.Name)
+	reqLogger.Info("Creating new pod template spec for custom resource")
+
+	terminationGracePeriodSeconds := int64(60)
+
+	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
+	Spec := corev1.PodSpec{}
+	Containers := []corev1.Container{}
+	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
+
+	volumeMounts := MakeVolumeMounts(customResource)
+	if len(volumeMounts) > 0 {
+		container.VolumeMounts = volumeMounts
+	}
+	Spec.Containers = append(Containers, container)
+	volumes := MakeVolumes(customResource)
+	if len(volumes) > 0 {
+		Spec.Volumes = volumes
+	}
+	Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+	pts.Spec = Spec
+
+	return pts
+}
+
+func NewStatefulSetForCR(cr *brokerv2alpha2.ActiveMQArtemis) *appsv1.StatefulSet {
+
+	// Log where we are and what we're doing
+	reqLogger := log.WithName(cr.Name)
+	reqLogger.Info("Creating new statefulset for custom resource")
+
+	namespacedName := types.NamespacedName{
+		Name: cr.Name,
+		Namespace: cr.Namespace,
+	}
+	ss, Spec := statefulsets.MakeStatefulSet(namespacedName, cr.Annotations, cr.Spec.DeploymentPlan.Size, NewPodTemplateSpecForCR(cr))
+
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
+		Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(cr, 1)
+	}
+	ss.Spec = Spec
+
+	return ss
+}
+
+func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha2.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
+
+	var pvc *corev1.PersistentVolumeClaim = nil
+	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
+
+	namespacedName := types.NamespacedName{
+		Name: cr.Name,
+		Namespace: cr.Namespace,
+	}
+
+	for i := 0; i < arrayLength; i++ {
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimForCR(namespacedName)
+		pvcArray = append(pvcArray, *pvc)
+	}
+
+	return &pvcArray
+}
+
+// TODO: Test namespacedName to ensure it's the right namespacedName
+func UpdatePodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Updating status for pods")
+
+	podStatus := GetPodStatus(cr, client, ssNamespacedName)
+
+	reqLogger.V(5).Info("PodStatus are to be updated.............................", "info:", podStatus)
+	reqLogger.V(5).Info("Ready Count........................", "info:", len(podStatus.Ready))
+	reqLogger.V(5).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
+	reqLogger.V(5).Info("Starting Count........................", "info:", len(podStatus.Starting))
+
+	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
+		cr.Status.PodStatus = podStatus
+
+		err := client.Status().Update(context.TODO(), cr)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update pods status")
+			return err
+		}
+		reqLogger.Info("Pods status updated")
+		return nil
+	}
+
+	return nil
+}
+
+func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger.Info("Getting status for pods")
+	var status olm.DeploymentStatus
+	sfsFound := &appsv1.StatefulSet{}
+
+	err := client.Get(context.TODO(), namespacedName, sfsFound)
+	if err == nil {
+		status = olm.GetSingleStatefulSetStatus(*sfsFound)
+	} else {
+		dsFound := &appsv1.DaemonSet{}
+		err = client.Get(context.TODO(), namespacedName, dsFound)
+		if err == nil {
+			status = olm.GetSingleDaemonSetStatus(*dsFound)
+		}
+	}
+
+	return status
+}
+
+//func CheckSSLEnabled(cr *brokerv2alpha2.ActiveMQArtemis) bool {
+//	reqLogger := log.WithName(cr.Name)
+//	var sslEnabled = false
+//	//if len(cr.Spec.SSLConfig.SecretName) != 0 && len(cr.Spec.SSLConfig.KeyStorePassword) != 0 && len(cr.Spec.SSLConfig.KeystoreFilename) != 0 && len(cr.Spec.SSLConfig.TrustStorePassword) != 0 && len(cr.Spec.SSLConfig.TrustStoreFilename) != 0 {
+//	if false { // "TODO-FIX-REPLACE"
+//		reqLogger.Info("SSL enabled and SSLConfig Section Provided")
+//		sslEnabled = true
+//	}
+//	return sslEnabled
+//}
+
+func MakeEnvVarArrayForCR(cr *brokerv2alpha2.ActiveMQArtemis) []corev1.EnvVar {
+
+	reqLogger := log.WithName(cr.Name)
+	reqLogger.Info("Adding Env variable ")
+
+	requireLogin := "false"
+	if cr.Spec.DeploymentPlan.RequireLogin {
+		requireLogin = "true"
+	} else {
+		requireLogin = "false"
+	}
+
+	journalType := "aio"
+	if "aio" == strings.ToLower(cr.Spec.DeploymentPlan.JournalType) {
+		journalType = "aio"
+	} else {
+		journalType = "nio"
+	}
+
+	envVar := []corev1.EnvVar{}
+	envVarArrayForBasic := environments.AddEnvVarForBasic(requireLogin, journalType)
+	envVar = append(envVar, envVarArrayForBasic...)
+
+	//if CheckSSLEnabled(cr) {
+	//	envVarArrayForSSL := environments.AddEnvVarForSSL(cr)
+	//	envVar = append(envVar, envVarArrayForSSL...)
+	//}
+	if cr.Spec.DeploymentPlan.PersistenceEnabled {
+		envVarArrayForPresistent := environments.AddEnvVarForPersistent(cr.Name)
+		envVar = append(envVar, envVarArrayForPresistent...)
+	}
+
+	// TODO: Optimize for the single broker configuration
+	envVarArrayForCluster := environments.AddEnvVarForCluster()
+	envVar = append(envVar, envVarArrayForCluster...)
+
+	return envVar
 }
