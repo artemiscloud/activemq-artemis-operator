@@ -5,4 +5,4 @@ metadata:
 spec:
   deploymentPlan:
     size: 2
-    image: registry.redhat.io/amq7/amq-broker:7.4
+    image: registry.redhat.io/amq7/amq-broker-lts-rhel7:7.4

@@ -617,7 +617,7 @@ func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", svc.PingNameBuilder.Name(), 1)
 	image := sts.Spec.Template.Spec.Containers[0].Image
 	if "" == image {
-		image = "registry.redhat.io/amq7/amq-broker:7.4"
+		image = "registry.redhat.io/amq7/amq-broker-lts-rhel7:7.4"
 	}
 	podTemplateJson = strings.Replace(podTemplateJson, "SSIMAGE", image, 1)
 	if podTemplateJson == "" {
