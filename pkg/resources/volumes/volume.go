@@ -93,11 +93,12 @@ func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 			continue
 		}
 
-		secretName := secrets.NettyNameBuilder.Name()
+		secretName := cr.Name + "-" + acceptor.Name + "-secret"
 		if "" != acceptor.SSLSecret {
 			secretName = acceptor.SSLSecret
 		}
-		volumeName := cr.Name + "-" + acceptor.Name + "-secret" + "-volume"
+
+		volumeName := secretName + "-volume"
 		volume := corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
@@ -115,11 +116,12 @@ func MakeVolumes(cr *brokerv2alpha1.ActiveMQArtemis) []corev1.Volume {
 			continue
 		}
 
-		secretName := secrets.NettyNameBuilder.Name()
+		secretName := cr.Name + "-" + connector.Name + "-secret"
 		if "" != connector.SSLSecret {
 			secretName = connector.SSLSecret
 		}
-		volumeName := cr.Name + "-" + connector.Name + "-secret" + "-volume"
+		volumeName := secretName + "-volume"
+
 		volume := corev1.Volume{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
