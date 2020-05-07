@@ -3,8 +3,11 @@ package v2alpha1activemqartemisaddress
 import (
 	"context"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	mgmt "github.com/roddiekieley/activemq-artemis-management"
+	mgmt "github.com/artemiscloud/activemq-artemis-management"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -220,11 +223,72 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 				}
 			} else {
 				reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
-				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker")
+				containers := pod.Spec.Containers //get env from this
+				var jolokiaUser string
+				var jolokiaPassword string
+				if len(containers) == 1 {
+					envVars := containers[0].Env
+					for _, oneVar := range envVars {
+						if "AMQ_USER" == oneVar.Name {
+							jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+						}
+						if "AMQ_PASSWORD" == oneVar.Name {
+							jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+						}
+						if jolokiaUser != "" && jolokiaPassword != "" {
+							break
+						}
+					}
+				}
+
+				reqLogger.Info("New Jololia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
+				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
 				artemisArray = append(artemisArray, artemis)
 			}
 		}
 	}
 
 	return artemisArray
+}
+
+func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+	var result string
+	if envVar.Value == "" {
+		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, statefulset, client)
+	} else {
+		result = envVar.Value
+	}
+	return result
+}
+
+func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+
+    reqLogger := log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
+
+	var result string = ""
+
+	secretName := varSource.SecretKeyRef.LocalObjectReference.Name
+	secretKey := varSource.SecretKeyRef.Key
+
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: statefulset.Namespace,
+	}
+	// Attempt to retrieve the secret
+	stringDataMap := map[string]string{
+		envName: "",
+	}
+	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	var err error = nil
+	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info("Secret IsNotFound.", "Secret Name", secretName, "Key", secretKey)
+		}
+	} else {
+		elem, ok := theSecret.Data[envName]
+		if ok {
+			result = string(elem)
+		}
+	}
+	return result
 }
