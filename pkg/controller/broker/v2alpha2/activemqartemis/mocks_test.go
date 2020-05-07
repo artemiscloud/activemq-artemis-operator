@@ -57,8 +57,8 @@ var (
 					SSLProvider:         "JDK",
 					SNIHost:             "localhost",
 					Expose:              true,
-					AnycastPrefix:       "jms.topic",
-					MulticastPrefix:     "/queue/",
+					AnycastPrefix:       "jms.queue.",
+					MulticastPrefix:     "/topic/",
 				},
 			},
 			Connectors: []brokerv2alpha2.ConnectorType{
@@ -114,8 +114,8 @@ var (
 					SSLProvider:         "JDK",
 					SNIHost:             "localhost",
 					Expose:              true,
-					AnycastPrefix:       "jms.topic",
-					MulticastPrefix:     "/queue/",
+					AnycastPrefix:       "jms.queue.",
+					MulticastPrefix:     "/topic/",
 				},
 			},
 			Connectors: []brokerv2alpha2.ConnectorType{

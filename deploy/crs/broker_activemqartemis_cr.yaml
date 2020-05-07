@@ -27,8 +27,8 @@ spec:
       sslProvider: JDK
       sniHost: localhost
       expose: true
-      anycastPrefix: jms.topic.
-      multicastPrefix: /queue/
+      anycastPrefix: jms.queue.
+      multicastPrefix: /topic/
   connectors:
     - name: connector0
       host: localhost
