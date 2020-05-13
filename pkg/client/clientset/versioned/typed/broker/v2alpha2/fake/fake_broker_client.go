@@ -19,22 +19,22 @@ limitations under the License.
 package fake
 
 import (
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeBrokerV2alpha1 struct {
+type FakeBrokerV2alpha2 struct {
 	*testing.Fake
 }
 
-func (c *FakeBrokerV2alpha1) ActiveMQArtemises(namespace string) v2alpha1.ActiveMQArtemisInterface {
+func (c *FakeBrokerV2alpha2) ActiveMQArtemises(namespace string) v2alpha2.ActiveMQArtemisInterface {
 	return &FakeActiveMQArtemises{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeBrokerV2alpha1) RESTClient() rest.Interface {
+func (c *FakeBrokerV2alpha2) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

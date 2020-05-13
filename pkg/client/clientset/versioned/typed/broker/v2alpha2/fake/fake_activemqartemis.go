@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,29 +32,29 @@ import (
 
 // FakeActiveMQArtemises implements ActiveMQArtemisInterface
 type FakeActiveMQArtemises struct {
-	Fake *FakeBrokerV2alpha1
+	Fake *FakeBrokerV2alpha2
 	ns   string
 }
 
-var activemqartemisesResource = schema.GroupVersionResource{Group: "broker.amq.io", Version: "v2alpha1", Resource: "activemqartemises"}
+var activemqartemisesResource = schema.GroupVersionResource{Group: "broker.amq.io", Version: "v2alpha2", Resource: "activemqartemises"}
 
-var activemqartemisesKind = schema.GroupVersionKind{Group: "broker.amq.io", Version: "v2alpha1", Kind: "ActiveMQArtemis"}
+var activemqartemisesKind = schema.GroupVersionKind{Group: "broker.amq.io", Version: "v2alpha2", Kind: "ActiveMQArtemis"}
 
 // Get takes name of the activeMQArtemis, and returns the corresponding activeMQArtemis object, and an error if there is any.
-func (c *FakeActiveMQArtemises) Get(ctx context.Context, name string, options v1.GetOptions) (result *v2alpha1.ActiveMQArtemis, err error) {
+func (c *FakeActiveMQArtemises) Get(ctx context.Context, name string, options v1.GetOptions) (result *v2alpha2.ActiveMQArtemis, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(activemqartemisesResource, c.ns, name), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewGetAction(activemqartemisesResource, c.ns, name), &v2alpha2.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2alpha1.ActiveMQArtemis), err
+	return obj.(*v2alpha2.ActiveMQArtemis), err
 }
 
 // List takes label and field selectors, and returns the list of ActiveMQArtemises that match those selectors.
-func (c *FakeActiveMQArtemises) List(ctx context.Context, opts v1.ListOptions) (result *v2alpha1.ActiveMQArtemisList, err error) {
+func (c *FakeActiveMQArtemises) List(ctx context.Context, opts v1.ListOptions) (result *v2alpha2.ActiveMQArtemisList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(activemqartemisesResource, activemqartemisesKind, c.ns, opts), &v2alpha1.ActiveMQArtemisList{})
+		Invokes(testing.NewListAction(activemqartemisesResource, activemqartemisesKind, c.ns, opts), &v2alpha2.ActiveMQArtemisList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (c *FakeActiveMQArtemises) List(ctx context.Context, opts v1.ListOptions) (
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v2alpha1.ActiveMQArtemisList{ListMeta: obj.(*v2alpha1.ActiveMQArtemisList).ListMeta}
-	for _, item := range obj.(*v2alpha1.ActiveMQArtemisList).Items {
+	list := &v2alpha2.ActiveMQArtemisList{ListMeta: obj.(*v2alpha2.ActiveMQArtemisList).ListMeta}
+	for _, item := range obj.(*v2alpha2.ActiveMQArtemisList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -81,43 +81,43 @@ func (c *FakeActiveMQArtemises) Watch(ctx context.Context, opts v1.ListOptions) 
 }
 
 // Create takes the representation of a activeMQArtemis and creates it.  Returns the server's representation of the activeMQArtemis, and an error, if there is any.
-func (c *FakeActiveMQArtemises) Create(ctx context.Context, activeMQArtemis *v2alpha1.ActiveMQArtemis, opts v1.CreateOptions) (result *v2alpha1.ActiveMQArtemis, err error) {
+func (c *FakeActiveMQArtemises) Create(ctx context.Context, activeMQArtemis *v2alpha2.ActiveMQArtemis, opts v1.CreateOptions) (result *v2alpha2.ActiveMQArtemis, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(activemqartemisesResource, c.ns, activeMQArtemis), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewCreateAction(activemqartemisesResource, c.ns, activeMQArtemis), &v2alpha2.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2alpha1.ActiveMQArtemis), err
+	return obj.(*v2alpha2.ActiveMQArtemis), err
 }
 
 // Update takes the representation of a activeMQArtemis and updates it. Returns the server's representation of the activeMQArtemis, and an error, if there is any.
-func (c *FakeActiveMQArtemises) Update(ctx context.Context, activeMQArtemis *v2alpha1.ActiveMQArtemis, opts v1.UpdateOptions) (result *v2alpha1.ActiveMQArtemis, err error) {
+func (c *FakeActiveMQArtemises) Update(ctx context.Context, activeMQArtemis *v2alpha2.ActiveMQArtemis, opts v1.UpdateOptions) (result *v2alpha2.ActiveMQArtemis, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(activemqartemisesResource, c.ns, activeMQArtemis), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewUpdateAction(activemqartemisesResource, c.ns, activeMQArtemis), &v2alpha2.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2alpha1.ActiveMQArtemis), err
+	return obj.(*v2alpha2.ActiveMQArtemis), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeActiveMQArtemises) UpdateStatus(ctx context.Context, activeMQArtemis *v2alpha1.ActiveMQArtemis, opts v1.UpdateOptions) (*v2alpha1.ActiveMQArtemis, error) {
+func (c *FakeActiveMQArtemises) UpdateStatus(ctx context.Context, activeMQArtemis *v2alpha2.ActiveMQArtemis, opts v1.UpdateOptions) (*v2alpha2.ActiveMQArtemis, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(activemqartemisesResource, "status", c.ns, activeMQArtemis), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewUpdateSubresourceAction(activemqartemisesResource, "status", c.ns, activeMQArtemis), &v2alpha2.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2alpha1.ActiveMQArtemis), err
+	return obj.(*v2alpha2.ActiveMQArtemis), err
 }
 
 // Delete takes name of the activeMQArtemis and deletes it. Returns an error if one occurs.
 func (c *FakeActiveMQArtemises) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(activemqartemisesResource, c.ns, name), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewDeleteAction(activemqartemisesResource, c.ns, name), &v2alpha2.ActiveMQArtemis{})
 
 	return err
 }
@@ -126,17 +126,17 @@ func (c *FakeActiveMQArtemises) Delete(ctx context.Context, name string, opts v1
 func (c *FakeActiveMQArtemises) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(activemqartemisesResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &v2alpha1.ActiveMQArtemisList{})
+	_, err := c.Fake.Invokes(action, &v2alpha2.ActiveMQArtemisList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched activeMQArtemis.
-func (c *FakeActiveMQArtemises) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v2alpha1.ActiveMQArtemis, err error) {
+func (c *FakeActiveMQArtemises) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v2alpha2.ActiveMQArtemis, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(activemqartemisesResource, c.ns, name, pt, data, subresources...), &v2alpha1.ActiveMQArtemis{})
+		Invokes(testing.NewPatchSubresourceAction(activemqartemisesResource, c.ns, name, pt, data, subresources...), &v2alpha2.ActiveMQArtemis{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2alpha1.ActiveMQArtemis), err
+	return obj.(*v2alpha2.ActiveMQArtemis), err
 }

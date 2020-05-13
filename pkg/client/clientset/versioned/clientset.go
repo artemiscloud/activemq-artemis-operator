@@ -19,7 +19,10 @@ limitations under the License.
 package versioned
 
 import (
+	"fmt"
+
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -28,8 +31,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	BrokerV2alpha1() brokerv2alpha1.BrokerV2alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Broker() brokerv2alpha1.BrokerV2alpha1Interface
+	BrokerV2alpha2() brokerv2alpha2.BrokerV2alpha2Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -37,6 +39,7 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	brokerV2alpha1 *brokerv2alpha1.BrokerV2alpha1Client
+	brokerV2alpha2 *brokerv2alpha2.BrokerV2alpha2Client
 }
 
 // BrokerV2alpha1 retrieves the BrokerV2alpha1Client
@@ -44,10 +47,9 @@ func (c *Clientset) BrokerV2alpha1() brokerv2alpha1.BrokerV2alpha1Interface {
 	return c.brokerV2alpha1
 }
 
-// Deprecated: Broker retrieves the default version of BrokerClient.
-// Please explicitly pick a version.
-func (c *Clientset) Broker() brokerv2alpha1.BrokerV2alpha1Interface {
-	return c.brokerV2alpha1
+// BrokerV2alpha2 retrieves the BrokerV2alpha2Client
+func (c *Clientset) BrokerV2alpha2() brokerv2alpha2.BrokerV2alpha2Interface {
+	return c.brokerV2alpha2
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -59,14 +61,23 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 }
 
 // NewForConfig creates a new Clientset for the given config.
+// If config's RateLimiter is not set and QPS and Burst are acceptable,
+// NewForConfig will generate a rate-limiter in configShallowCopy.
 func NewForConfig(c *rest.Config) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
+		if configShallowCopy.Burst <= 0 {
+			return nil, fmt.Errorf("burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
+		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 	var cs Clientset
 	var err error
 	cs.brokerV2alpha1, err = brokerv2alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+	cs.brokerV2alpha2, err = brokerv2alpha2.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +94,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.brokerV2alpha1 = brokerv2alpha1.NewForConfigOrDie(c)
+	cs.brokerV2alpha2 = brokerv2alpha2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -92,6 +104,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.brokerV2alpha1 = brokerv2alpha1.New(c)
+	cs.brokerV2alpha2 = brokerv2alpha2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
