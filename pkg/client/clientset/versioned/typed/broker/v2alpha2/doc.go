@@ -14,6 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
-
-type ActiveMQArtemisExpansion interface{}
+// This package has the automatically generated typed clients.
+package v2alpha2

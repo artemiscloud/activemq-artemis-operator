@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	scheme "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -33,15 +33,15 @@ type ActiveMQArtemisesGetter interface {
 
 // ActiveMQArtemisInterface has methods to work with ActiveMQArtemis resources.
 type ActiveMQArtemisInterface interface {
-	Create(*v2alpha1.ActiveMQArtemis) (*v2alpha1.ActiveMQArtemis, error)
-	Update(*v2alpha1.ActiveMQArtemis) (*v2alpha1.ActiveMQArtemis, error)
-	UpdateStatus(*v2alpha1.ActiveMQArtemis) (*v2alpha1.ActiveMQArtemis, error)
+	Create(*v2alpha2.ActiveMQArtemis) (*v2alpha2.ActiveMQArtemis, error)
+	Update(*v2alpha2.ActiveMQArtemis) (*v2alpha2.ActiveMQArtemis, error)
+	UpdateStatus(*v2alpha2.ActiveMQArtemis) (*v2alpha2.ActiveMQArtemis, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v2alpha1.ActiveMQArtemis, error)
-	List(opts v1.ListOptions) (*v2alpha1.ActiveMQArtemisList, error)
+	Get(name string, options v1.GetOptions) (*v2alpha2.ActiveMQArtemis, error)
+	List(opts v1.ListOptions) (*v2alpha2.ActiveMQArtemisList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2alpha1.ActiveMQArtemis, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2alpha2.ActiveMQArtemis, err error)
 	ActiveMQArtemisExpansion
 }
 
@@ -52,7 +52,7 @@ type activeMQArtemises struct {
 }
 
 // newActiveMQArtemises returns a ActiveMQArtemises
-func newActiveMQArtemises(c *BrokerV2alpha1Client, namespace string) *activeMQArtemises {
+func newActiveMQArtemises(c *BrokerV2alpha2Client, namespace string) *activeMQArtemises {
 	return &activeMQArtemises{
 		client: c.RESTClient(),
 		ns:     namespace,
@@ -60,8 +60,8 @@ func newActiveMQArtemises(c *BrokerV2alpha1Client, namespace string) *activeMQAr
 }
 
 // Get takes name of the activeMQArtemis, and returns the corresponding activeMQArtemis object, and an error if there is any.
-func (c *activeMQArtemises) Get(name string, options v1.GetOptions) (result *v2alpha1.ActiveMQArtemis, err error) {
-	result = &v2alpha1.ActiveMQArtemis{}
+func (c *activeMQArtemises) Get(name string, options v1.GetOptions) (result *v2alpha2.ActiveMQArtemis, err error) {
+	result = &v2alpha2.ActiveMQArtemis{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("activemqartemises").
@@ -73,8 +73,8 @@ func (c *activeMQArtemises) Get(name string, options v1.GetOptions) (result *v2a
 }
 
 // List takes label and field selectors, and returns the list of ActiveMQArtemises that match those selectors.
-func (c *activeMQArtemises) List(opts v1.ListOptions) (result *v2alpha1.ActiveMQArtemisList, err error) {
-	result = &v2alpha1.ActiveMQArtemisList{}
+func (c *activeMQArtemises) List(opts v1.ListOptions) (result *v2alpha2.ActiveMQArtemisList, err error) {
+	result = &v2alpha2.ActiveMQArtemisList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("activemqartemises").
@@ -95,8 +95,8 @@ func (c *activeMQArtemises) Watch(opts v1.ListOptions) (watch.Interface, error) 
 }
 
 // Create takes the representation of a activeMQArtemis and creates it.  Returns the server's representation of the activeMQArtemis, and an error, if there is any.
-func (c *activeMQArtemises) Create(activeMQArtemis *v2alpha1.ActiveMQArtemis) (result *v2alpha1.ActiveMQArtemis, err error) {
-	result = &v2alpha1.ActiveMQArtemis{}
+func (c *activeMQArtemises) Create(activeMQArtemis *v2alpha2.ActiveMQArtemis) (result *v2alpha2.ActiveMQArtemis, err error) {
+	result = &v2alpha2.ActiveMQArtemis{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("activemqartemises").
@@ -107,8 +107,8 @@ func (c *activeMQArtemises) Create(activeMQArtemis *v2alpha1.ActiveMQArtemis) (r
 }
 
 // Update takes the representation of a activeMQArtemis and updates it. Returns the server's representation of the activeMQArtemis, and an error, if there is any.
-func (c *activeMQArtemises) Update(activeMQArtemis *v2alpha1.ActiveMQArtemis) (result *v2alpha1.ActiveMQArtemis, err error) {
-	result = &v2alpha1.ActiveMQArtemis{}
+func (c *activeMQArtemises) Update(activeMQArtemis *v2alpha2.ActiveMQArtemis) (result *v2alpha2.ActiveMQArtemis, err error) {
+	result = &v2alpha2.ActiveMQArtemis{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("activemqartemises").
@@ -122,8 +122,8 @@ func (c *activeMQArtemises) Update(activeMQArtemis *v2alpha1.ActiveMQArtemis) (r
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 
-func (c *activeMQArtemises) UpdateStatus(activeMQArtemis *v2alpha1.ActiveMQArtemis) (result *v2alpha1.ActiveMQArtemis, err error) {
-	result = &v2alpha1.ActiveMQArtemis{}
+func (c *activeMQArtemises) UpdateStatus(activeMQArtemis *v2alpha2.ActiveMQArtemis) (result *v2alpha2.ActiveMQArtemis, err error) {
+	result = &v2alpha2.ActiveMQArtemis{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("activemqartemises").
@@ -158,8 +158,8 @@ func (c *activeMQArtemises) DeleteCollection(options *v1.DeleteOptions, listOpti
 }
 
 // Patch applies the patch and returns the patched activeMQArtemis.
-func (c *activeMQArtemises) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2alpha1.ActiveMQArtemis, err error) {
-	result = &v2alpha1.ActiveMQArtemis{}
+func (c *activeMQArtemises) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2alpha2.ActiveMQArtemis, err error) {
+	result = &v2alpha2.ActiveMQArtemis{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("activemqartemises").
