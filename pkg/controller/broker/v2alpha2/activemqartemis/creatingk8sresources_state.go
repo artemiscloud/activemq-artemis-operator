@@ -179,7 +179,10 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	var nextStateID int = CreatingK8sResourcesID
 	var statefulSetUpdates uint32 = 0
 	var allObjects []resource.KubernetesResource
+
+	// NOTE: By all service objects here we mean headless and ping service objects
 	err, allObjects = getServiceObjects(rs.parentFSM.customResource, rs.parentFSM.r.client, allObjects)
+
 	currentStatefulSet := &appsv1.StatefulSet{}
 	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
 	namespacedName := types.NamespacedName{
@@ -195,9 +198,9 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		}
 
 		// Do we need to check for and bounce an observed generation change here?
-		if (rs.stepsComplete&CreatedStatefulSet > 0) &&
-			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
-			(rs.stepsComplete&CreatedPingService > 0) {
+		if (rs.stepsComplete & CreatedStatefulSet > 0) &&
+			(rs.stepsComplete & CreatedHeadlessService) > 0 &&
+			(rs.stepsComplete & CreatedPingService > 0) {
 
 			firstTime := false
 

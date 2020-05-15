@@ -1006,14 +1006,14 @@ func getDeployedResources(instance *brokerv2alpha2.ActiveMQArtemis, client clien
 func getServiceObjects(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, allObjects []resource.KubernetesResource) (error, []resource.KubernetesResource) {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
-	reqLogger.Info("Updating ContainerRunningState")
+	reqLogger.Info("Reconciling headless and ping service objects")
 	var err error = nil
 
 	headlessService := &corev1.Service{}
 	HeadlessServiceName := types.NamespacedName{Name: svc.HeadlessNameBuilder.Name(), Namespace: customResource.Namespace}
 	err = client.Get(context.TODO(), HeadlessServiceName, headlessService)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Error(err, "Failed to get HeadlessService.", "Deployment.Namespace", headlessService.Namespace, "Deployment.Name", headlessService.Name)
+		reqLogger.Error(err, "Failed to get headless service.", "Deployment.Namespace", headlessService.Namespace, "Deployment.Name", headlessService.Name)
 		err = nil
 	}
 	allObjects = append(allObjects, headlessService)
@@ -1021,7 +1021,7 @@ func getServiceObjects(customResource *brokerv2alpha2.ActiveMQArtemis, client cl
 	PingServiceName := types.NamespacedName{Name: svc.PingNameBuilder.Name(), Namespace: customResource.Namespace}
 	err = client.Get(context.TODO(), PingServiceName, pingService)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Error(err, "Failed to get HeadlessService.", "Deployment.Namespace", pingService.Namespace, "Deployment.Name", pingService.Name)
+		reqLogger.Error(err, "Failed to get ping service.", "Deployment.Namespace", pingService.Namespace, "Deployment.Name", pingService.Name)
 		err = nil
 	}
 	allObjects = append(allObjects, pingService)
