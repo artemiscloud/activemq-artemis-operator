@@ -22,7 +22,6 @@ spec:
       storage: true
       schema:
         openAPIV3Schema:
-          type: object
           required:
             - spec
           properties:
