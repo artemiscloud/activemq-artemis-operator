@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi7/go-toolset:1.11.13-10 AS build-env
+FROM registry.access.redhat.com/ubi7/go-toolset:1.12.12-3.1584463524 AS build-env
 
 ENV GOPATH=/tmp/go 
 ENV GOOS=linux
@@ -11,10 +11,10 @@ RUN mkdir -p /tmp/activemq-artemis-operator
 ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 
-RUN /opt/rh/go-toolset-1.11/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
+RUN /opt/rh/go-toolset-1.12/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
 
 
-FROM registry.access.redhat.com/ubi7:7.7-310 AS base-env
+FROM registry.access.redhat.com/ubi7:7.8-311 AS base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
