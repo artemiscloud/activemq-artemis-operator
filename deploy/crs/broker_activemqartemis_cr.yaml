@@ -4,7 +4,7 @@ metadata:
   name: ex-aao
   application: ex-aao-app
 spec:
-  version: 7.6.0
+  version: 7.7.0
   deploymentPlan:
     size: 2
     image: quay.io/artemiscloud/activemq-artemis-operator:latest

@@ -9,11 +9,11 @@ import (
 
 const (
 	// CurrentVersion product version supported
-	CurrentVersion = "7.6.0"
+	CurrentVersion = "7.7.0"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "7.5.1"
+	LastMicroVersion = "7.6.0"
 	// LastMinorVersion product version supported
-	LastMinorVersion = "7.5.0"
+	LastMinorVersion = "7.6.0"
 )
 
 // SupportedVersions - product versions this operator supports
