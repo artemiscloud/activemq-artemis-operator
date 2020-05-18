@@ -14,36 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
-type BrokerV2alpha1Interface interface {
+type BrokerV2alpha2Interface interface {
 	RESTClient() rest.Interface
 	ActiveMQArtemisesGetter
-	ActiveMQArtemisAddressesGetter
 }
 
-// BrokerV2alpha1Client is used to interact with features provided by the broker.amq.io group.
-type BrokerV2alpha1Client struct {
+// BrokerV2alpha2Client is used to interact with features provided by the broker.amq.io group.
+type BrokerV2alpha2Client struct {
 	restClient rest.Interface
 }
 
-func (c *BrokerV2alpha1Client) ActiveMQArtemises(namespace string) ActiveMQArtemisInterface {
+func (c *BrokerV2alpha2Client) ActiveMQArtemises(namespace string) ActiveMQArtemisInterface {
 	return newActiveMQArtemises(c, namespace)
 }
 
-func (c *BrokerV2alpha1Client) ActiveMQArtemisAddresses(namespace string) ActiveMQArtemisAddressInterface {
-	return newActiveMQArtemisAddresses(c, namespace)
-}
-
-// NewForConfig creates a new BrokerV2alpha1Client for the given config.
-func NewForConfig(c *rest.Config) (*BrokerV2alpha1Client, error) {
+// NewForConfig creates a new BrokerV2alpha2Client for the given config.
+func NewForConfig(c *rest.Config) (*BrokerV2alpha2Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -52,12 +47,12 @@ func NewForConfig(c *rest.Config) (*BrokerV2alpha1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BrokerV2alpha1Client{client}, nil
+	return &BrokerV2alpha2Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new BrokerV2alpha1Client for the given config and
+// NewForConfigOrDie creates a new BrokerV2alpha2Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *BrokerV2alpha1Client {
+func NewForConfigOrDie(c *rest.Config) *BrokerV2alpha2Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -65,13 +60,13 @@ func NewForConfigOrDie(c *rest.Config) *BrokerV2alpha1Client {
 	return client
 }
 
-// New creates a new BrokerV2alpha1Client for the given RESTClient.
-func New(c rest.Interface) *BrokerV2alpha1Client {
-	return &BrokerV2alpha1Client{c}
+// New creates a new BrokerV2alpha2Client for the given RESTClient.
+func New(c rest.Interface) *BrokerV2alpha2Client {
+	return &BrokerV2alpha2Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v2alpha1.SchemeGroupVersion
+	gv := v2alpha2.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
@@ -85,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *BrokerV2alpha1Client) RESTClient() rest.Interface {
+func (c *BrokerV2alpha2Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}
