@@ -20,10 +20,16 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"strconv"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/kubernetes"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 )
 
 var log = logf.Log.WithName("controller_v2alpha1activemqartemisaddress")
 var namespacedNameToAddressName = make(map[types.NamespacedName]brokerv2alpha1.ActiveMQArtemisAddress)
+
+//This channel is used to receive new ready pods
+var C = make(chan types.NamespacedName)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -38,7 +44,37 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	go setupAddressObserver(mgr, C)
 	return &ReconcileActiveMQArtemisAddress{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+}
+
+func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
+	log.Info("Setting up address observer")
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		log.Error(err, "Error building kubeconfig: %s", err.Error())
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Error(err, "Error building kubernetes clientset: %s", err.Error())
+	}
+
+	namespace, err := k8sutil.GetWatchNamespace()
+
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		return
+	}
+
+	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient())
+
+	if err = observer.Run(C); err != nil {
+		log.Error(err, "Error running controller: %s", err.Error())
+	}
+
+	log.Info("Finish setup address observer")
+	return
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
