@@ -67,7 +67,7 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 		case ready := <-C:
 			// NOTE: c will be one ordinal higher than the real podname!
 			log.Info("address_observer received C", "pod", ready)
-			c.newPodReady(&ready)
+			go c.newPodReady(&ready)
 		default:
 			//log.Info("address_observer selected default, waiting a second")
 			// NOTE: Sender will be blocked if this select is sleeping, might need decreased time here
