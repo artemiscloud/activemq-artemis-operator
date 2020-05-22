@@ -23,11 +23,12 @@ ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel7-operator"
-ENV JBOSS_IMAGE_VERSION="0.13"
+ENV JBOSS_IMAGE_VERSION="0.14"
 
 WORKDIR /
 
 RUN mkdir -p /manifests/0.9.1
+RUN mkdir -p /manifests/0.13.0
 RUN mkdir -p /manifests/0.14.0
 RUN chown -R `id -u`:0 /manifests
 COPY --from=build-env /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
@@ -35,8 +36,10 @@ COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-opera
 
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/${BROKER_NAME}.package.yaml /manifests
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.9.1/ /manifests/0.9.1
+COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.13.0/ /manifests/0.13.0
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/olm-catalog/${BROKER_NAME}-operator/0.14.0/ /manifests/0.14.0
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.9.1
+COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.13.0
 COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/deploy/crds/* /manifests/0.14.0
 
 RUN useradd ${BROKER_NAME}-operator
@@ -47,7 +50,7 @@ ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 
 LABEL \
       com.redhat.component="amq-broker-rhel7-operator-container"  \
-      com.redhat.delivery.appregistry="true" \
+      com.redhat.delivery.appregistry="false" \
       description="ActiveMQ Artemis Broker Operator"  \
       io.k8s.description="An associated operator that handles broker installation, updates and scaling."  \
       io.k8s.display-name="ActiveMQ Artemis Broker Operator"  \
@@ -57,4 +60,4 @@ LABEL \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
       name="amq7/amq-broker-rhel7-operator" \
       summary="ActiveMQ Artemis Broker Operator"  \
-      version="0.13"
+      version="0.14"
