@@ -136,6 +136,12 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddressSpec(ref common.Refer
 							Format: "",
 						},
 					},
+					"removeFromBrokerOnDelete": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
 				Required: []string{"addressName", "queueName", "routingType"},
 			},
