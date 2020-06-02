@@ -100,7 +100,6 @@ func (rs *ContainerRunningState) Update() (error, int) {
 		}
 		nextStateID = ScalingID
 	}
-	//pods.UpdatePodStatus(rs.parentFSM.namespacedName, rs.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

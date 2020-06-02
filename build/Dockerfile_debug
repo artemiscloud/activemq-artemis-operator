@@ -4,14 +4,22 @@ ENV GOPATH=/tmp/go
 ENV GOOS=linux
 ENV CGO_ENABLED=0
 ENV BROKER_NAME=activemq-artemis
+ENV PATH=$PATH:/opt/rh/go-toolset-1.13/root/usr/bin
 
 RUN mkdir -p /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/bin
 RUN mkdir -p /tmp/activemq-artemis-operator
 
 ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
-WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 
-RUN /opt/rh/go-toolset-1.13/root/usr/bin/go get github.com/go-delve/delve/cmd/dlv
+#RUN /opt/rh/go-toolset-1.13/root/usr/bin/go get github.com/go-delve/delve/cmd/dlv
+RUN git clone https://github.com/go-delve/delve.git $GOPATH/src/github.com/go-delve/delve
+WORKDIR $GOPATH/src/github.com/go-delve/delve
+#RUN make install
+RUN git checkout v1.3.2
+RUN /opt/rh/go-toolset-1.13/root/usr/bin/go run scripts/make.go vendor
+RUN /opt/rh/go-toolset-1.13/root/usr/bin/go run scripts/make.go install
+
+WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -gcflags \"all=-N\" -v -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
 
 

@@ -3,7 +3,7 @@ package v2alpha2activemqartemis
 import (
 	"context"
 	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	"github.com/rh-messaging/activemq-artemis-operator/version"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -102,7 +102,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	var namespacedNameFSM *ActiveMQArtemisFSM = nil
 	var amqbfsm *ActiveMQArtemisFSM = nil
 
-	instance := &brokerv2alpha2.ActiveMQArtemis{}
+	customResource := &brokerv2alpha2.ActiveMQArtemis{}
 	namespacedName := types.NamespacedName{
 		Name:      request.Name,
 		Namespace: request.Namespace,
@@ -112,7 +112,7 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 	// When first creating this will have err == nil
 	// When deleting after creation this will have err NotFound
 	// When deleting before creation reconcile won't be called
-	if err = r.client.Get(context.TODO(), request.NamespacedName, instance); err != nil {
+	if err = r.client.Get(context.TODO(), request.NamespacedName, customResource); err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, checking to see if we should delete namespacedName tracking for request NamespacedName " + request.NamespacedName.String())
 
@@ -137,21 +137,6 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		return r.result, err
 	}
 
-	minor, micro, err := checkProductUpgrade(instance)
-	if err != nil {
-		return r.result, err
-	}
-
-	minorVersion := getMinorImageVersion(instance.Spec.Version)
-	latestMinorVersion := getMinorImageVersion(CurrentVersion)
-	if (micro && minorVersion == latestMinorVersion) ||
-		(minor && minorVersion != latestMinorVersion) {
-		// reset current annotations and update CR use to latest product version
-		instance.SetAnnotations(map[string]string{})
-		instance.Spec.Version = CurrentVersion
-	}
-	reqLogger.Info("Reconciling ActiveMQArtemis", "Operator version", version.Version, "ActiveMQArtemis release", instance.Spec.Version)
-
 	// Do lookup to see if we have a fsm for the incoming name in the incoming namespace
 	// if not, create it
 	// for the given fsm, do an update
@@ -162,14 +147,14 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 			reqLogger.Info("ActiveMQArtemis Controller Reconcile does not yet support more than one custom resource instance per namespace!")
 			return r.result, nil
 		}
-		amqbfsm = NewActiveMQArtemisFSM(instance, namespacedName, r)
+		amqbfsm = NewActiveMQArtemisFSM(customResource, namespacedName, r)
 		namespacedNameToFSM[namespacedName] = amqbfsm
 
 		// Enter the first state; atm CreatingK8sResourcesState
 		amqbfsm.Enter(CreatingK8sResourcesID)
 	} else {
 		amqbfsm = namespacedNameFSM
-		*amqbfsm.customResource = *instance
+		*amqbfsm.customResource = *customResource
 		err, _ = amqbfsm.Update()
 	}
 

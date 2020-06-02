@@ -34,7 +34,7 @@ import (
 var (
 	rh              = "Red Hat"
 	maturity        = "stable"
-	major, minor, _ = activemqartemis.MajorMinorMicro(activemqartemis.CurrentVersion)
+	major, minor, _ = activemqartemis.MajorMinorMicro(activemqartemis.LatestVersion)
 	csv             = csvSetting{
 
 		Name:         "activemq-artemis",
@@ -498,8 +498,24 @@ func main() {
 			Kind: "DockerImage",
 		},
 	})
+	imageRef.Spec.Tags = append(imageRef.Spec.Tags, constants.ImageRefTag{
+		Name: constants.Broker76Component,
+		From: &corev1.ObjectReference{
+			Name: constants.Broker76ImageURL,
+			Kind: "DockerImage",
+		},
+	})
+	imageRef.Spec.Tags = append(imageRef.Spec.Tags, constants.ImageRefTag{
+		Name: constants.Broker77Component,
+		From: &corev1.ObjectReference{
+			Name: constants.Broker77ImageURL,
+			Kind: "DockerImage",
+		},
+	})
 
 	relatedImages = append(relatedImages, getRelatedImage(constants.Broker75ImageURL))
+	relatedImages = append(relatedImages, getRelatedImage(constants.Broker76ImageURL))
+	relatedImages = append(relatedImages, getRelatedImage(constants.Broker77ImageURL))
 
 	if GetBoolEnv("DIGESTS") {
 

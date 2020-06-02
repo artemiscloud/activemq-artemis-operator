@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	// CurrentVersion product version supported
-	CurrentVersion = "7.7.0"
+	// LatestVersion product version supported
+	LatestVersion        = "7.7.0"
+	CompactLatestVersion = "770"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "7.6.0"
 	// LastMinorVersion product version supported
@@ -17,33 +18,46 @@ const (
 )
 
 // SupportedVersions - product versions this operator supports
-var SupportedVersions = []string{CurrentVersion, LastMicroVersion, LastMinorVersion}
+var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}
+var OperandVersionFromOperatorVersion map[string]string = map[string]string{
+	"0.9.1" : "7.5.0",
+	"0.13.0" : "7.6.0",
+	"0.14.0" : "7.7.0",
+}
+var FullVersionFromMinorVersion map[string]string = map[string]string{
+	"75" : "7.5.0",
+	"76" : "7.6.0",
+	"77" : "7.7.0",
+}
 
-// checkProductUpgrade ...
-func checkProductUpgrade(cr *api.ActiveMQArtemis) (minor, micro bool, err error) {
-	setDefaults(cr)
-	if checkVersion(cr.Spec.Version) {
-		if cr.Spec.Version != CurrentVersion && cr.Spec.Upgrades.Enabled {
-			micro = cr.Spec.Upgrades.Enabled
-			minor = cr.Spec.Upgrades.Minor
+var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
+	"75" : "750",
+	"76" : "760",
+	"77" : "770",
+}
+
+func checkProductUpgrade(cr *api.ActiveMQArtemis) (upgradesMinor, upgradesEnabled bool, err error) {
+	//setDefaults(cr)
+	if isVersionSupported(cr.Spec.Version) {
+		if cr.Spec.Version != LatestVersion && cr.Spec.Upgrades.Enabled {
+			upgradesEnabled = cr.Spec.Upgrades.Enabled
+			upgradesMinor = cr.Spec.Upgrades.Minor
 		}
 	} else {
 		err = fmt.Errorf("Product version %s is not allowed in operator version %s. The following versions are allowed - %s", cr.Spec.Version, version.Version, SupportedVersions)
 	}
-	return minor, micro, err
+	return upgradesMinor, upgradesEnabled, err
 }
 
-// checkVersion ...
-func checkVersion(productVersion string) bool {
-	for _, version := range SupportedVersions {
-		if version == productVersion {
+func isVersionSupported(specifiedVersion string) bool {
+	for _, thisSupportedVersion := range SupportedVersions {
+		if thisSupportedVersion == specifiedVersion {
 			return true
 		}
 	}
 	return false
 }
 
-// getMinorImageVersion ...
 func getMinorImageVersion(productVersion string) string {
 	major, minor, _ := MajorMinorMicro(productVersion)
 	return strings.Join([]string{major, minor}, "")
@@ -61,15 +75,14 @@ func MajorMinorMicro(productVersion string) (major, minor, micro string) {
 func setDefaults(cr *api.ActiveMQArtemis) {
 	if cr.GetAnnotations() == nil {
 		cr.SetAnnotations(map[string]string{
-			api.SchemeGroupVersion.Group: version.Version,
+			api.SchemeGroupVersion.Group: OperandVersionFromOperatorVersion[version.Version],
 		})
 	}
 	if len(cr.Spec.Version) == 0 {
-		cr.Spec.Version = CurrentVersion
+		cr.Spec.Version = LatestVersion
 	}
-
 }
-//GetImage
+
 func GetImage(imageURL string) (image, imageTag, imageContext string) {
 	urlParts := strings.Split(imageURL, "/")
 	if len(urlParts) > 1 {

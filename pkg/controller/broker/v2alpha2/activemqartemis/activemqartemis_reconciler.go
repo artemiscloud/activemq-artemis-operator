@@ -20,6 +20,7 @@ import (
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/rh-messaging/activemq-artemis-operator/version"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,6 +45,8 @@ import (
 
 	"strconv"
 	"strings"
+
+	"os"
 )
 
 const (
@@ -72,12 +75,15 @@ type ActiveMQArtemisReconciler struct {
 type ActiveMQArtemisIReconciler interface {
 	Process(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
 	ProcessDeploymentPlan(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
-	ProcessAcceptors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
-	ProcessConnectors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	ProcessAcceptorsAndConnectors(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessConsole(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	ProcessUpgrade(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
 }
 
 func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool, allObjects []resource.KubernetesResource) (uint32, uint8) {
+
+	var log = logf.Log.WithName("controller_v2alpha2activemqartemis")
+	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
 
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := secrets.CredentialsNameBuilder.Name()
@@ -107,7 +113,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	statefulSetUpdates |= reconciler.ProcessConsole(customResource, client, scheme, currentStatefulSet)
 
 	requestedResources = append(requestedResources, allObjects...)
-	stepsComplete := reconciler.processUpgrade(customResource, client, scheme, currentStatefulSet)
+	stepsComplete := reconciler.ProcessUpgrade(customResource, client, scheme, currentStatefulSet)
 
 	return statefulSetUpdates, stepsComplete
 }
@@ -893,18 +899,59 @@ func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha2.DeploymentPlanType, 
 	return false
 }
 
-func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessUpgrade(customResource *brokerv2alpha2.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
-	reqLogger.Info("Entering into  Process Upgrade")
+	reqLogger.Info("Entering into process upgrade")
+
 	var err error = nil
 	var createError error = nil
 	var hasUpdates bool
-	added := false
 	var stepsComplete uint8
+
+	added := false
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
 		Namespace: customResource.Namespace,
+	}
+
+	_, _, err = checkProductUpgrade(customResource)
+	if err != nil {
+		log.Info("checkProductUpgrade failed")
+	} else {
+		hasUpdates = true
+	}
+
+	specifiedMinorVersion := getMinorImageVersion(customResource.Spec.Version)
+	if customResource.Spec.Upgrades.Enabled && customResource.Spec.Upgrades.Minor {
+		imageName, imageTag, imageContext := GetImage(customResource.Spec.DeploymentPlan.Image)
+		reqLogger.V(1).Info("Current imageName " + imageName)
+		reqLogger.V(1).Info("Current imageTag " + imageTag)
+		reqLogger.V(1).Info("Current imageContext " + imageContext)
+
+		imageTagNoDash := strings.Replace(imageTag, "-", ".", -1)
+		imageVersionSplitFromTag := strings.Split(imageTagNoDash, ".")
+		var currentMinorVersion = ""
+		if 3 == len(imageVersionSplitFromTag) {
+			currentMinorVersion = imageVersionSplitFromTag[0] + imageVersionSplitFromTag[1]
+		}
+		reqLogger.V(1).Info("Current minor version " + currentMinorVersion)
+
+		if specifiedMinorVersion != currentMinorVersion {
+			// reset current annotations and update CR use to specified product version
+			customResource.SetAnnotations(map[string]string{
+				brokerv2alpha2.SchemeGroupVersion.Group: FullVersionFromMinorVersion[specifiedMinorVersion]})
+			customResource.Spec.Version = FullVersionFromMinorVersion[specifiedMinorVersion]
+			upgradeVersionEnvBrokerImage := os.Getenv("BROKER_IMAGE_" + CompactFullVersionFromMinorVersion[specifiedMinorVersion])
+			if "" != upgradeVersionEnvBrokerImage {
+				customResource.Spec.DeploymentPlan.Image = upgradeVersionEnvBrokerImage
+			}
+
+			imageName, imageTag, imageContext = GetImage(customResource.Spec.DeploymentPlan.Image)
+			reqLogger.V(1).Info("Updated imageName " + imageName)
+			reqLogger.V(1).Info("Updated imageTag " + imageTag)
+			reqLogger.V(1).Info("Updated imageContext " + imageContext)
+		}
 	}
 
 	for index := range requestedResources {
@@ -974,13 +1021,14 @@ func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brok
 		}
 		hasUpdates = hasUpdates || added || updated || removed
 	}
+
 	if hasUpdates {
 		err := client.Update(context.TODO(), customResource)
 		if err != nil {
 			return stepsComplete
 		}
 	} else if !hasUpdates {
-		log.Info("Reconcile loop did not find any resource changes to apply")
+		reqLogger.Info("Process upgrade did not find any resource changes to apply")
 	}
 	//empty the collected objects
 	requestedResources = nil
@@ -989,6 +1037,7 @@ func (reconciler *ActiveMQArtemisReconciler) processUpgrade(customResource *brok
 }
 
 func getDeployedResources(instance *brokerv2alpha2.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
+
 	var log = logf.Log.WithName("controller_v2alpha2activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
@@ -1036,24 +1085,27 @@ func getServiceObjects(customResource *brokerv2alpha2.ActiveMQArtemis, client cl
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
 	reqLogger.Info("Reconciling headless and ping service objects")
+
 	var err error = nil
 
 	headlessService := &corev1.Service{}
-	HeadlessServiceName := types.NamespacedName{Name: svc.HeadlessNameBuilder.Name(), Namespace: customResource.Namespace}
-	err = client.Get(context.TODO(), HeadlessServiceName, headlessService)
+	headlessServiceName := types.NamespacedName{Name: svc.HeadlessNameBuilder.Name(), Namespace: customResource.Namespace}
+	err = client.Get(context.TODO(), headlessServiceName, headlessService)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Error(err, "Failed to get headless service.", "Deployment.Namespace", headlessService.Namespace, "Deployment.Name", headlessService.Name)
 		err = nil
 	}
 	allObjects = append(allObjects, headlessService)
+
 	pingService := &corev1.Service{}
-	PingServiceName := types.NamespacedName{Name: svc.PingNameBuilder.Name(), Namespace: customResource.Namespace}
-	err = client.Get(context.TODO(), PingServiceName, pingService)
+	pingServiceName := types.NamespacedName{Name: svc.PingNameBuilder.Name(), Namespace: customResource.Namespace}
+	err = client.Get(context.TODO(), pingServiceName, pingService)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Error(err, "Failed to get ping service.", "Deployment.Namespace", pingService.Namespace, "Deployment.Name", pingService.Name)
 		err = nil
 	}
 	allObjects = append(allObjects, pingService)
+
 	return err, allObjects
 }
 
@@ -1251,6 +1303,7 @@ func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, name
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	reqLogger.Info("Getting status for pods")
+
 	var status olm.DeploymentStatus
 
 	sfsFound := &appsv1.StatefulSet{}
@@ -1267,8 +1320,8 @@ func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, name
 	}
 
 	// TODO: Remove global usage
-	log.Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
-	log.Info("status.Ready len is " + string(len(status.Ready)))
+	log.V(5).Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
+	log.V(5).Info("status.Ready len is " + string(len(status.Ready)))
 	if len(status.Ready) > len(lastStatus.Ready) {
 		// More pods ready, let the address controller know
 		newPodCount := len(status.Ready) - len(lastStatus.Ready)

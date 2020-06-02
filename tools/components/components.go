@@ -101,6 +101,7 @@ func GetDeployment(operatorName, repository, context, imageName, tag, imagePullP
 	sort.Sort(sort.Reverse(sort.StringSlice(activemqartemis.SupportedVersions)))
 	for _, imageVersion := range activemqartemis.SupportedVersions {
 
+		// TODO: FIX reference to 7.5 to be current
 		// add Broker75Image reference in Env variables
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  constants.BrokerVar + imageVersion,
