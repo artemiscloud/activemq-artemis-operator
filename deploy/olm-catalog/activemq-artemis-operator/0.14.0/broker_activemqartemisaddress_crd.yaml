@@ -14,7 +14,7 @@ spec:
   conversion:
     strategy: None
   preserveUnknownFields: true
-  version: v2alpha2
+  version: v2alpha1
   validation:
     openAPIV3Schema:
       properties:
@@ -37,17 +37,12 @@ spec:
               type: string
             routingType:
               type: string
-            removeFromBrokerOnDelete:
-              type: boolean
         status:
           type: object
   versions:
-    - name: v2alpha2
-      served: true
-      storage: true
     - name: v2alpha1
       served: true
-      storage: false
+      storage: true
     - name: v1alpha2
       served: true
       storage: false
