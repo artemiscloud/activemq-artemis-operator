@@ -59,6 +59,7 @@ rules:
   - watch
   - create
   - delete
+  - update
 - apiGroups:
   - extensions
   resources:
