@@ -2,7 +2,7 @@ package v2alpha2activemqartemis
 
 import (
 	"context"
-	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

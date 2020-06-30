@@ -17,8 +17,8 @@ limitations under the License.
 package v2alpha2
 
 import (
-	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
+	v2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )

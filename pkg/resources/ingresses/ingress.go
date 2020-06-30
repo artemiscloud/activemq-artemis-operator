@@ -1,8 +1,8 @@
 package ingresses
 
 import (
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
+	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

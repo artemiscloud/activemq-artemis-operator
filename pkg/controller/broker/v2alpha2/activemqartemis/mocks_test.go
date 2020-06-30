@@ -1,12 +1,12 @@
 package v2alpha2activemqartemis
 
 import (
-	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/containers"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

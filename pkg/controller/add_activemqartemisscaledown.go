@@ -1,7 +1,7 @@
 package controller
 
 import (
-	v2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
+	v2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 )
 
 func init() {

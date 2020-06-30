@@ -2,9 +2,9 @@ package statefulsets
 
 import (
 	"context"
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/selectors"
+	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

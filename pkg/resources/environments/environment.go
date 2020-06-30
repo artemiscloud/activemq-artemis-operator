@@ -1,9 +1,9 @@
 package environments
 
 import (
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	corev1 "k8s.io/api/core/v1"
 	"math"
 	"os"

@@ -18,8 +18,8 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
-	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

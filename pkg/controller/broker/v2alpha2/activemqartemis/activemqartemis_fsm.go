@@ -1,9 +1,9 @@
 package v2alpha2activemqartemis
 
 import (
-	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )

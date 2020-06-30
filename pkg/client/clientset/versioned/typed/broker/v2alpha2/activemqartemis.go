@@ -17,8 +17,8 @@ limitations under the License.
 package v2alpha2
 
 import (
-	v2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	scheme "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
+	v2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	scheme "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

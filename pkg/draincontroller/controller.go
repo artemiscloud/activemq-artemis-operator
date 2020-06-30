@@ -18,12 +18,12 @@ package draincontroller
 
 import (
 	"fmt"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"os"
 	"time"
 
-	svc "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/services"
+	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

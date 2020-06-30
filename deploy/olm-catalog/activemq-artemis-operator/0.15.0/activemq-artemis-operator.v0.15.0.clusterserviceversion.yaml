@@ -10,8 +10,7 @@ metadata:
     containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.15.0
     createdAt: 2019-11-25T08:16:32Z
     capabilities: Seamless Upgrades
-    repository: https://github.com/rh-messaging/activemq-artemis-operator
-    support: Red Hat
+    repository: https://github.com/artemiscloud/activemq-artemis-operator
     tectonic-visibility: ocs
     alm-examples: >-
       [{
@@ -64,18 +63,15 @@ spec:
     - activemqartemis
     - operator
   version: 0.15.0
-  replaces: activemq-artemis-operator.v0.13.0
   maturity: alpha
   maintainers:
-    - name: Red Hat
+    - name: Artemis Cloud
       email: rkieley@redhat.com
   provider:
-    name: Red Hat
+    name: Artemis Cloud
   links:
-    - name: Product Page
-      url: https://access.redhat.com/products/red-hat-amq/
     - name: Documentation
-      url: https://access.redhat.com/documentation/en-us/red_hat_amq/
+      url: https://github.com/artemiscloud/activemq-artemis-operator/tree/master/docs
   icon:
     - base64data: iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAlywAAJcsBGkdkZgAAAAd0SU1FB+MDHQ02AU8UBK4AAASBSURBVFjDtZfNb1RlFMZ/7zt3vqCU0pSSQjMSbCHVRSEjq7aBhQvFsDBqJIYF/gGGxAUpREyMCG5YqCSuiDGGRE2NCxTRBgkJuGlKYpAOBW3NtJ22UzoznTv3du6d++FibsvQ6XzQ1rO899z3Oefc5zznvII6LRahCTgCHAIOAu3ANu91GpgEhoBbwLWuOJl6zhV1AO8F+oG3gU11xqsD3wMXuuI8XFMAsQhh4BzwHuBnbVYAvgDOdsXR6w4gFqET+BF4kY2x+8DrXXEe1QwgFuEA8CuwnY21Od3h1egkwxUD8DK/8z+AozugOaQl9PQmiJUF4P3zoQ0s+0rwJRv1QbQngQaglPidqwYuWjtp+eRzELIqmF0wyefzy7kVcira6XdLXfY58KlH7qKX12p/VWO7cvA1OgZ+wrVthM+HY1lIRXnKx7EsMpkMOVXFJ8AwDMJ+P3/3daw8zpLQ3ZtgZCmd0/W22r/jY6jpFLdv/o6xuFgGbrsuqqqyuJDhcTJZMR8XzgAIT+GmaonMcgUsC6H4sAsWPr+/DBxgMaciERhGnk2BwGoVAMj7BO2KJ681Fc6ZHCd18waIculYXFjAdoosU/buI9y6Ayu7gDUyQjqnVjoy5LgcVYDD9ZTemR4heeLlmmxvvHydzaEw8Y/OYt74ttaxhxTgpdIn4eOnCHR0epS2KmusrmOXyEh28Be0u4OEZmeYv/J1PeC4EFW8qbZszW8dY8v+A1U/zGsaqpYjr+lIn8QfDKEWTLg7yHz/ibr1QUBEKRmpT/6pmiWZTBIIhjBNk+f27CkBz6FqOq5tMzUxQbChgdYdO9YkUC40KquyY3MDO3cFED6J67hl4AiBkJKtzdtQAkGklGtWSQVIAa3L2T8aRQYDBNt2oTQ14Zgm2v17WKaJlsvhel1guRD2vjFmZzDj8WcGF5AVsQh3gbKfrvS+SeSzLxE+H//sb66m7euxe4o3gMoCsG4PED8JbR9+7EUUJHzsJKaU+FxorDgMbArGk1ng6BrG1cuVKjAsYhHeAa5ULFOgAdfMoRw8QsfAzzVY5ZJNp9GNPAKBbdtI0+RR3/OVAjghgWveDrf6mWauSEAvo+nJCbRslj+HhjAN42nwTBrDtpmfe4yanGFyfKxqN0vBVeltr9/VUjjda4amrU2EwmEiu3fj92ZBETyDYdkABPx+lGCIcDhcjYA/9EyRWmrDC8Dx1SbiEuH8mRT67AwCganrhID83BwA2kKGfKFQpMqWRppaWnAdG7/jYCRnV8O3BJxfuRFdBN5fL9vbvrpOY3c301e+IXvxVKXsL/UligtJqYJ84G2v62o117KqggOjUtBfaSntAP7QHbavtc/lnijO2HCl1ylvKX1QcS0fbieqOfwGNG/wbpqS8EpvgqGnAl7pFZ1kWEIPMLqB4KNe5kNlFVvNuzfBA0UQFcVrlbUOYEvAJQWipWV/psvp7Z284MIZF94AQnUCGwIGBJzvTTCyrtvxkt3ZRbPjchQ47EJUQGRpJAjIuhAXMAzckoKrPVPM13Puf2Qd6X5KXrjXAAAAAElFTkSuQmCC
       mediatype: image/png
@@ -111,7 +107,7 @@ spec:
             served: false
             storage: false
         kind: ActiveMQArtemis
-        description: An instance of Active MQ Artemis
+        description: An instance of ActiveMQ Artemis broker
         displayName: ActiveMQ Artemis
         resources:
           - kind: Service

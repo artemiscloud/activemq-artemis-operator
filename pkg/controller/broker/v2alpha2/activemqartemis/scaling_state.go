@@ -2,8 +2,8 @@ package v2alpha2activemqartemis
 
 import (
 	"context"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
