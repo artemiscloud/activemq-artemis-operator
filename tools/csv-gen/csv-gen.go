@@ -5,18 +5,18 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/blang/semver"
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"strconv"
 
 	oimagev1 "github.com/openshift/api/image/v1"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	olmversion "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
-	api "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
-	activemqartemis "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
-	"github.com/rh-messaging/activemq-artemis-operator/tools/components"
-	"github.com/rh-messaging/activemq-artemis-operator/tools/constants"
-	"github.com/rh-messaging/activemq-artemis-operator/tools/util"
-	"github.com/rh-messaging/activemq-artemis-operator/version"
+	api "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	activemqartemis "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
+	"github.com/artemiscloud/activemq-artemis-operator/tools/components"
+	"github.com/artemiscloud/activemq-artemis-operator/tools/constants"
+	"github.com/artemiscloud/activemq-artemis-operator/tools/util"
+	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -76,7 +76,7 @@ func main() {
 	templateStruct.Name = csvVersionedName
 	templateStruct.Namespace = "placeholder"
 	descrip := "ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters"
-	repository := "https://github.com/rh-messaging/activemq-artemis-operator"
+	repository := "https://github.com/artemiscloud/activemq-artemis-operator"
 	examples := []string{"{\n          \"apiVersion\": \"broker.amq.io/v2alpha2\",\n          \"kind\": \"ActiveMQArtemis\",\n          \"metadata\": {\n             \"name\": \"ex-aao\",\n             \"application\": \"ex-aao-app\"\n          },\n          \"version\": \"7.6.0\",\n          \"spec\": {\n             \"deploymentPlan\": {\n                \"size\": 1,\n                \"image\": \"registry.redhat.io/amq7/amq-broker:7.6\",\n                \"requireLogin\": false,\n                \"persistenceEnabled\": false,\n                \"journalType\": \"nio\",\n                \"messageMigration\": false\n             },\n             \"console\": {\n                \"expose\": true\n             },\n             \"acceptors\": [\n                {\n                   \"name\": \"amqp\",\n                   \"protocols\": \"amqp\",\n                   \"port\": 5672,\n                   \"sslEnabled\": false,\n                   \"enabledCipherSuites\": \"SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA\",\n                   \"enabledProtocols\": \"TLSv1,TLSv1.1,TLSv1.2\",\n                   \"needClientAuth\": true,\n                   \"wantClientAuth\": true,\n                   \"verifyHost\": true,\n                   \"sslProvider\": \"JDK\",\n                   \"sniHost\": \"localhost\",\n                   \"expose\": true,\n                   \"anycastPrefix\": \"jms.topic.\",\n                   \"multicastPrefix\": \"/queue/\"\n                }\n             ],\n             \"connectors\": [\n                {\n                   \"name\": \"connector0\",\n                   \"host\": \"localhost\",\n                   \"port\": 22222,\n                   \"sslEnabled\": false,\n                   \"enabledCipherSuites\": \"SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA\",\n                   \"enabledProtocols\": \"TLSv1,TLSv1.1,TLSv1.2\",\n                   \"needClientAuth\": true,\n                   \"wantClientAuth\": true,\n                   \"verifyHost\": true,\n                   \"sslProvider\": \"JDK\",\n                   \"sniHost\": \"localhost\",\n                   \"expose\": true\n                }\n             ]\n          }\n       },\n      {\n          \"apiVersion\": \"broker.amq.io/v2alpha1\",\n          \"kind\": \"ActiveMQArtemisAddress\",\n          \"metadata\": {\n              \"name\": \"ex-aaoaddress\"\n          },\n          \"spec\": {\n              \"addressName\": \"myAddress0\",\n              \"queueName\": \"myQueue0\",\n              \"routingType\": \"anycast\"\n          }\n      },\n      {\n          \"apiVersion\": \"broker.amq.io/v2alpha1\",\n          \"kind\": \"ActiveMQArtemisScaledown\",\n          \"metadata\": {\n              \"name\": \"ex-aaoscaledown\"\n          },\n          \"spec\": {\n              \"localOnly\": \"true\"\n          }\n      }"}
 	templateStruct.SetAnnotations(
 		map[string]string{

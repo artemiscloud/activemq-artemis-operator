@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/heroku/docker-registry-client/registry"
-	"github.com/rh-messaging/activemq-artemis-operator/tools/constants"
+	"github.com/artemiscloud/activemq-artemis-operator/tools/constants"
 	"io/ioutil"
 	"net/http"
 	"net/url"
