@@ -1,8 +1,8 @@
 package components
 
 import (
-	activemqartemis "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
-	"github.com/rh-messaging/activemq-artemis-operator/tools/constants"
+	activemqartemis "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
+	"github.com/artemiscloud/activemq-artemis-operator/tools/constants"
 	"sort"
 	"strings"
 
