@@ -12,18 +12,18 @@ resource.
 
 ## Getting the code
 
-To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/rh-messaging/activemq-artemis-operator)
-and checkout the 0.14.0 tag as per
+To launch the operator you will need to clone the [activemq-artemis-operator](https://github.com/artemiscloud/activemq-artemis-operator)
+and checkout the 0.15.0 tag as per
 
 ```$xslt
-git clone https://github.com/rh-messaging/activemq-artemis-operator
-git checkout 0.14.0
+git clone https://github.com/artemiscloud/activemq-artemis-operator
+git checkout 0.15.0
 ```
 
 ## Deploying the operator
 
-In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.14.0/deploy/operator.yaml)
-within which you will want to update the [spec.containers.image](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.14.0/deploy/operator.yaml#L18-L19)
+In the activemq-artemis-operator/deploy directory you should see [operator.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/operator.yaml)
+within which you will want to update the [spec.containers.image](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/operator.yaml#L18-L19)
 with the correct location for the activemq-artemis-operator container image that you either pulled or [built](building.md).
 
 As per the [operator-framework/operator-sdk](https://github.com/operator-framework/operator-sdk) Quick Start we first
@@ -81,7 +81,7 @@ exec /activemq-artemis-operator/activemq-artemis-operator
 ## Deploying the broker
 
 Now that the operator is running and listening for changes related to our crd we can deploy our basic broker custom
-resource instance for 'ex-aao' from [broker_activemqartemis_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.14.0/deploy/crs/broker_activemqartemis_cr.yaml)
+resource instance for 'ex-aao' from [broker_activemqartemis_cr.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/crs/broker_activemqartemis_cr.yaml)
 which looks like
 
 ```$xslt
@@ -95,7 +95,7 @@ spec:
     image: quay.io/artemiscloud/activemq-artemis-operator:latest
 ```  
 
-Note in particular the [spec.image:](https://github.com/rh-messaging/activemq-artemis-operator/blob/0.14.0/deploy/crs/broker_activemqartemis_cr.yaml#L8)
+Note in particular the [spec.image:](https://github.com/artemiscloud/activemq-artemis-operator/blob/0.15.0/deploy/crs/broker_activemqartemis_cr.yaml#L8)
 which identifies the container image to use to launch the AMQ Broker. Ignore the size as its unused at the moment.
 
 To deploy the broker we simply execute
@@ -123,12 +123,12 @@ This is an area that requires further development.
 
 ### headless-service
 
-The headless service internally exposes all broker ports: 
+The headless service internally exposes all broker ports:
 - 1883: MQTT
 - 5672: AMQP
 - 8161: Web Console / Jolokia
 - 61613: STOMP
-- 61616: All protocols as above 
+- 61616: All protocols as above
 
 ### ping
 
@@ -136,7 +136,7 @@ The ping service, used internally by the brokers for clustering themselves, inte
 
 ### ex-aao-console-jolokia-service
 
-The broker hosts its own web console at port 8161 and this service provides external access to it via a 
+The broker hosts its own web console at port 8161 and this service provides external access to it via a
 [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
 that provides direct access to the web console. Note that the actual port number chosen is, by default, in the range
 of 30000-32767 so you will want to click in here to get the actual port number needed to access the console.
@@ -148,7 +148,7 @@ brokers web console.
 
 The broker has a multiplexed protocol port at 61616 supporting all protocols; AMQP, CORE, HornetQ, MQTT, OpenWire and STOMP.
 This broker port is exposed via a [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#nodeport)
-as is the web console. 
+as is the web console.
 
 To produce or consume messages to the broker from outside the [OCP SDN](https://docs.openshift.com/container-platform/3.11/admin_guide/sdn_troubleshooting.html)
 you should be able to produce or consume messages to protocol://://any.ocp.node.ip:muxProtocolNodePortNumber.
@@ -156,7 +156,7 @@ you should be able to produce or consume messages to protocol://://any.ocp.node.
 ## Scaling
 
 The ex-aao-ss-0 pod should now also be visible via the OpenShift console via the Applications -> Pods
-sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale' 
+sub menu, or by drilling down through the statefulset. The number of running pods can be adjusted via the 'oc scale'
 command as per:
 
 ```$xslt
@@ -164,7 +164,7 @@ oc scale --replicas 0 statefulset ex-aao-ss
 ```
 
 which would scale down the number of pods to zero. You can also scale the number to greater than one whereby the broker
-pods will form a broker cluster with default settings: 
+pods will form a broker cluster with default settings:
 
 ```$xslt
 oc scale --replicas 2 statefulset ex-aao-ss
@@ -211,9 +211,9 @@ served from.
 
 ```$xslt
 [rkieley@i7t450s ~]$ curl  http://admin:admin@ex-aao-ss-0.console-jolokia-abo-2.apps-ocp311.kieley.ca/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/NodeID | jq
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current 
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed                                                                                                                
-100   191    0   191    0     0   4897      0 --:--:-- --:--:-- --:--:--  4897 
+100   191    0   191    0     0   4897      0 --:--:-- --:--:-- --:--:--  4897
 {                                                                                                   
   "request": {                                                                
     "mbean": "org.apache.activemq.artemis:broker=\"amq-broker\"",                                                                                                                                
@@ -279,9 +279,9 @@ activemqartemis.broker.amq.io "ex-aao" deleted
 ### Overview
 
 Very basic, non-robust, functionality for adding and removing queues via custom resource definitions has been added. Of interest are two
-additional yaml files, [broker_activemqartemisaddress_crd.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml)
+additional yaml files, [broker_activemqartemisaddress_crd.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml)
 which provides the custom resource definition for an ActiveMQArtemisAddress and an example implementation of a custom
-resource based on this crd, [broker_activemqartemisaddress_cr.yaml](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crs/broker_activemqartemisaddress_cr.yaml)
+resource based on this crd, [broker_activemqartemisaddress_cr.yaml](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crs/broker_activemqartemisaddress_cr.yaml)
 
 In the implemented custom resource you will note the following of interest:
 
@@ -294,7 +294,7 @@ spec:
 ```
 
 Note that for the moment in this initial implementation each of the three fields; addressName, queueName,
-and routingType are required as per the [crd](https://github.com/rh-messaging/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml#L35-L39).
+and routingType are required as per the [crd](https://github.com/artemiscloud/activemq-artemis-operator/blob/master/deploy/crds/broker_activemqartemisaddress_crd.yaml#L35-L39).
 This will possibly be relaxed in the future when the feature is more mature.
 
 ### Deploying the ActiveMQArtemisAddress crd
@@ -401,19 +401,9 @@ kubectl scale statefulset ex-aao-ss --replicas 1
 ```
 
 * Observe that the pod ex-aao-ss-1 is shutdown and soon after a new drainer pod
-of the same name is started by the controller. This drainer pod will shutdown itself once the 
+of the same name is started by the controller. This drainer pod will shutdown itself once the
 messages have been drained to the other pod (namely ex-aao-ss-0).
 
-* Wait until the drainer pos is shutdown. Then check on the message count on TEST queue at 
+* Wait until the drainer pos is shutdown. Then check on the message count on TEST queue at
 pod ex-aao-ss-0 and you will see the the messages at the queue is 2000, which
 means the drainer pod has done its work.
-
-
-
-
-
-
-
-
-
-
