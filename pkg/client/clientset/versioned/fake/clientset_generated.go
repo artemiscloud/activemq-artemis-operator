@@ -17,11 +17,11 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned"
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
-	fakebrokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1/fake"
-	brokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
-	fakebrokerv2alpha2 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2/fake"
+	clientset "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	fakebrokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1/fake"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2"
+	fakebrokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha2/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

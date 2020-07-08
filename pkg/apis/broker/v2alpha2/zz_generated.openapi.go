@@ -13,15 +13,15 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemis":                schema_pkg_apis_broker_v2alpha2_ActiveMQArtemis(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddress":         schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddress(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec":     schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddressSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus":   schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddressStatus(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledown":       schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledown(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec":   schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledownSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus": schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledownStatus(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec":            schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref),
-		"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus":          schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisStatus(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemis":                schema_pkg_apis_broker_v2alpha2_ActiveMQArtemis(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddress":         schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddress(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec":     schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddressSpec(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus":   schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddressStatus(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledown":       schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledown(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec":   schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledownSpec(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus": schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledownStatus(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec":            schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref),
+		"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus":          schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisStatus(ref),
 	}
 }
 
@@ -52,19 +52,19 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemis(ref common.ReferenceCallbac
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisSpec", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -95,19 +95,19 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisAddress(ref common.Reference
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressSpec", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisAddressStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -189,19 +189,19 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisScaledown(ref common.Referen
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownSpec", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisScaledownStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -258,7 +258,7 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref common.ReferenceCal
 					},
 					"deploymentPlan": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.DeploymentPlanType"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.DeploymentPlanType"),
 						},
 					},
 					"acceptors": {
@@ -267,7 +267,7 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref common.ReferenceCal
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.AcceptorType"),
+										Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.AcceptorType"),
 									},
 								},
 							},
@@ -279,7 +279,7 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref common.ReferenceCal
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConnectorType"),
+										Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConnectorType"),
 									},
 								},
 							},
@@ -287,7 +287,7 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref common.ReferenceCal
 					},
 					"console": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConsoleType"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConsoleType"),
 						},
 					},
 					"version": {
@@ -298,14 +298,14 @@ func schema_pkg_apis_broker_v2alpha2_ActiveMQArtemisSpec(ref common.ReferenceCal
 					},
 					"upgrades": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisUpgrades"),
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisUpgrades"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.AcceptorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisUpgrades", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConnectorType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConsoleType", "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2.DeploymentPlanType"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.AcceptorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ActiveMQArtemisUpgrades", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConnectorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.ConsoleType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2.DeploymentPlanType"},
 	}
 }
 

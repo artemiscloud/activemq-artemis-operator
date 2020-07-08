@@ -10,7 +10,7 @@ if [[ -z ${CI} ]]; then
     operator-sdk build ${REGISTRY}/${IMAGE}:${TAG}
    
 else
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -a -o build/_output/bin/activemq-artemis-operator github.com/rh-messaging/activemq-artemis-operator/cmd/manager
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -a -o build/_output/bin/activemq-artemis-operator github.com/artemiscloud/activemq-artemis-operator/cmd/manager
 fi
 
 

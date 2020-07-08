@@ -1,7 +1,7 @@
 package integration_test
 
 import (
-	//"github.com/rh-messaging/activemq-artemis-operator/test"
+	//"github.com/artemiscloud/activemq-artemis-operator/test"
 	"github.com/fgiorgetti/qpid-dispatch-go-tests/test"
 	"testing"
 )

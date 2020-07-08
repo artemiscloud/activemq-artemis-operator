@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 )
 
 func init() {

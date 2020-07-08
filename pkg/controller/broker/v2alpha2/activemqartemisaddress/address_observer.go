@@ -23,8 +23,8 @@ import (
 	"time"
 
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
-	clientv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
-	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
+	clientv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/client/clientset/versioned/typed/broker/v2alpha1"
+	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
