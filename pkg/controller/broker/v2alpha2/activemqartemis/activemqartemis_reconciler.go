@@ -9,8 +9,8 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/RHsyseng/operator-utils/pkg/resource/write"
 	//v2alpha1activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisaddress"
-	v2alpha2activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
 	activemqartemisscaledown "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
+	v2alpha2activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -162,9 +162,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptorsAndConnectors(custo
 	configureAcceptorsExposure(customResource, client, scheme)
 	configureConnectorsExposure(customResource, client, scheme)
 
-	envVars := map[string]string {
-		"AMQ_ACCEPTORS" : acceptorEntry,
-		"AMQ_CONNECTORS" : connectorEntry,
+	envVars := map[string]string{
+		"AMQ_ACCEPTORS":  acceptorEntry,
+		"AMQ_CONNECTORS": connectorEntry,
 	}
 
 	secretName := secrets.NettyNameBuilder.Name()
@@ -306,7 +306,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha2.ActiveMQArtemis, curr
 			},
 		}
 
-		acceptorsEnvVar := &corev1.EnvVar {
+		acceptorsEnvVar := &corev1.EnvVar{
 			Name:      envVarName,
 			Value:     "",
 			ValueFrom: acceptorsEnvVarSource,
@@ -540,7 +540,7 @@ func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, cl
 	}
 	for ; i < customResource.Spec.DeploymentPlan.Size; i++ {
 		ordinalString = strconv.Itoa(int(i))
-        var serviceRoutelabels = make(map[string]string)
+		var serviceRoutelabels = make(map[string]string)
 		for k, v := range originalLabels {
 			serviceRoutelabels[k] = v
 		}
@@ -1329,7 +1329,7 @@ func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, name
 	if len(status.Ready) > len(lastStatus.Ready) {
 		// More pods ready, let the address controller know
 		newPodCount := len(status.Ready) - len(lastStatus.Ready)
-		for i := newPodCount-1; i < len(status.Ready); i++ {
+		for i := newPodCount - 1; i < len(status.Ready); i++ {
 			v2alpha2activemqartemisaddress.C <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
 		}
 	}

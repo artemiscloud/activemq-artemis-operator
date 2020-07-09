@@ -1,3 +1,5 @@
+// Package v1alpha1 implements all the required types and methods for parsing
+// resources for v1alpha1 versioned ClusterServiceVersions.
 package v1alpha1
 
 import (
@@ -5,36 +7,29 @@ import (
 	"fmt"
 	"sort"
 
-	appsv1 "k8s.io/api/apps/v1"
-	rbac "k8s.io/api/rbac/v1"
+	"github.com/coreos/go-semver/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators"
 )
 
 const (
-	ClusterServiceVersionAPIVersion     = GroupName + "/" + GroupVersion
+	ClusterServiceVersionAPIVersion     = operators.GroupName + "/" + GroupVersion
 	ClusterServiceVersionKind           = "ClusterServiceVersion"
 	OperatorGroupNamespaceAnnotationKey = "olm.operatorNamespace"
-	InstallStrategyNameDeployment       = "deployment"
 )
 
 // InstallModeType is a supported type of install mode for CSV installation
 type InstallModeType string
 
 const (
-	// InstallModeTypeOwnNamespace indicates that the operator can be a member of an `OperatorGroup` that selects its own namespace.
-	InstallModeTypeOwnNamespace InstallModeType = "OwnNamespace"
-	// InstallModeTypeSingleNamespace indicates that the operator can be a member of an `OperatorGroup` that selects one namespace.
+	InstallModeTypeOwnNamespace    InstallModeType = "OwnNamespace"
 	InstallModeTypeSingleNamespace InstallModeType = "SingleNamespace"
-	// InstallModeTypeMultiNamespace indicates that the operator can be a member of an `OperatorGroup` that selects more than one namespace.
-	InstallModeTypeMultiNamespace InstallModeType = "MultiNamespace"
-	// InstallModeTypeAllNamespaces indicates that the operator can be a member of an `OperatorGroup` that selects all namespaces (target namespace set is the empty string "").
-	InstallModeTypeAllNamespaces InstallModeType = "AllNamespaces"
+	InstallModeTypeMultiNamespace  InstallModeType = "MultiNamespace"
+	InstallModeTypeAllNamespaces   InstallModeType = "AllNamespaces"
 )
 
 // InstallMode associates an InstallModeType with a flag representing if the CSV supports it
-// +k8s:openapi-gen=true
 type InstallMode struct {
 	Type      InstallModeType `json:"type"`
 	Supported bool            `json:"supported"`
@@ -46,36 +41,11 @@ type InstallModeSet map[InstallModeType]bool
 // NamedInstallStrategy represents the block of an ClusterServiceVersion resource
 // where the install strategy is specified.
 type NamedInstallStrategy struct {
-	StrategyName string                    `json:"strategy"`
-	StrategySpec StrategyDetailsDeployment `json:"spec,omitempty"`
-}
-
-// StrategyDeploymentPermissions describe the rbac rules and service account needed by the install strategy
-type StrategyDeploymentPermissions struct {
-	ServiceAccountName string            `json:"serviceAccountName"`
-	Rules              []rbac.PolicyRule `json:"rules"`
-}
-
-// StrategyDeploymentSpec contains the name and spec for the deployment ALM should create
-type StrategyDeploymentSpec struct {
-	Name string                `json:"name"`
-	Spec appsv1.DeploymentSpec `json:"spec"`
-}
-
-// StrategyDetailsDeployment represents the parsed details of a Deployment
-// InstallStrategy.
-type StrategyDetailsDeployment struct {
-	DeploymentSpecs    []StrategyDeploymentSpec        `json:"deployments"`
-	Permissions        []StrategyDeploymentPermissions `json:"permissions,omitempty"`
-	ClusterPermissions []StrategyDeploymentPermissions `json:"clusterPermissions,omitempty"`
-}
-
-func (d *StrategyDetailsDeployment) GetStrategyName() string {
-	return InstallStrategyNameDeployment
+	StrategyName    string          `json:"strategy"`
+	StrategySpecRaw json.RawMessage `json:"spec,omitempty"`
 }
 
 // StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
-// +k8s:openapi-gen=true
 type StatusDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -85,7 +55,6 @@ type StatusDescriptor struct {
 }
 
 // SpecDescriptor describes a field in a spec block of a CRD so that OLM can consume it
-// +k8s:openapi-gen=true
 type SpecDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -95,7 +64,6 @@ type SpecDescriptor struct {
 }
 
 // ActionDescriptor describes a declarative action that can be performed on a custom resource instance
-// +k8s:openapi-gen=true
 type ActionDescriptor struct {
 	Path         string           `json:"path"`
 	DisplayName  string           `json:"displayName,omitempty"`
@@ -105,7 +73,6 @@ type ActionDescriptor struct {
 }
 
 // CRDDescription provides details to OLM about the CRDs
-// +k8s:openapi-gen=true
 type CRDDescription struct {
 	Name              string                 `json:"name"`
 	Version           string                 `json:"version"`
@@ -119,7 +86,6 @@ type CRDDescription struct {
 }
 
 // APIServiceDescription provides details to OLM about apis provided via aggregation
-// +k8s:openapi-gen=true
 type APIServiceDescription struct {
 	Name              string                 `json:"name"`
 	Group             string                 `json:"group"`
@@ -136,23 +102,16 @@ type APIServiceDescription struct {
 }
 
 // APIResourceReference is a Kubernetes resource type used by a custom resource
-// +k8s:openapi-gen=true
 type APIResourceReference struct {
 	Name    string `json:"name"`
 	Kind    string `json:"kind"`
 	Version string `json:"version"`
 }
 
-// GetName returns the name of an APIService as derived from its group and version.
-func (d APIServiceDescription) GetName() string {
-	return fmt.Sprintf("%s.%s", d.Version, d.Group)
-}
-
 // CustomResourceDefinitions declares all of the CRDs managed or required by
 // an operator being ran by ClusterServiceVersion.
 //
 // If the CRD is present in the Owned list, it is implicitly required.
-// +k8s:openapi-gen=true
 type CustomResourceDefinitions struct {
 	Owned    []CRDDescription `json:"owned,omitempty"`
 	Required []CRDDescription `json:"required,omitempty"`
@@ -160,7 +119,6 @@ type CustomResourceDefinitions struct {
 
 // APIServiceDefinitions declares all of the extension apis managed or required by
 // an operator being ran by ClusterServiceVersion.
-// +k8s:openapi-gen=true
 type APIServiceDefinitions struct {
 	Owned    []APIServiceDescription `json:"owned,omitempty"`
 	Required []APIServiceDescription `json:"required,omitempty"`
@@ -170,7 +128,7 @@ type APIServiceDefinitions struct {
 // that can manage apps for a given version.
 type ClusterServiceVersionSpec struct {
 	InstallStrategy           NamedInstallStrategy      `json:"install"`
-	Version                   version.OperatorVersion   `json:"version,omitempty"`
+	Version                   semver.Version            `json:"version,omitempty"`
 	Maturity                  string                    `json:"maturity,omitempty"`
 	CustomResourceDefinitions CustomResourceDefinitions `json:"customresourcedefinitions,omitempty"`
 	APIServiceDefinitions     APIServiceDefinitions     `json:"apiservicedefinitions,omitempty"`
@@ -253,33 +211,29 @@ const (
 type ConditionReason string
 
 const (
-	CSVReasonRequirementsUnknown                         ConditionReason = "RequirementsUnknown"
-	CSVReasonRequirementsNotMet                          ConditionReason = "RequirementsNotMet"
-	CSVReasonRequirementsMet                             ConditionReason = "AllRequirementsMet"
-	CSVReasonOwnerConflict                               ConditionReason = "OwnerConflict"
-	CSVReasonComponentFailed                             ConditionReason = "InstallComponentFailed"
-	CSVReasonComponentFailedNoRetry                      ConditionReason = "InstallComponentFailedNoRetry"
-	CSVReasonInvalidStrategy                             ConditionReason = "InvalidInstallStrategy"
-	CSVReasonWaiting                                     ConditionReason = "InstallWaiting"
-	CSVReasonInstallSuccessful                           ConditionReason = "InstallSucceeded"
-	CSVReasonInstallCheckFailed                          ConditionReason = "InstallCheckFailed"
-	CSVReasonComponentUnhealthy                          ConditionReason = "ComponentUnhealthy"
-	CSVReasonBeingReplaced                               ConditionReason = "BeingReplaced"
-	CSVReasonReplaced                                    ConditionReason = "Replaced"
-	CSVReasonNeedsReinstall                              ConditionReason = "NeedsReinstall"
-	CSVReasonNeedsCertRotation                           ConditionReason = "NeedsCertRotation"
-	CSVReasonAPIServiceResourceIssue                     ConditionReason = "APIServiceResourceIssue"
-	CSVReasonAPIServiceResourcesNeedReinstall            ConditionReason = "APIServiceResourcesNeedReinstall"
-	CSVReasonAPIServiceInstallFailed                     ConditionReason = "APIServiceInstallFailed"
-	CSVReasonCopied                                      ConditionReason = "Copied"
-	CSVReasonInvalidInstallModes                         ConditionReason = "InvalidInstallModes"
-	CSVReasonNoTargetNamespaces                          ConditionReason = "NoTargetNamespaces"
-	CSVReasonUnsupportedOperatorGroup                    ConditionReason = "UnsupportedOperatorGroup"
-	CSVReasonNoOperatorGroup                             ConditionReason = "NoOperatorGroup"
-	CSVReasonTooManyOperatorGroups                       ConditionReason = "TooManyOperatorGroups"
-	CSVReasonInterOperatorGroupOwnerConflict             ConditionReason = "InterOperatorGroupOwnerConflict"
-	CSVReasonCannotModifyStaticOperatorGroupProvidedAPIs ConditionReason = "CannotModifyStaticOperatorGroupProvidedAPIs"
-	CSVReasonDetectedClusterChange                       ConditionReason = "DetectedClusterChange"
+	CSVReasonRequirementsUnknown              ConditionReason = "RequirementsUnknown"
+	CSVReasonRequirementsNotMet               ConditionReason = "RequirementsNotMet"
+	CSVReasonRequirementsMet                  ConditionReason = "AllRequirementsMet"
+	CSVReasonOwnerConflict                    ConditionReason = "OwnerConflict"
+	CSVReasonComponentFailed                  ConditionReason = "InstallComponentFailed"
+	CSVReasonInvalidStrategy                  ConditionReason = "InvalidInstallStrategy"
+	CSVReasonWaiting                          ConditionReason = "InstallWaiting"
+	CSVReasonInstallSuccessful                ConditionReason = "InstallSucceeded"
+	CSVReasonInstallCheckFailed               ConditionReason = "InstallCheckFailed"
+	CSVReasonComponentUnhealthy               ConditionReason = "ComponentUnhealthy"
+	CSVReasonBeingReplaced                    ConditionReason = "BeingReplaced"
+	CSVReasonReplaced                         ConditionReason = "Replaced"
+	CSVReasonNeedsReinstall                   ConditionReason = "NeedsReinstall"
+	CSVReasonNeedsCertRotation                ConditionReason = "NeedsCertRotation"
+	CSVReasonAPIServiceResourceIssue          ConditionReason = "APIServiceResourceIssue"
+	CSVReasonAPIServiceResourcesNeedReinstall ConditionReason = "APIServiceResourcesNeedReinstall"
+	CSVReasonAPIServiceInstallFailed          ConditionReason = "APIServiceInstallFailed"
+	CSVReasonCopied                           ConditionReason = "Copied"
+	CSVReasonInvalidInstallModes              ConditionReason = "InvalidInstallModes"
+	CSVReasonNoTargetNamespaces               ConditionReason = "NoTargetNamespaces"
+	CSVReasonUnsupportedOperatorGroup         ConditionReason = "UnsupportedOperatorGroup"
+	CSVReasonNoOperatorGroup                  ConditionReason = "NoOperatorGroup"
+	CSVReasonTooManyOperatorGroups            ConditionReason = "TooManyOperatorGroups"
 )
 
 // Conditions appear in the status as a record of state transitions on the ClusterServiceVersion
@@ -295,13 +249,13 @@ type ClusterServiceVersionCondition struct {
 	Reason ConditionReason `json:"reason,omitempty"`
 	// Last time we updated the status
 	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the status transitioned from one status to another.
 	// +optional
-	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-// OwnsCRD determines whether the current CSV owns a particular CRD.
+// OwnsCRD determines whether the current CSV owns a paritcular CRD.
 func (csv ClusterServiceVersion) OwnsCRD(name string) bool {
 	for _, desc := range csv.Spec.CustomResourceDefinitions.Owned {
 		if desc.Name == name {
@@ -312,7 +266,7 @@ func (csv ClusterServiceVersion) OwnsCRD(name string) bool {
 	return false
 }
 
-// OwnsAPIService determines whether the current CSV owns a particular APIService.
+// OwnsAPIService determines whether the current CSV owns a paritcular APIService.
 func (csv ClusterServiceVersion) OwnsAPIService(name string) bool {
 	for _, desc := range csv.Spec.APIServiceDefinitions.Owned {
 		apiServiceName := fmt.Sprintf("%s.%s", desc.Version, desc.Group)
@@ -372,38 +326,35 @@ type ClusterServiceVersionStatus struct {
 	Reason ConditionReason `json:"reason,omitempty"`
 	// Last time we updated the status
 	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the status transitioned from one status to another.
 	// +optional
-	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 	// List of conditions, a history of state transitions
 	Conditions []ClusterServiceVersionCondition `json:"conditions,omitempty"`
 	// The status of each requirement for this CSV
 	RequirementStatus []RequirementStatus `json:"requirementStatus,omitempty"`
 	// Last time the owned APIService certs were updated
 	// +optional
-	CertsLastUpdated *metav1.Time `json:"certsLastUpdated,omitempty"`
+	CertsLastUpdated metav1.Time `json:"certsLastUpdated,omitempty"`
 	// Time the owned APIService certs will rotate next
 	// +optional
-	CertsRotateAt *metav1.Time `json:"certsRotateAt,omitempty"`
+	CertsRotateAt metav1.Time `json:"certsRotateAt,omitempty"`
 }
 
+// ClusterServiceVersion is a Custom Resource of type `ClusterServiceVersionSpec`.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +genclient
-
-// ClusterServiceVersion is a Custom Resource of type `ClusterServiceVersionSpec`.
 type ClusterServiceVersion struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec ClusterServiceVersionSpec `json:"spec"`
-	// +optional
+	Spec   ClusterServiceVersionSpec   `json:"spec"`
 	Status ClusterServiceVersionStatus `json:"status"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // ClusterServiceVersionList represents a list of ClusterServiceVersions.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClusterServiceVersionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -511,7 +462,7 @@ func (csv ClusterServiceVersion) GetRequiredAPIServiceDescriptions() []APIServic
 func (csv ClusterServiceVersion) GetOwnedAPIServiceDescriptions() []APIServiceDescription {
 	set := make(map[string]APIServiceDescription)
 	for _, owned := range csv.Spec.APIServiceDefinitions.Owned {
-		name := owned.GetName()
+		name := fmt.Sprintf("%s.%s", owned.Version, owned.Group)
 		set[name] = owned
 	}
 

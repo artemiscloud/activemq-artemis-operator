@@ -3,11 +3,11 @@ package v2alpha2activemqartemisaddress
 import (
 	"context"
 	mgmt "github.com/artemiscloud/activemq-artemis-management"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -148,7 +148,7 @@ func (r *ReconcileActiveMQArtemisAddress) Reconcile(request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-        log.Error(err, "Requeue the request for error")
+		log.Error(err, "Requeue the request for error")
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	} else {
@@ -305,7 +305,7 @@ func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, stat
 
 func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
 
-    reqLogger := log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
+	reqLogger := log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
 
 	var result string = ""
 

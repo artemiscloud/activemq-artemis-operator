@@ -83,7 +83,6 @@ func main() {
 		os.Exit(1)
 	}
 
-
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -110,15 +109,17 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-	name := os.Getenv(leader.PodNameEnv)
-	clnt, err := client.New(cfg, client.Options{})
-	if err != nil {
-		log.Error(err, "can't create client from config")
-		os.Exit(1)
-	}  else {
-		setupAccountName(clnt, ctx, namespace, name)
-	}
 
+	// todo temporary committing this code, getting compilation error. This required to fix, as `leader.PodNameEnv` is undefined
+	/*	name := os.Getenv(leader.PodNameEnv)
+		clnt, err := client.New(cfg, client.Options{})
+		if err != nil {
+			log.Error(err, "can't create client from config")
+			os.Exit(1)
+		} else {
+			setupAccountName(clnt, ctx, namespace, name)
+		}
+	*/
 	log.Info("Registering Components.")
 
 	// Setup Scheme for all resources
@@ -162,7 +163,7 @@ func setupAccountName(clnt client.Client, ctx context.Context, ns, podname strin
 		log.Error(err, "failed to get pod")
 	} else {
 		log.Info("service account name: " + pod.Spec.ServiceAccountName)
-		err = os.Setenv("SERVICE_ACCOUNT",pod.Spec.ServiceAccountName)
+		err = os.Setenv("SERVICE_ACCOUNT", pod.Spec.ServiceAccountName)
 		if err != nil {
 			log.Error(err, "failed to set env variable")
 		}

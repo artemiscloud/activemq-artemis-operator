@@ -3,7 +3,6 @@ package v2alpha2activemqartemis
 import (
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
@@ -148,7 +147,7 @@ var (
 		Namespace: AMQinstance.Namespace,
 		Name:      AMQinstance.Name,
 	}
-	container   = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:latest", environments.MakeEnvVarArrayForCR(&AMQinstance))
+	container   = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:latest", MakeEnvVarArrayForCR(&AMQinstance))
 	podTemplate = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: AMQinstance.Namespace,
@@ -156,6 +155,6 @@ var (
 			Labels:    AMQinstance.Labels,
 		},
 		//Spec: pods.NewPodTemplateSpecForCR(&AMQinstance).Spec,
-		Spec: pods.NewPodTemplateSpecForCR(namespacedName).Spec,
+		Spec: pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels()).Spec,
 	}
 )

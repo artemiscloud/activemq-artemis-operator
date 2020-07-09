@@ -12,10 +12,10 @@ type ActiveMQArtemisAddressSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	AddressName string `json:"addressName"`
-	QueueName   string `json:"queueName"`
-	RoutingType string `json:"routingType"`
-	RemoveFromBrokerOnDelete bool `json:"removeFromBrokerOnDelete"`
+	AddressName              string `json:"addressName"`
+	QueueName                string `json:"queueName"`
+	RoutingType              string `json:"routingType"`
+	RemoveFromBrokerOnDelete bool   `json:"removeFromBrokerOnDelete"`
 }
 
 // ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress

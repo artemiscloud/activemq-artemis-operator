@@ -198,9 +198,9 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		}
 
 		// Do we need to check for and bounce an observed generation change here?
-		if (rs.stepsComplete & CreatedStatefulSet > 0) &&
-			(rs.stepsComplete & CreatedHeadlessService) > 0 &&
-			(rs.stepsComplete & CreatedPingService > 0) {
+		if (rs.stepsComplete&CreatedStatefulSet > 0) &&
+			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
+			(rs.stepsComplete&CreatedPingService > 0) {
 
 			firstTime := false
 

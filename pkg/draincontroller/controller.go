@@ -616,8 +616,8 @@ func newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
 	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", environments.GLOBAL_AMQ_CLUSTER_PASSWORD, 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", svc.HeadlessNameBuilder.Name(), 1)
 	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", svc.PingNameBuilder.Name(), 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"),1)
-	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"),1)
+	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"), 1)
+	podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"), 1)
 	image := sts.Spec.Template.Spec.Containers[0].Image
 	if "" == image {
 		return nil, fmt.Errorf("No drain pod image configured for StatefulSet " + sts.Name)
