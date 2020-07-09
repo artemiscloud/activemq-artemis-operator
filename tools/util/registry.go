@@ -3,8 +3,8 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/heroku/docker-registry-client/registry"
 	"github.com/artemiscloud/activemq-artemis-operator/tools/constants"
+	"github.com/heroku/docker-registry-client/registry"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -24,7 +24,6 @@ type QuayTag struct {
 	IsManifestList bool   `json:"is_manifest_list"`
 	Size           int64  `json:"size"`
 	Reversion      bool   `json:"reversion"`
-	StartTS        int64  `json:"start_ts"`
 }
 
 type QuayTagsResponse struct {
@@ -87,7 +86,7 @@ func httpGet(url, apiToken string, basicAuth *BasicAuthInfo) (string, error) {
 	} else if basicAuth != nil {
 		req.SetBasicAuth(basicAuth.Username, basicAuth.Password)
 	} else {
-		return "", fmt.Errorf("No apiToken and Basic Auth provided for registry, Please add QUAYIO_TOKEN ", url)
+		return "", fmt.Errorf("No apiToken and Basic Auth provided for registry, Please add QUAYIO_TOKEN %v: %v", url, err)
 	}
 
 	client := new(http.Client)

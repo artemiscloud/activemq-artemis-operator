@@ -4,19 +4,19 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/blang/semver"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	//"github.com/blang/semver"
 	"strconv"
 
-	oimagev1 "github.com/openshift/api/image/v1"
-	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	olmversion "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	api "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	activemqartemis "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemis"
 	"github.com/artemiscloud/activemq-artemis-operator/tools/components"
 	"github.com/artemiscloud/activemq-artemis-operator/tools/constants"
 	"github.com/artemiscloud/activemq-artemis-operator/tools/util"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
+	oimagev1 "github.com/openshift/api/image/v1"
+	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	//olmversion "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -101,9 +101,9 @@ func main() {
 	)
 
 	templateStruct.Spec.Keywords = []string{"activemqartemis", "operator"}
-	var opVersion olmversion.OperatorVersion
-	opVersion.Version = semver.MustParse(version.Version)
-	templateStruct.Spec.Version = opVersion
+	//var opVersion olmversion.OperatorVersion
+	//opVersion.Version = semver.MustParse(version.Version)
+	//templateStruct.Spec.Version = opVersion
 	templateStruct.Spec.Replaces = operatorName + ".v" + version.PriorVersion
 	templateStruct.Spec.Description = descrip
 	templateStruct.Spec.DisplayName = csv.DisplayName

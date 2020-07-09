@@ -1,9 +1,9 @@
 package apis
 
 import (
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	routev1 "github.com/openshift/api/route/v1"
 )
 
 func init() {

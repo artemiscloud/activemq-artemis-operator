@@ -1,10 +1,14 @@
 #!/bin/sh
+
+source ./scripts/go-mod-env.sh
+
 REGISTRY=quay.io/artemiscloud
 IMAGE=activemq-artemis-operator
 TAG=0.14.0
 CFLAGS="--redhat --build-tech-preview"
 
-go generate ./...
+./scripts/go-gen.sh
+
 if [[ -z ${CI} ]]; then
     ./scripts/go-test.sh
     operator-sdk build ${REGISTRY}/${IMAGE}:${TAG}

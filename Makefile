@@ -17,21 +17,21 @@ endif
 .PHONY: all
 all: build
 
-.PHONY: dep
-dep:
-	./scripts/go-dep.sh
+.PHONY: mod
+mod:
+	./scripts/go-mod.sh
 
 .PHONY: format
 format:
 	./scripts/go-fmt.sh
 
 .PHONY: go-generate
-go-generate: dep
-	$(Q)go generate ./...
+go-generate: mod
+	./scripts/go-gen.sh
 
 .PHONY: sdk-generate
-sdk-generate: dep
-	operator-sdk generate k8s
+sdk-generate: mod
+	./scripts/go-gen.sh
 
 .PHONY: vet
 vet:

@@ -24,7 +24,7 @@ const (
 	Broker77ImageTag  = "7.7"
 	Broker77ImageURL  = RedHatImageRegistry + "/amq7/" + Broker77Image + ":" + Broker77ImageTag
 	Broker77Component = "amq-broker-openshift-container"
-	)
+)
 
 type ImageEnv struct {
 	Var       string

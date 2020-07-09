@@ -1,5 +1,19 @@
 # Building the operator
 
+activemq-artemis-operator includes a `Makefile` with various Make targets to build the operator.
+
+## Make targets
+
+Commonly used Make targets:
+
+ - `make build` for building operator image
+ - `make test` for running unit test
+ - `make csv` for generating the csv file
+ - `docker_push` for pushing images to a registry, if required change the registry under scripts/go-build.sh 
+
+
+
+
 - [imagebuilder](https://github.com/openshift/imagebuilder)
 
 ```$xslt

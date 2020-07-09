@@ -42,7 +42,7 @@ const AnnotationDrainerPodTemplate = "statefulsets.kubernetes.io/drainer-pod-tem
 type AddressObserver struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	opclient client.Client
+	opclient      client.Client
 }
 
 func NewAddressObserver(
@@ -51,8 +51,8 @@ func NewAddressObserver(
 	client client.Client) *AddressObserver {
 
 	observer := &AddressObserver{
-		kubeclientset:      kubeclientset,
-		opclient:			client,
+		kubeclientset: kubeclientset,
+		opclient:      client,
 	}
 
 	return observer
@@ -82,16 +82,16 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	log.Info("New pod ready.", "Pod", ready)
 
-    //find out real name of the pod basename-(num - 1)
-	podBaseName := ss.NameBuilder.Name();
+	//find out real name of the pod basename-(num - 1)
+	podBaseName := ss.NameBuilder.Name()
 	originalName := ready.Name
-	
-	if len(podBaseName) > len(originalName) - 2 {
+
+	if len(podBaseName) > len(originalName)-2 {
 		log.Info("Original pod name too short", "pod name", originalName, "base", podBaseName)
-		return;
+		return
 	}
 
-	podSerial := originalName[len(podBaseName) + 1:]
+	podSerial := originalName[len(podBaseName)+1:]
 
 	//convert to int
 	i, err := strconv.Atoi(podSerial)
@@ -99,12 +99,12 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 		log.Error(err, "failed to convert pod name", "pod", originalName)
 	}
 
-    realPodName := fmt.Sprintf("%s-%d", podBaseName, i-1)
-    
-    podNamespacedName := types.NamespacedName{ready.Namespace, realPodName}
-    pod := &corev1.Pod{}
+	realPodName := fmt.Sprintf("%s-%d", podBaseName, i-1)
 
-    err1 := c.opclient.Get(context.TODO(), podNamespacedName, pod)
+	podNamespacedName := types.NamespacedName{ready.Namespace, realPodName}
+	pod := &corev1.Pod{}
+
+	err1 := c.opclient.Get(context.TODO(), podNamespacedName, pod)
 	if err1 != nil {
 		log.Error(err1, "Can't find the pod, abort", "pod", podNamespacedName)
 		return
@@ -112,11 +112,11 @@ func (c *AddressObserver) newPodReady(ready *types.NamespacedName) {
 
 	stsNameFromAnnotation := pod.Annotations[AnnotationStatefulSet]
 	if stsNameFromAnnotation != "" {
-		log.Info("Ignoring drainer pod", "pod", realPodName);
+		log.Info("Ignoring drainer pod", "pod", realPodName)
 		return
 	}
 
-    c.checkCRsForNewPod(pod)    
+	c.checkCRsForNewPod(pod)
 }
 
 func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
@@ -135,24 +135,24 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
 	result, listerr := addressInterface.List(metav1.ListOptions{})
 	if listerr != nil {
 		log.Error(listerr, "Failed to get address resources")
-		return		
+		return
 	}
 
 	if len(result.Items) == 0 {
 		log.Info("No pre-installed CRs so nothing to do")
-		return;
+		return
 	}
-	
+
 	if ownerRef := metav1.GetControllerOf(newPod); ownerRef != nil {
-		
+
 		podNamespacedName := types.NamespacedName{newPod.Name, newPod.Namespace}
 
-        sts := &appsv1.StatefulSet{}
-        
-        err := c.opclient.Get(context.TODO(), types.NamespacedName{newPod.Namespace, ownerRef.Name}, sts)
-        if err != nil {
-        	log.Error(err, "Error finding the statefulset")
-        }
+		sts := &appsv1.StatefulSet{}
+
+		err := c.opclient.Get(context.TODO(), types.NamespacedName{newPod.Namespace, ownerRef.Name}, sts)
+		if err != nil {
+			log.Error(err, "Error finding the statefulset")
+		}
 
 		containers := newPod.Spec.Containers
 		var jolokiaUser string
@@ -177,7 +177,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod) {
 
 		for _, a := range result.Items {
 			log.Info("Creating pre-installed address", "address", a.Spec.AddressName, "queue", a.Spec.QueueName, "routing type", a.Spec.RoutingType)
-		
+
 			_, err := artemis.CreateQueue(a.Spec.AddressName, a.Spec.QueueName, a.Spec.RoutingType)
 			if nil != err {
 				log.Error(err, "Error creating address")

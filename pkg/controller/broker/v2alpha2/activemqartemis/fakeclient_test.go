@@ -1,9 +1,9 @@
 package v2alpha2activemqartemis
 
 import (
-	routev1 "github.com/openshift/api/route/v1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	routev1 "github.com/openshift/api/route/v1"
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
