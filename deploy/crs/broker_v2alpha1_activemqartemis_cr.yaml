@@ -18,7 +18,6 @@ spec:
       protocols: amqp
       port: 5672
       sslEnabled: true
-      enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
       wantClientAuth: true
@@ -33,7 +32,6 @@ spec:
       host: localhost
       port: 22222
       sslEnabled: true
-      enabledCipherSuites: SSL_RSA_WITH_RC4_128_SHA,SSL_DH_anon_WITH_3DES_EDE_CBC_SHA
       enabledProtocols: TLSv1,TLSv1.1,TLSv1.2
       needClientAuth: true
       wantClientAuth: true
