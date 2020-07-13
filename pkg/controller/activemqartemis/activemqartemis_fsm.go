@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/fsm"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -130,6 +131,8 @@ func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
 	// Was the current state complete?
 	amqbfsm.r.result = reconcile.Result{}
 	err, nextStateID := amqbfsm.m.Update()
+	ssNamespacedName := types.NamespacedName{Name: statefulsets.NameBuilder.Name(), Namespace: amqbfsm.customResource.Namespace}
+	UpdatePodStatus(amqbfsm.customResource, amqbfsm.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }

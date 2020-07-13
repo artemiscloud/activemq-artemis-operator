@@ -24,6 +24,10 @@
   packages = [
     "pkg/olm",
     "pkg/resource",
+    "pkg/resource/compare",
+    "pkg/resource/read",
+    "pkg/resource/write",
+    "pkg/resource/write/hooks",
     "pkg/validation"
   ]
   revision = "942a3f9c85a9638585c45cb90af49a08fac6e22d"
@@ -33,6 +37,15 @@
   packages = ["."]
   revision = "7c0e3b262f30165a8ec3d0b4c6059fd92703bfb2"
   version = "1.0.0"
+
+[[projects]]
+  name = "github.com/artemiscloud/activemq-artemis-management"
+  packages = [
+    ".",
+    "jolokia"
+  ]
+  revision = "d75b890ea0e54f0cbeaed2eef9927e04e55bdef7"
+  version = "0.1.2"
 
 [[projects]]
   name = "github.com/asaskevich/govalidator"
@@ -71,6 +84,12 @@
   ]
   revision = "b993709ae1a4f6dd19cfa475232614441b11c9d5"
   version = "v2.9.5"
+
+[[projects]]
+  name = "github.com/evanphx/json-patch"
+  packages = ["."]
+  revision = "78cf029964937ffcb67feaeac1fe23d9cef0d26a"
+  version = "v5.0.0"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -309,6 +328,7 @@
   name = "github.com/openshift/api"
   packages = [
     "apps/v1",
+    "build/v1",
     "route/v1"
   ]
   revision = "0d921e363e951d89f583292c60d013c318df64dc"
@@ -673,6 +693,7 @@
   name = "k8s.io/client-go"
   packages = [
     "discovery",
+    "discovery/fake",
     "dynamic",
     "informers",
     "informers/admissionregistration",
@@ -791,6 +812,7 @@
     "rest",
     "rest/watch",
     "restmapper",
+    "testing",
     "third_party/forked/golang/template",
     "tools/auth",
     "tools/cache",
@@ -937,6 +959,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f62074978c3cc27655ca47fadceb909fea80a4e9eda6f9951e8e62737882370a"
+  inputs-digest = "0afcc9ba4b9c35e2990607a771377413b3aea57993726c6496a1e705da0c561f"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"fmt"
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemisscaledown"
@@ -11,6 +12,7 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	"github.com/RHsyseng/operator-utils/pkg/resource/write"
+	v2alpha1activemqartemisaddress "github.com/rh-messaging/activemq-artemis-operator/pkg/controller/activemqartemisaddress"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/ingresses"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/routes"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
@@ -55,6 +57,7 @@ const (
 
 var defaultMessageMigration bool = true
 var requestedResources []resource.KubernetesResource
+var lastStatus olm.DeploymentStatus
 
 type ActiveMQArtemisReconciler struct {
 	statefulSetUpdates uint32
@@ -1043,4 +1046,67 @@ func getServiceObjects(customResource *brokerv2alpha1.ActiveMQArtemis, client cl
 	allObjects = append(allObjects, pingService)
 
 	return err, allObjects
+}
+
+// TODO: Test namespacedName to ensure it's the right namespacedName
+func UpdatePodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger.Info("Updating status for pods")
+
+	podStatus := GetPodStatus(cr, client, ssNamespacedName)
+
+	reqLogger.V(5).Info("PodStatus are to be updated.............................", "info:", podStatus)
+	reqLogger.V(5).Info("Ready Count........................", "info:", len(podStatus.Ready))
+	reqLogger.V(5).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
+	reqLogger.V(5).Info("Starting Count........................", "info:", len(podStatus.Starting))
+
+	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
+		cr.Status.PodStatus = podStatus
+
+		err := client.Status().Update(context.TODO(), cr)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update pods status")
+			return err
+		}
+		reqLogger.Info("Pods status updated")
+		return nil
+	}
+
+	return nil
+}
+
+func GetPodStatus(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+
+	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger.Info("Getting status for pods")
+
+	var status olm.DeploymentStatus
+
+	sfsFound := &appsv1.StatefulSet{}
+
+	err := client.Get(context.TODO(), namespacedName, sfsFound)
+	if err == nil {
+		status = olm.GetSingleStatefulSetStatus(*sfsFound)
+	} else {
+		dsFound := &appsv1.DaemonSet{}
+		err = client.Get(context.TODO(), namespacedName, dsFound)
+		if err == nil {
+			status = olm.GetSingleDaemonSetStatus(*dsFound)
+		}
+	}
+
+	// TODO: Remove global usage
+	log.V(5).Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
+	log.V(5).Info("status.Ready len is " + string(len(status.Ready)))
+	if len(status.Ready) > len(lastStatus.Ready) {
+		// More pods ready, let the address controller know
+		newPodCount := len(status.Ready) - len(lastStatus.Ready)
+		for i := newPodCount-1; i < len(status.Ready); i++ {
+			v2alpha1activemqartemisaddress.C <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
+		}
+	}
+	lastStatus = status
+
+	return status
 }

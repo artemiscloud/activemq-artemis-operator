@@ -2,14 +2,19 @@ package activemqartemisaddress
 
 import (
 	"context"
-	"fmt"
 	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
+	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/rh-messaging/activemq-artemis-operator/pkg/resources/statefulsets"
-	mgmt "github.com/roddiekieley/activemq-artemis-management"
+	mgmt "github.com/artemiscloud/activemq-artemis-management"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -22,6 +27,9 @@ import (
 
 var log = logf.Log.WithName("controller_activemqartemisaddress")
 var namespacedNameToAddressName = make(map[types.NamespacedName]brokerv2alpha1.ActiveMQArtemisAddress)
+
+//This channel is used to receive new ready pods
+var C = make(chan types.NamespacedName)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -36,8 +44,39 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	go setupAddressObserver(mgr, C)
 	return &ReconcileActiveMQArtemisAddress{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
+
+func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
+	log.Info("Setting up address observer")
+	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	if err != nil {
+		log.Error(err, "Error building kubeconfig: %s", err.Error())
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Error(err, "Error building kubernetes clientset: %s", err.Error())
+	}
+
+	namespace, err := k8sutil.GetWatchNamespace()
+
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		return
+	}
+
+	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient())
+
+	if err = observer.Run(C); err != nil {
+		log.Error(err, "Error running controller: %s", err.Error())
+	}
+
+	log.Info("Finish setup address observer")
+	return
+}
+
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -199,7 +238,6 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " not found")
 	} else {
 		reqLogger.Info("Statefulset: " + ssNamespacedName.Name + " found")
-		fmt.Printf("%v+", statefulset)
 
 		pod := &corev1.Pod{}
 		podNamespacedName := types.NamespacedName{
@@ -222,11 +260,72 @@ func getPodBrokers(instance *brokerv2alpha1.ActiveMQArtemisAddress, request reco
 				}
 			} else {
 				reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
-				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker")
+				containers := pod.Spec.Containers //get env from this
+				var jolokiaUser string
+				var jolokiaPassword string
+				if len(containers) == 1 {
+					envVars := containers[0].Env
+					for _, oneVar := range envVars {
+						if "AMQ_USER" == oneVar.Name {
+							jolokiaUser = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+						}
+						if "AMQ_PASSWORD" == oneVar.Name {
+							jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client)
+						}
+						if jolokiaUser != "" && jolokiaPassword != "" {
+							break
+						}
+					}
+				}
+
+				reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Password: ", jolokiaPassword)
+				artemis := mgmt.NewArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword)
 				artemisArray = append(artemisArray, artemis)
 			}
 		}
 	}
 
 	return artemisArray
+}
+
+func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+	var result string
+	if envVar.Value == "" {
+		result = getEnvVarValueFromSecret(envVar.Name, envVar.ValueFrom, namespace, statefulset, client)
+	} else {
+		result = envVar.Value
+	}
+	return result
+}
+
+func getEnvVarValueFromSecret(envName string, varSource *corev1.EnvVarSource, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client client.Client) string {
+
+    reqLogger := log.WithValues("Namespace", namespace.Name, "StatefulSet", statefulset.Name)
+
+	var result string = ""
+
+	secretName := varSource.SecretKeyRef.LocalObjectReference.Name
+	secretKey := varSource.SecretKeyRef.Key
+
+	namespacedName := types.NamespacedName{
+		Name:      secretName,
+		Namespace: statefulset.Namespace,
+	}
+	// Attempt to retrieve the secret
+	stringDataMap := map[string]string{
+		envName: "",
+	}
+	theSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap)
+	var err error = nil
+	if err = resources.Retrieve(namespacedName, client, theSecret); err != nil {
+		if errors.IsNotFound(err) {
+			reqLogger.Info("Secret IsNotFound.", "Secret Name", secretName, "Key", secretKey)
+		}
+	} else {
+		elem, ok := theSecret.Data[envName]
+		if ok {
+			result = string(elem)
+		}
+	}
+	return result
 }
