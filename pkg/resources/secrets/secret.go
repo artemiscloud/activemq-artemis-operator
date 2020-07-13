@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	brokerv2alpha1 "github.com/rh-messaging/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/utils/random"
@@ -38,7 +37,8 @@ func MakeStringDataMap(keyName string, valueName string, key string, value strin
 	return stringDataMap
 }
 
-func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) corev1.Secret {
+//func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) corev1.Secret {
+func MakeSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string) corev1.Secret {
 
 	secretDefinition := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -48,7 +48,7 @@ func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName strin
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    selectors.LabelBuilder.Labels(),
 			Name:      secretName,
-			Namespace: customResource.Namespace,
+			Namespace: namespacedName.Namespace,
 		},
 		StringData: stringData,
 	}
@@ -56,23 +56,24 @@ func MakeSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName strin
 	return secretDefinition
 }
 
-func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) *corev1.Secret {
+//func NewSecret(customResource *brokerv2alpha1.ActiveMQArtemis, secretName string, stringData map[string]string) *corev1.Secret {
+func NewSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string) *corev1.Secret {
 
-	secretDefinition := MakeSecret(customResource, secretName, stringData)
+	secretDefinition := MakeSecret(namespacedName, secretName, stringData)
 
 	return &secretDefinition
 }
 
-func Create(customResource *brokerv2alpha1.ActiveMQArtemis, namespacedName types.NamespacedName, stringDataMap map[string]string, client client.Client, scheme *runtime.Scheme) error {
+func Create(owner metav1.Object, namespacedName types.NamespacedName, stringDataMap map[string]string, client client.Client, scheme *runtime.Scheme) *corev1.Secret {
 
 	var err error = nil
-	secretDefinition := NewSecret(customResource, namespacedName.Name, stringDataMap)
+	secretDefinition := NewSecret(namespacedName, namespacedName.Name, stringDataMap)
 
-	if err = resources.Retrieve(customResource, namespacedName, client, secretDefinition); err != nil {
+	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			err = resources.Create(customResource, client, scheme, secretDefinition)
+			err = resources.Create(owner, namespacedName, client, scheme, secretDefinition)
 		}
 	}
 
-	return err
+	return secretDefinition
 }

@@ -2,6 +2,7 @@ package activemqartemis
 
 import (
 	"context"
+	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/rh-messaging/activemq-artemis-operator/pkg/resources/pods"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"time"
 )
@@ -71,7 +73,7 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 	secrets.NettyNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("netty").Suffix("secret").Generate()
 }
 
-func (rs *CreatingK8sResourcesState) generateSecrets() {
+func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 
 	credentialsSecretName := secrets.CredentialsNameBuilder.Name()
 	namespacedName := types.NamespacedName{
@@ -105,54 +107,45 @@ func (rs *CreatingK8sResourcesState) generateSecrets() {
 	environments.GLOBAL_AMQ_CLUSTER_USER = clusterUser
 	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = clusterPassword
 
-	secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition := secrets.NewSecret(namespacedName, namespacedName.Name, stringDataMap)
+	//secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	return secretDefinition
 }
 
 // First time entering state
 func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	var err error = nil
-	var retrieveError error = nil
+	//var retrieveError error = nil
+	stepsComplete := rs.stepsComplete
+	firstTime := true
 
 	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	rs.generateSecrets()
+	secretDefinition := rs.generateSecrets()
 
-	// TODO: Ensure consistent path usage; remove this hack
-	volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
+	//volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
+	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
+	labels := selectors.LabelBuilder.Labels()
+
+	namespacedName := types.NamespacedName{
+		Name:      rs.parentFSM.customResource.Name,
+		Namespace: rs.parentFSM.customResource.Namespace,
+	}
 
 	statefulsetDefinition := ss.NewStatefulSetForCR(rs.parentFSM.customResource)
-	firstTime := true
-	_ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition, firstTime)
-	// Check to see if the statefulset already exists
-	if err := resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, statefulsetDefinition); err != nil {
-		// err means not found, so create
-		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition); retrieveError == nil {
-			rs.stepsComplete |= CreatedStatefulSet
+	headlessServiceDefinition := svc.NewHeadlessServiceForCR(namespacedName, serviceports.GetDefaultPorts())
+	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(namespacedName, labels, labels)
 
-			//TODO: Remove this blatant hack
-			ss.GLOBAL_CRNAME = rs.parentFSM.customResource.Name
-		}
-	}
+	//for upgrade
+	var requestedResources []resource.KubernetesResource
+	requestedResources = append(requestedResources, secretDefinition)
+	requestedResources = append(requestedResources, statefulsetDefinition)
+	requestedResources = append(requestedResources, headlessServiceDefinition)
+	requestedResources = append(requestedResources, pingServiceDefinition)
+	_, stepsComplete = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition, firstTime, requestedResources)
 
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR(rs.parentFSM.customResource, serviceports.GetDefaultPorts(rs.parentFSM.customResource))
-	// Check to see if the headless service already exists
-	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, headlessServiceDefinition); err != nil {
-		// err means not found, so create
-		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, headlessServiceDefinition); retrieveError == nil {
-			rs.stepsComplete |= CreatedHeadlessService
-		}
-	}
-
-	// Check to see if the ping service already exists
-	labels := selectors.LabelBuilder.Labels()
-	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(rs.parentFSM.customResource, labels, labels)
-	if err = resources.Retrieve(rs.parentFSM.customResource, rs.parentFSM.namespacedName, rs.parentFSM.r.client, pingServiceDefinition); err != nil {
-		// err means not found, so create
-		if retrieveError = resources.Create(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, pingServiceDefinition); retrieveError == nil {
-			rs.stepsComplete |= CreatedPingService
-		}
-	}
+	rs.stepsComplete = stepsComplete
 
 	return err
 }
@@ -183,9 +176,17 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 	var err error = nil
 	var nextStateID int = CreatingK8sResourcesID
 	var statefulSetUpdates uint32 = 0
+	var allObjects []resource.KubernetesResource
+
+	// NOTE: By all service objects here we mean headless and ping service objects
+	err, allObjects = getServiceObjects(rs.parentFSM.customResource, rs.parentFSM.r.client, allObjects)
 
 	currentStatefulSet := &appsv1.StatefulSet{}
 	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
+	namespacedName := types.NamespacedName{
+		Name:      rs.parentFSM.customResource.Name,
+		Namespace: rs.parentFSM.customResource.Namespace,
+	}
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
@@ -195,14 +196,16 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		}
 
 		// Do we need to check for and bounce an observed generation change here?
-		if (rs.stepsComplete&CreatedStatefulSet > 0) &&
-			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
-			(rs.stepsComplete&CreatedPingService > 0) {
+		if (rs.stepsComplete & CreatedStatefulSet > 0) &&
+			(rs.stepsComplete & CreatedHeadlessService) > 0 &&
+			(rs.stepsComplete & CreatedPingService > 0) {
 
 			firstTime := false
-			statefulSetUpdates = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet, firstTime)
+
+			allObjects = append(allObjects, currentStatefulSet)
+			statefulSetUpdates, _ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet, firstTime, allObjects)
 			if statefulSetUpdates > 0 {
-				if err := resources.Update(rs.parentFSM.customResource, rs.parentFSM.r.client, currentStatefulSet); err != nil {
+				if err := resources.Update(namespacedName, rs.parentFSM.r.client, currentStatefulSet); err != nil {
 					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 					break
 				}
@@ -223,7 +226,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 		break
 	}
-	pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, ssNamespacedName)
+	//pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }
