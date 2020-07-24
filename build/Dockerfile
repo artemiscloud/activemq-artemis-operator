@@ -1,29 +1,29 @@
-FROM golang:1.11.5-alpine3.8 AS build-env
+FROM registry.access.redhat.com/ubi7/go-toolset:1.13.4-23.1592916276 AS build-env
 
-ENV OPERATOR=/activemq-artemis-operator/activemq-artemis-operator \
-    CGO_ENABLED=0 \
-    GOPATH=/go
-
-# Allow Go to retrieve the dependencies for the build step
-RUN apk add --no-cache git
+ENV OPERATOR=/tmp/activemq-artemis-operator/activemq-artemis-operator
+ENV GOPATH=/tmp/go
+ENV GOOS=linux
+ENV CGO_ENABLED=0
 
 RUN mkdir -p ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/bin
-RUN mkdir -p /activemq-artemis-operator
+RUN mkdir -p /tmp/activemq-artemis-operator
+
 ADD . ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator
-RUN go build -v -o ${OPERATOR} ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
+
+RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -v -o ${OPERATOR} ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/cmd/manager
 
 FROM alpine:3.8
 
-ENV OPERATOR=/activemq-artemis-operator/activemq-artemis-operator \
-    USER_UID=1001 \
-    USER_NAME=activemq-artemis-operator \
-    CGO_ENABLED=0 \
-    GOPATH=/go
+ENV OPERATOR=/home/activemq-artemis-operator/bin/activemq-artemis-operator
+ENV USER_UID=1001
+ENV USER_NAME=activemq-artemis-operator
+ENV CGO_ENABLED=0 
+ENV GOPATH=/go
 ENV HOME=/home/${USER_NAME}
 
-COPY --from=build-env ${OPERATOR} /activemq-artemis-operator/
-COPY --from=build-env ${GOPATH}/src/github.com/rh-messaging/activemq-artemis-operator/build/bin /home/activemq-artemis-operator/bin
+COPY --from=build-env /tmp/activemq-artemis-operator /home/activemq-artemis-operator/bin
+COPY --from=build-env /tmp/go/src/github.com/rh-messaging/activemq-artemis-operator/build/bin/entrypoint /home/activemq-artemis-operator/bin
 
 RUN mkdir -p ${HOME} && \
     chown -R ${USER_UID}:0 ${HOME} && \
