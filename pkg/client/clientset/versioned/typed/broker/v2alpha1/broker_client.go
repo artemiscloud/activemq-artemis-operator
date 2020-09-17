@@ -27,6 +27,7 @@ type BrokerV2alpha1Interface interface {
 	RESTClient() rest.Interface
 	ActiveMQArtemisesGetter
 	ActiveMQArtemisAddressesGetter
+	ActiveMQArtemisScaledownsGetter
 }
 
 // BrokerV2alpha1Client is used to interact with features provided by the broker.amq.io group.
@@ -40,6 +41,10 @@ func (c *BrokerV2alpha1Client) ActiveMQArtemises(namespace string) ActiveMQArtem
 
 func (c *BrokerV2alpha1Client) ActiveMQArtemisAddresses(namespace string) ActiveMQArtemisAddressInterface {
 	return newActiveMQArtemisAddresses(c, namespace)
+}
+
+func (c *BrokerV2alpha1Client) ActiveMQArtemisScaledowns(namespace string) ActiveMQArtemisScaledownInterface {
+	return newActiveMQArtemisScaledowns(c, namespace)
 }
 
 // NewForConfig creates a new BrokerV2alpha1Client for the given config.
