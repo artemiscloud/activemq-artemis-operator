@@ -24,7 +24,7 @@ metadata:
           "spec": {
               "deploymentPlan": {
                   "size": 2,
-                  "image": "quay.io/artemiscloud/activemq-artemis-openshift-image:latest",
+                  "image": "quay.io/artemiscloud activemq-artemis-broker-kubernetes:0.1.0",
                   "requireLogin": false,
                   "persistenceEnabled": false,
                   "journalType": "nio",
@@ -65,7 +65,6 @@ spec:
     - activemqartemis
     - operator
   version: 0.16.0
-  replaces: activemq-artemis-operator.v0.15.0
   maturity: alpha
   maintainers:
     - name: Artemis Cloud
@@ -572,8 +571,8 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: BROKER_IMAGE_211
-                        value: quay.io/artemiscloud/activemq-artemis-openshift-image:2.11
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0
                       - name: BROKER_IMAGE_212
-                        value: quay.io/artemiscloud/activemq-artemis-openshift-image:2.12
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0
                       - name: BROKER_IMAGE_213
-                        value: quay.io/artemiscloud/activemq-artemis-openshift-image:2.13
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0

@@ -34,7 +34,7 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha2.DeploymentPlanType{
 				Size:               2,
-				Image:              "quay.io/artemiscloud/activemq-artemis-operator:latest",
+				Image:              "quay.io/artemiscloud/activemq-artemis-operator:0.16.0",
 				PersistenceEnabled: false,
 				RequireLogin:       false,
 				MessageMigration:   &f,

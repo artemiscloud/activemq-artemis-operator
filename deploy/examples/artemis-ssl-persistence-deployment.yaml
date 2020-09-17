@@ -5,7 +5,7 @@ metadata:
 spec:
   deploymentPlan:
     size: 1
-    image: quay.io/artemiscloud/activemq-artemis-operator:latest
+    image: quay.io/artemiscloud/activemq-artemis-operator:0.16.0
     persistenceEnabled: true
     messageMigration: true
   acceptors:
