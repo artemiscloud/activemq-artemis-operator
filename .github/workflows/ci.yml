@@ -26,6 +26,7 @@ jobs:
         run: docker build --file ./build/Dockerfile --tag $IMAGE_NAME:latest .
 
       - name: Push the image
+        if: ${{ github.event_name == 'push' }}
         run: >
           docker login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io &&
           docker tag $IMAGE_NAME:latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:dev.latest &&
