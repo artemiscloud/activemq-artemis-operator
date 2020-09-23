@@ -160,3 +160,24 @@ func MakePersistentVolumeMount(customResourceName string) []corev1.VolumeMount {
 	}
 	return volumeMounts
 }
+
+func MakeVolumeForCfg(name string) corev1.Volume {
+	volume := corev1.Volume {
+		Name: name,
+		VolumeSource: corev1.VolumeSource {
+			EmptyDir: &corev1.EmptyDirVolumeSource {
+			},
+		},
+	}
+	return volume
+}
+
+func MakeVolumeMountForCfg(name string, path string) corev1.VolumeMount {
+
+	volumeMount := corev1.VolumeMount{
+			Name:      name,
+			MountPath: path,
+			ReadOnly:  false,
+	}
+	return volumeMount
+}

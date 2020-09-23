@@ -1,7 +1,7 @@
 package version
 
 var (
-	Version = "0.15.0-SNAPSHOT"
+	Version = "0.16.0"
 	// PriorVersion - prior version
-	PriorVersion = "0.13.0"
+	PriorVersion = "0.15.0"
 )

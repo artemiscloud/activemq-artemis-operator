@@ -17,7 +17,9 @@ limitations under the License.
 package fake
 
 import (
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
+	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,5 +50,7 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	apis.AddToScheme(scheme)
+	brokerv2alpha1.AddToScheme(scheme)
+	brokerv2alpha2.AddToScheme(scheme)
+	brokerv2alpha3.AddToScheme(scheme)
 }
