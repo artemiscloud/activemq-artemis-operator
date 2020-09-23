@@ -1258,7 +1258,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		InitContainers := []corev1.Container {
 			{
 				Name:	"activemq-artemis-init",
-				Image:	"quay.io/artemiscloud/activemq-artemis-broker-init:1.0",
+				Image:	"quay.io/artemiscloud/activemq-artemis-broker-init:0.1.0",
 				ImagePullPolicy: "Always",
 				Command:	[]string{"/bin/bash"},
 				Args:		[]string{"-c",
