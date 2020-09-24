@@ -1226,21 +1226,11 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha2.ActiveMQArtemis) cor
 	if len(volumeMounts) > 0 {
 		container.VolumeMounts = volumeMounts
 	}
-
-	volumeMountForCfg := volumes.MakeVolumeMountForCfg("tool-dir", "/tools")
-	container.VolumeMounts = append(container.VolumeMounts, volumeMountForCfg)
-
 	Spec.Containers = append(Containers, container)
-
-	volumeForCfg := volumes.MakeVolumeForCfg("tool-dir")
-
 	volumes := MakeVolumes(customResource)
-
 	if len(volumes) > 0 {
 		Spec.Volumes = volumes
 	}
-	Spec.Volumes = append(Spec.Volumes, volumeForCfg)
-
 	Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 	pts.Spec = Spec
 
