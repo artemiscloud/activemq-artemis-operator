@@ -24,7 +24,7 @@ metadata:
           "spec": {
               "deploymentPlan": {
                   "size": 2,
-                  "image": "quay.io/artemiscloud activemq-artemis-broker-kubernetes:0.1.0",
+                  "image": "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0",
                   "requireLogin": false,
                   "persistenceEnabled": false,
                   "journalType": "nio",
@@ -785,14 +785,11 @@ spec:
               - "urn:alm:descriptor:com.tectonic.ui:podStatuses"
 
       - name: activemqartemisaddresses.broker.amq.io
-        version: v2alpha3
+        version: v2alpha2
         versions:
-          - name: v2alpha3
-            served: true
-            storage: true
           - name: v2alpha2
             served: true
-            storage: false
+            storage: true
           - name: v2alpha1
             served: true
             storage: false
@@ -832,14 +829,11 @@ spec:
               - 'urn:alm:descriptor:com.tectonic.ui:text'
 
       - name: activemqartemisscaledowns.broker.amq.io
-        version: v2alpha3
+        version: v2alpha1
         versions:
-          - name: v2alpha3
-            served: true
-            storage: true
           - name: v2alpha1
             served: true
-            storage: false
+            storage: true
           - name: v1alpha1
             served: false
             storage: false
@@ -958,8 +952,8 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: BROKER_IMAGE_211
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0
                       - name: BROKER_IMAGE_212
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0
                       - name: BROKER_IMAGE_213
-                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.1.0
+                        value: quay.io/artemiscloud/activemq-artemis-kubernetes-image:0.2.0

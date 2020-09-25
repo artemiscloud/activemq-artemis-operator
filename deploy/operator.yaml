@@ -40,11 +40,11 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: BROKER_IMAGE_211
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.1.0
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
         - name: BROKER_IMAGE_212
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.1.0
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
         - name: BROKER_IMAGE_213
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.1.0
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
         image: quay.io/artemiscloud/activemq-artemis-operator:0.16.0
         imagePullPolicy: Always
         name: activemq-artemis-operator

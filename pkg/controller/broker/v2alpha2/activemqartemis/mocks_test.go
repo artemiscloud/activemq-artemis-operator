@@ -34,7 +34,7 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha2.DeploymentPlanType{
 				Size:               2,
-				Image:              "quay.io/artemiscloud/activemq-artemis-operator:0.17.0",
+				Image:              "quay.io/artemiscloud/activemq-artemis-operator:0.16.0",
 				PersistenceEnabled: false,
 				RequireLogin:       false,
 				MessageMigration:   &f,
@@ -90,7 +90,7 @@ var (
 			AdminPassword: "admin",
 			DeploymentPlan: brokerv2alpha2.DeploymentPlanType{
 				Size:               0,
-				Image:              "registry.redhat.io/amq7/amq-broker:7.5",
+				Image:              "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.1.0",
 				PersistenceEnabled: false,
 				JournalType:        "nio",
 				RequireLogin:       false,
@@ -147,7 +147,7 @@ var (
 		Namespace: AMQinstance.Namespace,
 		Name:      AMQinstance.Name,
 	}
-	container   = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:latest", MakeEnvVarArrayForCR(&AMQinstance))
+	container   = containers.MakeContainer(namespacedName.Name, "quay.io/artemiscloud/activemq-artemis-operator:0.16.0", MakeEnvVarArrayForCR(&AMQinstance))
 	podTemplate = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: AMQinstance.Namespace,
