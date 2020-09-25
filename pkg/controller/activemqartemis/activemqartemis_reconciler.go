@@ -446,7 +446,7 @@ func configureAcceptorsExposure(customResource *brokerv2alpha1.ActiveMQArtemis, 
 				Namespace: customResource.Namespace,
 			}
 			if acceptor.Expose {
-				requestedResources = append(requestedResources, serviceDefinition)
+				requestedResources = append(requestedResources, routeDefinition)
 				//causedUpdate, err = resources.Enable(customResource, client, scheme, routeNamespacedName, routeDefinition)
 			} else {
 				causedUpdate, err = resources.Disable(customResource, client, scheme, routeNamespacedName, routeDefinition)
