@@ -20,7 +20,7 @@ const (
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}
 var OperandVersionFromOperatorVersion map[string]string = map[string]string{
-	"0.16.0":  "0.1.0",
+	"0.16.0": "0.1.0",
 	"0.17.0": "0.2.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
@@ -34,7 +34,8 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 }
 
 func checkProductUpgrade(cr *api.ActiveMQArtemis) (upgradesMinor, upgradesEnabled bool, err error) {
-	//setDefaults(cr)
+
+	err = nil
 	if isVersionSupported(cr.Spec.Version) {
 		if cr.Spec.Version != LatestVersion && cr.Spec.Upgrades.Enabled {
 			upgradesEnabled = cr.Spec.Upgrades.Enabled

@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,7 +41,7 @@ func (ss *ScalingState) Enter(previousStateID int) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", ss.parentFSM.customResource.Name)
-	reqLogger.Info("Entering ScalingState")
+	reqLogger.Info("Entering ScalingState from " + strconv.Itoa(previousStateID))
 
 	var err error = nil
 

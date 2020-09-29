@@ -2,23 +2,16 @@ package v2alpha3activemqartemis
 
 import (
 	"context"
-	"github.com/RHsyseng/operator-utils/pkg/resource"
-
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/pods"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
+
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/fsm"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	appsv1 "k8s.io/api/apps/v1"
-	//"sigs.k8s.io/controller-runtime/pkg/client"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -77,77 +70,18 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 	secrets.NettyNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("netty").Suffix("secret").Generate()
 }
 
-func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
-
-	credentialsSecretName := secrets.CredentialsNameBuilder.Name()
-	namespacedName := types.NamespacedName{
-		Name:      credentialsSecretName,
-		Namespace: rs.namespacedName.Namespace,
-	}
-
-	clusterUser := random.GenerateRandomString(8)
-	clusterPassword := random.GenerateRandomString(8)
-	adminUser := ""
-	adminPassword := ""
-
-	if "" == rs.parentFSM.customResource.Spec.AdminUser {
-		adminUser = environments.Defaults.AMQ_USER
-	} else {
-		adminUser = rs.parentFSM.customResource.Spec.AdminUser
-	}
-	if "" == rs.parentFSM.customResource.Spec.AdminPassword {
-		adminPassword = environments.Defaults.AMQ_PASSWORD
-	} else {
-		adminPassword = rs.parentFSM.customResource.Spec.AdminPassword
-	}
-
-	stringDataMap := map[string]string{
-		"clusterUser":     clusterUser,
-		"clusterPassword": clusterPassword,
-		"AMQ_USER":        adminUser,
-		"AMQ_PASSWORD":    adminPassword,
-	}
-	// TODO: Remove this hack
-	environments.GLOBAL_AMQ_CLUSTER_USER = clusterUser
-	environments.GLOBAL_AMQ_CLUSTER_PASSWORD = clusterPassword
-
-	secretDefinition := secrets.NewSecret(namespacedName, namespacedName.Name, stringDataMap)
-	//secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.r.client, rs.parentFSM.r.scheme)
-	return secretDefinition
-}
-
 // First time entering state
 func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
+	// Log where we are and what we're doing
+	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger.Info("CreateK8sResourceState enterFromInvalidstate")
+
 	var err error = nil
-	stepsComplete := rs.stepsComplete
-	firstTime := true
 
 	rs.generateNames()
 	selectors.LabelBuilder.Base(rs.parentFSM.customResource.Name).Suffix("app").Generate()
-	secretDefinition := rs.generateSecrets()
-
-	//volumes.GLOBAL_DATA_PATH = environments.GetPropertyForCR("AMQ_DATA_DIR", rs.parentFSM.customResource, "/opt/"+rs.parentFSM.customResource.Name+"/data")
 	volumes.GLOBAL_DATA_PATH = "/opt/" + rs.parentFSM.customResource.Name + "/data"
-	labels := selectors.LabelBuilder.Labels()
-
-	namespacedName := types.NamespacedName{
-		Name:      rs.parentFSM.customResource.Name,
-		Namespace: rs.parentFSM.customResource.Namespace,
-	}
-	statefulsetDefinition := NewStatefulSetForCR(rs.parentFSM.customResource)
-	headlessServiceDefinition := svc.NewHeadlessServiceForCR(namespacedName, serviceports.GetDefaultPorts())
-	pingServiceDefinition := svc.NewPingServiceDefinitionForCR(namespacedName, labels, labels)
-
-	//for upgrade
-	var requestedResources []resource.KubernetesResource
-	requestedResources = append(requestedResources, secretDefinition)
-	requestedResources = append(requestedResources, statefulsetDefinition)
-	requestedResources = append(requestedResources, headlessServiceDefinition)
-	requestedResources = append(requestedResources, pingServiceDefinition)
-	_, stepsComplete = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, statefulsetDefinition, firstTime, requestedResources)
-
-	rs.stepsComplete = stepsComplete
 
 	return err
 }
@@ -156,15 +90,22 @@ func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
-	reqLogger.Info("Entering CreateK8sResourceState from " + strconv.Itoa(previousStateID))
+	reqLogger.Info("Entering CreatingK8sResourcesState from " + strconv.Itoa(previousStateID))
+
+	var stepsComplete uint8 = 0
+	firstTime := false
 
 	switch previousStateID {
 	case NotCreatedID:
+		firstTime = true
 		rs.enterFromInvalidState()
 		break
 		//case ScalingID:
 		// No brokers running; safe to touch journals etc...
 	}
+
+	_, stepsComplete = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+	rs.stepsComplete = stepsComplete
 
 	return nil
 }
@@ -177,45 +118,31 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 	var err error = nil
 	var nextStateID int = CreatingK8sResourcesID
-	var statefulSetUpdates uint32 = 0
-	var allObjects []resource.KubernetesResource
-
-	// NOTE: By all service objects here we mean headless and ping service objects
-	err, allObjects = getServiceObjects(rs.parentFSM.customResource, rs.parentFSM.r.client, allObjects)
 
 	currentStatefulSet := &appsv1.StatefulSet{}
 	ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: rs.parentFSM.customResource.Namespace}
-	namespacedName := types.NamespacedName{
-		Name:      rs.parentFSM.customResource.Name,
-		Namespace: rs.parentFSM.customResource.Namespace,
-	}
 	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 			err = nil
 			break
+		} else {
+			rs.stepsComplete |= CreatedStatefulSet
 		}
 
 		// Do we need to check for and bounce an observed generation change here?
-		if (rs.stepsComplete&CreatedStatefulSet > 0) &&
-			(rs.stepsComplete&CreatedHeadlessService) > 0 &&
-			(rs.stepsComplete&CreatedPingService > 0) {
-
+		if rs.stepsComplete&CreatedStatefulSet > 0 { //&&
 			firstTime := false
 
-			allObjects = append(allObjects, currentStatefulSet)
-			statefulSetUpdates, _ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, currentStatefulSet, firstTime, allObjects)
-			if statefulSetUpdates > 0 {
-				if err := resources.Update(namespacedName, rs.parentFSM.r.client, currentStatefulSet); err != nil {
-					reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
-					break
-				}
-			}
+			_, _ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size != currentStatefulSet.Status.ReadyReplicas {
 				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 					nextStateID = ScalingID
+					break
 				}
+			} else if currentStatefulSet.Status.ReadyReplicas > 0 {
+				nextStateID = ContainerRunningID
 				break
 			}
 		} else {
@@ -228,7 +155,6 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 		break
 	}
-	//pods.UpdatePodStatus(rs.parentFSM.customResource, rs.parentFSM.r.client, ssNamespacedName)
 
 	return err, nextStateID
 }
