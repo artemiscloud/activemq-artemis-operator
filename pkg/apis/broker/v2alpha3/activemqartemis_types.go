@@ -2,6 +2,7 @@ package v2alpha3
 
 import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -98,12 +99,13 @@ type AddressSettingType struct {
 }
 
 type DeploymentPlanType struct {
-	Image              string `json:"image,omitempty"`
-	Size               int32  `json:"size,omitempty"`
-	RequireLogin       bool   `json:"requireLogin,omitempty"`
-	PersistenceEnabled bool   `json:"persistenceEnabled,omitempty"`
-	JournalType        string `json:"journalType,omitempty"`
-	MessageMigration   *bool  `json:"messageMigration,omitempty"`
+	Image              string                      `json:"image,omitempty"`
+	Size               int32                       `json:"size,omitempty"`
+	RequireLogin       bool                        `json:"requireLogin,omitempty"`
+	PersistenceEnabled bool                        `json:"persistenceEnabled,omitempty"`
+	JournalType        string                      `json:"journalType,omitempty"`
+	MessageMigration   *bool                       `json:"messageMigration,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type AcceptorType struct {

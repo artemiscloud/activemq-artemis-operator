@@ -1387,6 +1387,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
+	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	volumeMounts := MakeVolumeMounts(customResource)
 	if len(volumeMounts) > 0 {
@@ -1394,6 +1395,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		container.VolumeMounts = volumeMounts
 	}
 	reqLogger.Info("now mounts added to container", "new len", len(container.VolumeMounts))
+
 	Spec.Containers = append(Containers, container)
 	brokerVolumes := MakeVolumes(customResource)
 	if len(brokerVolumes) > 0 {
@@ -1426,6 +1428,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 					"echo \"" + brokerYaml + "\" > " + outputDir +
 						"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile artemis/2.15.0/default_with_user_address_settings.yaml.jinja2  --tune " +
 						outputDir + "/broker.yaml --output " + outputDir},
+				Resources: customResource.Spec.DeploymentPlan.Resources,
 			},
 		}
 
