@@ -1483,6 +1483,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha3.ActiveMQArtemis) *appsv1.StatefulSet
 func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha3.ActiveMQArtemis, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	var pvc *corev1.PersistentVolumeClaim = nil
+	capacity := "2Gi"
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
 
 	namespacedName := types.NamespacedName{
@@ -1490,8 +1491,12 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha3.ActiveMQArtemis, arra
 		Namespace: cr.Namespace,
 	}
 
+	if "" != cr.Spec.DeploymentPlan.Storage.Size {
+		capacity = cr.Spec.DeploymentPlan.Storage.Size
+	}
+
 	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimForCR(namespacedName)
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacity(namespacedName, capacity)
 		pvcArray = append(pvcArray, *pvc)
 	}
 

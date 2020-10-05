@@ -37,6 +37,32 @@ func NewPersistentVolumeClaimForCR(namespacedName types.NamespacedName) *corev1.
 	return pvc
 }
 
+func NewPersistentVolumeClaimWithCapacity(namespacedName types.NamespacedName, capacity string) *corev1.PersistentVolumeClaim {
+
+	pvc := &corev1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "PersistentVolumeClaim",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: nil,
+			Labels:      selectors.LabelBuilder.Labels(),
+			Name:        namespacedName.Name,
+			Namespace:   namespacedName.Namespace,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse(capacity),
+				},
+			},
+		},
+	}
+
+	return pvc
+}
+
 // TODO: Evaluate if local Create and Retrieve are required for more precise control of pvc creation and deletion
 //func CreatePersistentVolumeClaim(cr *brokerv2alpha1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme) (*corev1.PersistentVolumeClaim, error) {
 //

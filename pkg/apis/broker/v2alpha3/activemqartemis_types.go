@@ -106,6 +106,11 @@ type DeploymentPlanType struct {
 	JournalType        string                      `json:"journalType,omitempty"`
 	MessageMigration   *bool                       `json:"messageMigration,omitempty"`
 	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	Storage            StorageType                 `json:"storage,omitempty"`
+}
+
+type StorageType struct {
+	Size string `json:"size,omitempty"`
 }
 
 type AcceptorType struct {
