@@ -3,6 +3,7 @@ package v2alpha3activemqartemis
 import (
 	"context"
 	"fmt"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
@@ -1418,7 +1419,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		InitContainers := []corev1.Container{
 			{
 				Name:            "activemq-artemis-init",
-				Image:           "quay.io/artemiscloud/activemq-artemis-broker-init:0.1.0",
+				Image:           "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.0",
 				ImagePullPolicy: "Always",
 				Command:         []string{"/bin/bash"},
 				Args: []string{"-c",
