@@ -290,6 +290,11 @@ func schema_pkg_apis_broker_v2alpha3_ActiveMQArtemisSpec(ref common.ReferenceCal
 							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ConsoleType"),
 						},
 					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.StorageType"),
+						},
+					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -305,7 +310,7 @@ func schema_pkg_apis_broker_v2alpha3_ActiveMQArtemisSpec(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{
-			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.AcceptorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ActiveMQArtemisUpgrades", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ConnectorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ConsoleType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.DeploymentPlanType"},
+			"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.AcceptorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ActiveMQArtemisUpgrades", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ConnectorType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.ConsoleType", "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.StorageType","github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3.DeploymentPlanType"},
 	}
 }
 
