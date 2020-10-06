@@ -51,7 +51,7 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
-	reqLogger.Info("Retrieving " + "statefulset")
+	reqLogger.Info("Retrieving " + "StatefulSet " + statefulsetName)
 
 	var err error = nil
 
@@ -70,9 +70,9 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 
 	if err = client.Get(context.TODO(), namespacedName, ss); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info("Statefulset claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.V(1).Info("StatefulSet claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
-			reqLogger.Info("Statefulset claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.V(1).Info("StatefulSet claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		}
 	}
 

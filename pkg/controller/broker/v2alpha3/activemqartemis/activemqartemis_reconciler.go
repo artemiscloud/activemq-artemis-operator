@@ -120,11 +120,11 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(customResource *
 	}
 	currentStatefulSet, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), ssNamespacedName, client)
 	if errors.IsNotFound(err) {
-		log.Info("Statefulset: " + ssNamespacedName.Name + " not found, will create")
+		log.Info("StatefulSet: " + ssNamespacedName.Name + " not found, will create")
 		currentStatefulSet = NewStatefulSetForCR(customResource)
 		firstTime = true
 	} else {
-		log.Info("Statefulset: " + currentStatefulSet.Name + " found")
+		log.Info("StatefulSet: " + currentStatefulSet.Name + " found")
 	}
 
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR(ssNamespacedName, serviceports.GetDefaultPorts())
@@ -139,7 +139,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(customResource *
 func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var log = logf.Log.WithName("controller_v2alpha3activemqartemis")
-	log.Info("ProcessCredentials")
+	log.V(1).Info("ProcessCredentials")
 
 	credentialsSecretName := secrets.CredentialsNameBuilder.Name()
 	credentialsSecretNamespacedName := types.NamespacedName{
@@ -369,26 +369,26 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha3.ActiveMQArtemis, curr
 	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap)
 	if err = resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("sourceEnvVarFromSecret did not find secret " + secretName)
+			log.V(1).Info("Did not find secret " + secretName)
 			requestedResources = append(requestedResources, secretDefinition)
 		}
 	} else { // err == nil so it already exists
 		// Exists now
 		// Check the contents against what we just got above
-		log.Info("sourceEnvVarFromSecret found secret " + secretName)
+		log.V(1).Info("Found secret " + secretName)
 
 		var needUpdate bool = false
 		for k := range *envVars {
 			elem, ok := secretDefinition.Data[k]
 			if 0 != strings.Compare(string(elem), (*envVars)[k]) || !ok {
-				log.Info("Secret exists but not equals, or not ok", "ok?", ok)
+				log.V(1).Info("Secret exists but not equals, or not ok", "ok?", ok)
 				secretDefinition.Data[k] = []byte((*envVars)[k])
 				needUpdate = true
 			}
 		}
 
 		if needUpdate {
-			log.Info("sourceEnvVarFromSecret secret " + secretName + " needs update")
+			log.V(1).Info("Secret " + secretName + " needs update")
 
 			// These updates alone do not trigger a rolling update due to env var update as it's from a secret
 			err = resources.Update(namespacedName, client, secretDefinition)
@@ -401,7 +401,7 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha3.ActiveMQArtemis, curr
 		}
 	}
 
-	log.Info("sourceEnvVarFromSecret Populating env vars from secret " + secretName)
+	log.Info("Populating env vars from secret " + secretName)
 	for envVarName := range *envVars {
 		acceptorsEnvVarSource := &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
@@ -419,11 +419,11 @@ func sourceEnvVarFromSecret(customResource *brokerv2alpha3.ActiveMQArtemis, curr
 			ValueFrom: acceptorsEnvVarSource,
 		}
 		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
-			log.Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
+			log.V(1).Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
 			retVal = statefulSetAcceptorsUpdated
 		} else {
-			log.Info("sourceEnvVarFromSecret retrieved " + envVarName + " existing value " + retrievedEnvVar.Value + " desired value " + (*envVars)[envVarName])
+			log.V(1).Info("sourceEnvVarFromSecret retrieved " + envVarName)
 		}
 	}
 
@@ -1020,7 +1020,7 @@ func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha3.DeploymentPlanType, 
 func (reconciler *ActiveMQArtemisReconciler) ProcessResources(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", customResource.Name)
-	reqLogger.Info("Entering into process upgrade")
+	reqLogger.Info("Processing resources")
 
 	var err error = nil
 	var createError error = nil
@@ -1081,7 +1081,7 @@ func (reconciler *ActiveMQArtemisReconciler) createResource(customResource *brok
 
 	kind := requested.GetName()
 	added = true
-	reqLogger.Info("Adding delta resources, i.e. creating ", "for kind ", kind)
+	reqLogger.V(1).Info("Adding delta resources, i.e. creating ", "for kind ", kind)
 	reqLogger.V(1).Info("last namespacedName.Name was " + namespacedName.Name)
 	namespacedName.Name = kind
 	reqLogger.V(1).Info("this namespacedName.Name IS " + namespacedName.Name)
@@ -1112,7 +1112,7 @@ func (reconciler *ActiveMQArtemisReconciler) updateResource(customResource *brok
 
 	kind := requested.GetName()
 	updated = true
-	reqLogger.Info("Updating delta resources, i.e. updating ", "for kind ", kind)
+	reqLogger.V(1).Info("Updating delta resources, i.e. updating ", "for kind ", kind)
 	reqLogger.V(1).Info("last namespacedName.Name was " + namespacedName.Name)
 	namespacedName.Name = kind
 	reqLogger.V(1).Info("this namespacedName.Name IS " + namespacedName.Name)
@@ -1133,7 +1133,7 @@ func (reconciler *ActiveMQArtemisReconciler) updateResource(customResource *brok
 		//	//stepsComplete |= CreatedNettySecret
 		//default:
 		//}
-		reqLogger.Info("updateResource updated " + kind)
+		reqLogger.V(1).Info("updateResource updated " + kind)
 	} else if nil != updateError {
 		reqLogger.Info("updateResource Failed to update resource " + kind)
 	}
@@ -1145,7 +1145,7 @@ func (reconciler *ActiveMQArtemisReconciler) deleteResource(customResource *brok
 
 	kind := requested.GetName()
 	deleted = true
-	reqLogger.Info("Deleting delta resources, i.e. removing ", "for kind ", kind)
+	reqLogger.V(1).Info("Deleting delta resources, i.e. removing ", "for kind ", kind)
 	reqLogger.V(1).Info("last namespacedName.Name was " + namespacedName.Name)
 	namespacedName.Name = kind
 	reqLogger.V(1).Info("this namespacedName.Name IS " + namespacedName.Name)
@@ -1166,7 +1166,7 @@ func (reconciler *ActiveMQArtemisReconciler) deleteResource(customResource *brok
 		//	//stepsComplete |= CreatedNettySecret
 		//default:
 		//}
-		reqLogger.Info("deleteResource deleted " + kind)
+		reqLogger.V(1).Info("deleteResource deleted " + kind)
 	} else if nil != deleteError {
 		reqLogger.Info("deleteResource Failed to delete resource " + kind)
 	}
@@ -1374,7 +1374,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(customResource.Name)
 	//reqLogger.Info("Creating new pod template spec for custom resource")
-	reqLogger.Info("NewPodTemplateSpecForCR")
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR")
 
 	namespacedName := types.NamespacedName{
 		Name:      customResource.Name,
@@ -1391,10 +1391,10 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 
 	volumeMounts := MakeVolumeMounts(customResource)
 	if len(volumeMounts) > 0 {
-		reqLogger.Info("Adding new mounts to main", "len", len(volumeMounts))
+		reqLogger.V(1).Info("Adding new mounts to main", "len", len(volumeMounts))
 		container.VolumeMounts = volumeMounts
 	}
-	reqLogger.Info("now mounts added to container", "new len", len(container.VolumeMounts))
+	reqLogger.V(1).Info("now mounts added to container", "new len", len(container.VolumeMounts))
 
 	Spec.Containers = append(Containers, container)
 	brokerVolumes := MakeVolumes(customResource)
@@ -1415,7 +1415,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha3.ActiveMQArtemis) cor
 		if envVarApplyRuleValue == nil {
 			envVarApplyRuleValue = &defApplyRule
 		}
-		reqLogger.Info("Process addresssetting", "ApplyRule", *envVarApplyRuleValue)
+		reqLogger.V(1).Info("Process addresssetting", "ApplyRule", *envVarApplyRuleValue)
 
 		brokerYaml := cr2jinja2.MakeBrokerCfgOverrides(customResource, nil, nil)
 		InitContainers := []corev1.Container{
@@ -1464,7 +1464,7 @@ func NewStatefulSetForCR(cr *brokerv2alpha3.ActiveMQArtemis) *appsv1.StatefulSet
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(cr.Name)
-	reqLogger.Info("NewStatefulSetForCR")
+	reqLogger.V(1).Info("NewStatefulSetForCR")
 
 	namespacedName := types.NamespacedName{
 		Name:      cr.Name,
@@ -1507,14 +1507,14 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha3.ActiveMQArtemis, arra
 func UpdatePodStatus(cr *brokerv2alpha3.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
-	reqLogger.Info("Updating status for pods")
+	reqLogger.V(1).Info("Updating status for pods")
 
 	podStatus := GetPodStatus(cr, client, ssNamespacedName)
 
-	reqLogger.V(5).Info("PodStatus are to be updated.............................", "info:", podStatus)
-	reqLogger.V(5).Info("Ready Count........................", "info:", len(podStatus.Ready))
-	reqLogger.V(5).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
-	reqLogger.V(5).Info("Starting Count........................", "info:", len(podStatus.Starting))
+	reqLogger.V(1).Info("PodStatus are to be updated.............................", "info:", podStatus)
+	reqLogger.V(1).Info("Ready Count........................", "info:", len(podStatus.Ready))
+	reqLogger.V(1).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
+	reqLogger.V(1).Info("Starting Count........................", "info:", len(podStatus.Starting))
 
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
 		cr.Status.PodStatus = podStatus
@@ -1534,7 +1534,7 @@ func UpdatePodStatus(cr *brokerv2alpha3.ActiveMQArtemis, client client.Client, s
 func GetPodStatus(cr *brokerv2alpha3.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
-	reqLogger.Info("Getting status for pods")
+	reqLogger.V(1).Info("Getting status for pods")
 
 	var status olm.DeploymentStatus
 
@@ -1552,8 +1552,8 @@ func GetPodStatus(cr *brokerv2alpha3.ActiveMQArtemis, client client.Client, name
 	}
 
 	// TODO: Remove global usage
-	log.V(5).Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
-	log.V(5).Info("status.Ready len is " + string(len(status.Ready)))
+	reqLogger.V(1).Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
+	reqLogger.V(1).Info("status.Ready len is " + string(len(status.Ready)))
 	if len(status.Ready) > len(lastStatus.Ready) {
 		// More pods ready, let the address controller know
 		newPodCount := len(status.Ready) - len(lastStatus.Ready)
@@ -1569,7 +1569,7 @@ func GetPodStatus(cr *brokerv2alpha3.ActiveMQArtemis, client client.Client, name
 func MakeEnvVarArrayForCR(cr *brokerv2alpha3.ActiveMQArtemis) []corev1.EnvVar {
 
 	reqLogger := log.WithName(cr.Name)
-	reqLogger.Info("Adding Env variable ")
+	reqLogger.V(1).Info("Adding Env variable ")
 
 	requireLogin := "false"
 	if cr.Spec.DeploymentPlan.RequireLogin {

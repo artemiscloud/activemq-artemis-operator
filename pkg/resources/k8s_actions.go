@@ -27,9 +27,9 @@ func Create(owner v1.Object, namespacedName types.NamespacedName, client client.
 	var err error = nil
 	if err = controllerutil.SetControllerReference(owner, objectDefinition.(v1.Object), scheme); err != nil {
 		// Add error detail for use later
-		reqLogger.Info("Failed to set controller reference for new " + objectTypeString)
+		reqLogger.V(1).Info("Failed to set controller reference for new " + objectTypeString)
 	}
-	reqLogger.Info("Set controller reference for new " + objectTypeString)
+	reqLogger.V(1).Info("Set controller reference for new " + objectTypeString)
 
 	// Call k8s create for service
 	if err = client.Create(context.TODO(), objectDefinition); err != nil {
