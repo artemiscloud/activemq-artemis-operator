@@ -45,7 +45,7 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
         - name: BROKER_IMAGE_213
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
-        image: quay.io/artemiscloud/activemq-artemis-operator:0.16.0
+        image: quay.io/artemiscloud/activemq-artemis-operator:0.17.0
         imagePullPolicy: Always
         name: activemq-artemis-operator
         resources: {}
