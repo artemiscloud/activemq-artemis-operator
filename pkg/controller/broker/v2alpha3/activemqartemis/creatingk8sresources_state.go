@@ -132,7 +132,7 @@ func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 		// No brokers running; safe to touch journals etc...
 	}
 
-	_, stepsComplete = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+	_, stepsComplete = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 	rs.stepsComplete = stepsComplete
 
 	return nil
@@ -163,7 +163,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		if rs.stepsComplete&CreatedStatefulSet > 0 { //&&
 			firstTime := false
 
-			_, _ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+			_, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size != currentStatefulSet.Status.ReadyReplicas {
 				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 					nextStateID = ScalingID
