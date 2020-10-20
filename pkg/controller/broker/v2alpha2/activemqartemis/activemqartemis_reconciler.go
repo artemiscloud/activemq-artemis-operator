@@ -36,6 +36,7 @@ import (
 	"reflect"
 
 	routev1 "github.com/openshift/api/route/v1"
+	extv1b1 "k8s.io/api/extensions/v1beta1"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
@@ -584,7 +585,7 @@ func configureConsoleExposure(customResource *brokerv2alpha2.ActiveMQArtemis, cl
 			}
 		} else {
 			log.Info("Environment is not OpenShift, creating ingress")
-			ingressDefinition := ingresses.NewIngressForCR(namespacedName, "wconsj")
+			ingressDefinition := ingresses.NewIngressForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName)
 			ingressNamespacedName := types.NamespacedName{
 				Name:      ingressDefinition.Name,
 				Namespace: customResource.Namespace,
@@ -1050,6 +1051,7 @@ func getDeployedResources(instance *brokerv2alpha2.ActiveMQArtemis, client clien
 		&corev1.ServiceList{},
 		&appsv1.StatefulSetList{},
 		&routev1.RouteList{},
+		&extv1b1.IngressList{},
 	)
 	if err != nil {
 		log.Error(err, "Failed to list deployed objects. ", err)
