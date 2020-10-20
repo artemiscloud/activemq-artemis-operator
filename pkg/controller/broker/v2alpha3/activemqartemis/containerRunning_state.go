@@ -86,7 +86,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 			break
 		}
 
-		statefulSetUpdates, _ = reconciler.Process(rs.parentFSM.customResource, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+		statefulSetUpdates, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
 		break
 	}
 

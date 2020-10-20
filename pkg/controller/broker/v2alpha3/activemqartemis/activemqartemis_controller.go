@@ -154,7 +154,8 @@ func (r *ReconcileActiveMQArtemis) Reconcile(request reconcile.Request) (reconci
 		amqbfsm.Enter(CreatingK8sResourcesID)
 	} else {
 		amqbfsm = namespacedNameFSM
-		*amqbfsm.customResource = *customResource
+		//remember current customeResource so that we can compare for update
+		amqbfsm.UpdateCustomResource(customResource);
 		err, _ = amqbfsm.Update()
 	}
 

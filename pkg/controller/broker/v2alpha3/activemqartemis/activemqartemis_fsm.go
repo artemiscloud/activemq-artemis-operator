@@ -61,6 +61,7 @@ type ActiveMQArtemisFSM struct {
 	m              fsm.IMachine
 	namespacedName types.NamespacedName
 	customResource *brokerv2alpha3.ActiveMQArtemis
+	prevCustomResource *brokerv2alpha3.ActiveMQArtemis
 	r              *ReconcileActiveMQArtemis
 }
 
@@ -77,6 +78,7 @@ func MakeActiveMQArtemisFSM(instance *brokerv2alpha3.ActiveMQArtemis, _namespace
 
 	amqbfsm.namespacedName = _namespacedName
 	amqbfsm.customResource = instance
+	amqbfsm.prevCustomResource = &brokerv2alpha3.ActiveMQArtemis{}
 	amqbfsm.r = r
 
 	// TODO: Fix disconnect here between passing the parent and being added later as adding implies parenthood
@@ -128,6 +130,11 @@ func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
 	}
 
 	return err
+}
+
+func (amqbfsm *ActiveMQArtemisFSM) UpdateCustomResource(newRc *brokerv2alpha3.ActiveMQArtemis) {
+		*amqbfsm.prevCustomResource = *amqbfsm.customResource
+		*amqbfsm.customResource = *newRc
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {

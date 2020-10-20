@@ -10,6 +10,7 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	activemqartemisscaledown "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha1/activemqartemisscaledown"
 	v2alpha2activemqartemisaddress "github.com/artemiscloud/activemq-artemis-operator/pkg/controller/broker/v2alpha2/activemqartemisaddress"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -79,31 +80,32 @@ type ActiveMQArtemisReconciler struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, firstTime bool) uint32
-	ProcessStatefulSet(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
+	Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) uint32
+	ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
 	ProcessCredentials(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessDeploymentPlan(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
 	ProcessAcceptorsAndConnectors(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessConsole(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessResources(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
+	ProcessAddressSettings(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client) bool
 }
 
-func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8) {
+func (reconciler *ActiveMQArtemisReconciler) Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8) {
 
 	var log = logf.Log.WithName("controller_v2alpha3activemqartemis")
-	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", customResource.Spec.Version)
+	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version)
 
-	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(customResource, client, log, firstTime)
-	statefulSetUpdates := reconciler.ProcessDeploymentPlan(customResource, client, scheme, currentStatefulSet, firstTime)
-	statefulSetUpdates |= reconciler.ProcessCredentials(customResource, client, scheme, currentStatefulSet)
-	statefulSetUpdates |= reconciler.ProcessAcceptorsAndConnectors(customResource, client, scheme, currentStatefulSet)
-	statefulSetUpdates |= reconciler.ProcessConsole(customResource, client, scheme, currentStatefulSet)
+	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
+	statefulSetUpdates := reconciler.ProcessDeploymentPlan(fsm.customResource, client, scheme, currentStatefulSet, firstTime)
+	statefulSetUpdates |= reconciler.ProcessCredentials(fsm.customResource, client, scheme, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessAcceptorsAndConnectors(fsm.customResource, client, scheme, currentStatefulSet)
+	statefulSetUpdates |= reconciler.ProcessConsole(fsm.customResource, client, scheme, currentStatefulSet)
 
 	requestedResources = append(requestedResources, currentStatefulSet)
-	stepsComplete := reconciler.ProcessResources(customResource, client, scheme, currentStatefulSet)
+	stepsComplete := reconciler.ProcessResources(fsm.customResource, client, scheme, currentStatefulSet)
 
 	if statefulSetUpdates > 0 {
-		ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: customResource.Namespace}
+		ssNamespacedName := types.NamespacedName{Name: ss.NameBuilder.Name(), Namespace: fsm.customResource.Namespace}
 		if err := resources.Update(ssNamespacedName, client, currentStatefulSet); err != nil {
 			log.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
 		}
@@ -112,19 +114,25 @@ func (reconciler *ActiveMQArtemisReconciler) Process(customResource *brokerv2alp
 	return statefulSetUpdates, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool) {
+func (reconciler *ActiveMQArtemisReconciler) ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool) {
 
 	ssNamespacedName := types.NamespacedName{
 		Name:      ss.NameBuilder.Name(),
-		Namespace: customResource.Namespace,
+		Namespace: fsm.customResource.Namespace,
 	}
 	currentStatefulSet, err := ss.RetrieveStatefulSet(ss.NameBuilder.Name(), ssNamespacedName, client)
 	if errors.IsNotFound(err) {
 		log.Info("StatefulSet: " + ssNamespacedName.Name + " not found, will create")
-		currentStatefulSet = NewStatefulSetForCR(customResource)
+		currentStatefulSet = NewStatefulSetForCR(fsm.customResource)
 		firstTime = true
 	} else {
 		log.Info("StatefulSet: " + currentStatefulSet.Name + " found")
+		//update statefulset with customer resource
+		if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
+			log.Info("There are new address settings change in the cr, creating a new pod template to update")
+			*fsm.prevCustomResource = *fsm.customResource
+			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm.customResource);	
+		}
 	}
 
 	headlessServiceDefinition := svc.NewHeadlessServiceForCR(ssNamespacedName, serviceports.GetDefaultPorts())
@@ -223,6 +231,28 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 	syncMessageMigration(customResource, client, scheme)
 
 	return reconciler.statefulSetUpdates
+}
+
+func (reconciler *ActiveMQArtemisReconciler) ProcessAddressSettings(customResource *brokerv2alpha3.ActiveMQArtemis, prevCustomResource *brokerv2alpha3.ActiveMQArtemis, client client.Client) bool {
+
+	var log = logf.Log.WithName("controller_v2alpha2activemqartemis")
+	log.Info("Process addresssettings")
+
+	if len(customResource.Spec.AddressSettings.AddressSetting) == 0 {
+		return false
+	}
+
+	//we need to compare old with new and update if they are different.
+	return compareAddressSettings(&prevCustomResource.Spec.AddressSettings, &customResource.Spec.AddressSettings)
+}
+
+//returns true if currentAddressSettings need update
+func compareAddressSettings(currentAddressSettings *brokerv2alpha3.AddressSettingsType, newAddressSettings *brokerv2alpha3.AddressSettingsType) bool {
+
+	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule || !config.IsEqual((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
+		return true
+	}
+	return false
 }
 
 func (reconciler *ActiveMQArtemisReconciler) ProcessAcceptorsAndConnectors(customResource *brokerv2alpha3.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
