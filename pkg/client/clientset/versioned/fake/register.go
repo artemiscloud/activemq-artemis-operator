@@ -50,7 +50,7 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	brokerv2alpha1.AddToScheme(scheme)
-	brokerv2alpha2.AddToScheme(scheme)
-	brokerv2alpha3.AddToScheme(scheme)
+	brokerv2alpha1.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha2.SchemeBuilder.AddToScheme(scheme)
+	brokerv2alpha3.SchemeBuilder.AddToScheme(scheme)
 }

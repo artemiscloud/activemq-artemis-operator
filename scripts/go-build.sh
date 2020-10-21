@@ -4,7 +4,7 @@ source ./scripts/go-mod-env.sh
 
 REGISTRY=quay.io/artemiscloud
 IMAGE=activemq-artemis-operator
-TAG=0.14.0
+TAG=0.17.0
 CFLAGS="--redhat --build-tech-preview"
 
 ./scripts/go-gen.sh

@@ -85,6 +85,17 @@ type ReconcileActiveMQArtemis struct {
 	result reconcile.Result
 }
 
+func NewReconcileActiveMQArtemis(c client.Client, s *runtime.Scheme) ReconcileActiveMQArtemis {
+	return ReconcileActiveMQArtemis{
+		client: c,
+		scheme: s,
+	}
+}
+
+func (r *ReconcileActiveMQArtemis) GetClient() client.Client {
+	return r.client
+}
+
 // Reconcile reads that state of the cluster for a ActiveMQArtemis object and makes changes based on the state read
 // and what is in the ActiveMQArtemis.Spec
 // TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates

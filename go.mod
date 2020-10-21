@@ -12,7 +12,6 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/evanphx/json-patch v4.5.0+incompatible // indirect
-	github.com/fgiorgetti/qpid-dispatch-go-tests v0.0.0-20190923194420-c3f992ce0eee
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1 // indirect
@@ -35,11 +34,10 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
 	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/interconnectedcloud/qdr-operator v0.0.0-20200515123116-0468fa0ffb7a // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
-	github.com/onsi/ginkgo v1.12.3
-	github.com/onsi/gomega v1.10.1
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.2
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/openshift/api v3.9.0+incompatible
@@ -58,14 +56,12 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.6.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.0.0-20190222213804-5cb15d344471
 	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236 // indirect
 	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
 	k8s.io/client-go v8.0.0+incompatible
 	k8s.io/klog v0.3.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20181031203759-72693cb1fadd
-	k8s.io/utils v0.0.0-20171020034047-5722d958ac0e // indirect
 	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
