@@ -40,6 +40,14 @@ func checkInt64(prop *int64) *string {
 	return &tmp
 }
 
+func checkFloat32(prop *float32) *string {
+	if nil == prop {
+		return nil
+	}
+	tmp := fmt.Sprint(*prop)
+	return &tmp
+}
+
 /* return a yaml string */
 func MakeBrokerCfgOverrides(customeResource *brokerv2alpha3.ActiveMQArtemis, envVar *string, output *string) string {
 
@@ -116,7 +124,7 @@ func processAddressSettings(sb *strings.Builder, addressSettings *[]brokerv2alph
 		if value := checkInt32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkInt32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
