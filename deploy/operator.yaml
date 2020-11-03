@@ -24,6 +24,7 @@ spec:
         # from most to least.
         # If running entrypoint_debug then use '-- --zap-level debug'
         - '--zap-level debug'
+        - '--zap-encoder console'
         command:
         - /home/activemq-artemis-operator/bin/entrypoint
         env:
