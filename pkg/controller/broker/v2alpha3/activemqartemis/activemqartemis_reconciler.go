@@ -1227,16 +1227,27 @@ func getDeployedResources(instance *brokerv2alpha3.ActiveMQArtemis, client clien
 	var log = logf.Log.WithName("controller_v2alpha3activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
-	resourceMap, err := reader.ListAll(
-		&corev1.PersistentVolumeClaimList{},
-		&corev1.ServiceList{},
-		&appsv1.StatefulSetList{},
-		&routev1.RouteList{},
-		&extv1b1.IngressList{},
-		&corev1.SecretList{},
-	)
+	var resourceMap map[reflect.Type][]resource.KubernetesResource
+	var err error
+	if isOpenshift, _ := environments.DetectOpenshift(); isOpenshift {
+		resourceMap, err = reader.ListAll(
+			&corev1.PersistentVolumeClaimList{},
+			&corev1.ServiceList{},
+			&appsv1.StatefulSetList{},
+			&routev1.RouteList{},
+			&corev1.SecretList{},
+		)
+	} else {
+		resourceMap, err = reader.ListAll(
+			&corev1.PersistentVolumeClaimList{},
+			&corev1.ServiceList{},
+			&appsv1.StatefulSetList{},
+			&extv1b1.IngressList{},
+			&corev1.SecretList{},
+		)
+	}
 	if err != nil {
-		log.Error(err, "Failed to list deployed objects. ", err)
+		log.Error(err, "Failed to list deployed objects. ")
 		return nil, err
 	}
 
