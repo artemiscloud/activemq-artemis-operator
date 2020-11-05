@@ -495,8 +495,8 @@ spec:
                     image:
                       description: The image used for the broker deployment
                       type: string
-                    initImage:
-                      description: The init container image used to configure broker
+                    initImage: The init container image used to configure broker addresssettings
+                      description:
                       type: string
                     journalType:
                       description: 'If aio use ASYNCIO, if nio use NIO for journal IO'
@@ -853,7 +853,7 @@ spec:
                             description: >-
                               The page size in bytes to use for an address. Supports byte notation like K, Mb,
                               GB, etc.
-                            type: integer
+                            type: string
                           pageMaxCacheSize:
                             description: Number of paging files to cache in memory to avoid IO during paging navigation
                             type: integer

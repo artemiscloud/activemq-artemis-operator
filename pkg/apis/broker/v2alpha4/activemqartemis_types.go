@@ -1,4 +1,4 @@
-package v2alpha3
+package v2alpha4
 
 import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
@@ -24,7 +24,7 @@ type ActiveMQArtemisSpec struct {
 	Console        ConsoleType             `json:"console,omitempty"`
 	Version        string                  `json:"version,omitempty"`
 	Upgrades       ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
-	//below are v2alpha3 types
+	//below are v2alpha4 types
 	AddressSettings AddressSettingsType `json:"addressSettings,omitempty"`
 }
 
@@ -100,6 +100,7 @@ type AddressSettingType struct {
 
 type DeploymentPlanType struct {
 	Image              string                      `json:"image,omitempty"`
+	InitImage          string                      `json:"initImage,omitempty"`
 	Size               int32                       `json:"size,omitempty"`
 	RequireLogin       bool                        `json:"requireLogin,omitempty"`
 	PersistenceEnabled bool                        `json:"persistenceEnabled,omitempty"`

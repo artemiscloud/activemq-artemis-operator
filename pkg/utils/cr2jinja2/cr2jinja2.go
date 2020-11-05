@@ -1,7 +1,9 @@
 package cr2jinja2
 
 import (
-	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
+	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
+	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
+
 	//k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 	"fmt"
 	"io/ioutil"
@@ -40,13 +42,35 @@ func checkInt64(prop *int64) *string {
 	return &tmp
 }
 
-/* return a yaml string */
-func MakeBrokerCfgOverrides(customeResource *brokerv2alpha3.ActiveMQArtemis, envVar *string, output *string) string {
+func checkFloat32(prop *float32) *string {
+	if nil == prop {
+		return nil
+	}
+	tmp := fmt.Sprint(*prop)
+	return &tmp
+}
 
-	var addressSettings *[]brokerv2alpha3.AddressSettingType = &customeResource.Spec.AddressSettings.AddressSetting
+/* return a yaml string */
+func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *string) string {
+
 	var sb strings.Builder
 
-	processAddressSettings(&sb, addressSettings)
+	var processed bool = false
+	v2alpha3Res, ok := customResource.(*v2alpha3.ActiveMQArtemis)
+	if ok {
+		MakeBrokerCfgOverridesForV2alpha3(v2alpha3Res, envVar, output, &sb)
+		processed = true
+	} else {
+		v2alpha4Res, ok := customResource.(*v2alpha4.ActiveMQArtemis)
+		if ok {
+			MakeBrokerCfgOverridesForV2alpha4(v2alpha4Res, envVar, output, &sb)
+			processed = true
+		}
+	}
+
+	if !processed {
+		panic("Unregnized resource type " + fmt.Sprintf("%T", customResource))
+	}
 
 	if envVar != nil && *envVar != "" {
 		fmt.Println("envvar: " + (*envVar))
@@ -62,10 +86,29 @@ func MakeBrokerCfgOverrides(customeResource *brokerv2alpha3.ActiveMQArtemis, env
 		}
 	}
 	return result
+}
+
+func MakeBrokerCfgOverridesForV2alpha4(customResource *v2alpha4.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder) {
+	var addressSettings *[]v2alpha4.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
+
+	//because the address settings are same between v2alpha3 and v2alpha4, reuse the code
+	var addressSettingsV2alpha3 []v2alpha3.AddressSettingType
+	for _, a := range *addressSettings {
+		addressSettingsV2alpha3 = append(addressSettingsV2alpha3, v2alpha3.AddressSettingType(a))
+	}
+
+	processAddressSettings(sb, &addressSettingsV2alpha3)
+}
+
+func MakeBrokerCfgOverridesForV2alpha3(customResource *v2alpha3.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder) {
+
+	var addressSettings *[]v2alpha3.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
+
+	processAddressSettings(sb, addressSettings)
 
 }
 
-func processAddressSettings(sb *strings.Builder, addressSettings *[]brokerv2alpha3.AddressSettingType) {
+func processAddressSettings(sb *strings.Builder, addressSettings *[]v2alpha3.AddressSettingType) {
 
 	if addressSettings == nil || len(*addressSettings) == 0 {
 		return
@@ -116,7 +159,7 @@ func processAddressSettings(sb *strings.Builder, addressSettings *[]brokerv2alph
 		if value := checkInt32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkInt32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {

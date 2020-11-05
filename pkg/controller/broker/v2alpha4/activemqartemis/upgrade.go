@@ -1,10 +1,10 @@
-package v2alpha3activemqartemis
+package v2alpha4activemqartemis
 
 import (
 	"fmt"
 	"strings"
 
-	api "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
+	api "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 )
 
@@ -23,6 +23,7 @@ var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersi
 var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.16.0": "0.1.0",
 	"0.17.0": "0.2.0",
+	"0.18.0": "0.2.0",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"01": "0.1.0",
