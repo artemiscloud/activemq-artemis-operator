@@ -8,9 +8,9 @@ spec:
     image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
     resources:
       limits:
-        cpu: "500Mi"
+        cpu: "500m"
         memory: "1024Mi"
       requests:
-        cpu: "250Mi"
+        cpu: "250m"
         memory: "512Mi"
 
