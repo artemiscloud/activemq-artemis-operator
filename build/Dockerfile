@@ -72,4 +72,4 @@ LABEL \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
       name="amq7/amq-broker-rhel7-operator" \
       summary="ActiveMQ Artemis Broker Operator"  \
-      version="0.17"
+      version="0.18"
