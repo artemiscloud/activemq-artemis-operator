@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
+
 	//"github.com/blang/semver"
 	"strconv"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	oimagev1 "github.com/openshift/api/image/v1"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+
 	//olmversion "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,6 +27,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
+
 	//"net/http"
 	"os"
 	"sort"
@@ -217,6 +221,16 @@ func main() {
 					Description:  "If true migrate messages on scaledown",
 					DisplayName:  "MessageMigration",
 					Path:         "deploymentPlan.messageMigration",
+					XDescriptors: []string{"urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan", "urn:alm:descriptor:com.tectonic.ui:booleanSwitch"},
+				}, {
+					Description:  "If true enable the Jolokia JVM Agent",
+					DisplayName:  "JolokiaAgentEnabled",
+					Path:         "deploymentPlan.jolokiaAgentEnabled",
+					XDescriptors: []string{"urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan", "urn:alm:descriptor:com.tectonic.ui:booleanSwitch"},
+				}, {
+					Description:  "If true enable the management role based access control",
+					DisplayName:  "ManagementRBACEnabled",
+					Path:         "deploymentPlan.managementRBACEnabled",
 					XDescriptors: []string{"urn:alm:descriptor:com.tectonic.ui:fieldGroup:deploymentPlan", "urn:alm:descriptor:com.tectonic.ui:booleanSwitch"},
 				}, {
 

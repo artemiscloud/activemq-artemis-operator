@@ -1,13 +1,14 @@
 package environments
 
 import (
-	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
-	corev1 "k8s.io/api/core/v1"
 	"math"
 	"os"
 	"strconv"
 	"strings"
+
+	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/random"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -198,6 +199,32 @@ func AddEnvVarForCluster() []corev1.EnvVar {
 		{
 			"AMQ_CLUSTERED",
 			"true", //GetPropertyForCR("AMQ_CLUSTERED", cr, "true"),
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
+func AddEnvVarForJolokia(jolokiaAgentEnabled string) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_ENABLE_JOLOKIA_AGENT",
+			jolokiaAgentEnabled,
+			nil,
+		},
+	}
+
+	return envVarArray
+}
+
+func AddEnvVarForManagement(managementRBACEnabled string) []corev1.EnvVar {
+
+	envVarArray := []corev1.EnvVar{
+		{
+			"AMQ_ENABLE_MANAGEMENT_RBAC",
+			managementRBACEnabled,
 			nil,
 		},
 	}
