@@ -1376,6 +1376,22 @@ func MakeVolumeMounts(cr *brokerv2alpha4.ActiveMQArtemis) []corev1.VolumeMount {
 	return volumeMounts
 }
 
+func MakeContainerPorts(cr *brokerv2alpha4.ActiveMQArtemis) []corev1.ContainerPort {
+
+	containerPorts := []corev1.ContainerPort{}
+	if cr.Spec.DeploymentPlan.JolokiaAgentEnabled {
+		jolokiaContainerPort := corev1.ContainerPort{
+
+			Name:          "jolokia",
+			ContainerPort: 8778,
+			Protocol:      "TCP",
+		}
+		containerPorts = append(containerPorts, jolokiaContainerPort)
+	}
+
+	return containerPorts
+}
+
 func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
@@ -1395,6 +1411,13 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	Containers := []corev1.Container{}
 	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
+
+	containerPorts := MakeContainerPorts(customResource)
+	if len(containerPorts) > 0 {
+		reqLogger.V(1).Info("Adding new ports to main", "len", len(containerPorts))
+		container.Ports = containerPorts
+	}
+	reqLogger.V(1).Info("now ports added to container", "new len", len(container.Ports))
 
 	volumeMounts := MakeVolumeMounts(customResource)
 	if len(volumeMounts) > 0 {
@@ -1599,6 +1622,20 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha4.ActiveMQArtemis) []corev1.EnvVar {
 		journalType = "nio"
 	}
 
+	jolokiaAgentEnabled := "false"
+	if cr.Spec.DeploymentPlan.JolokiaAgentEnabled {
+		jolokiaAgentEnabled = "true"
+	} else {
+		jolokiaAgentEnabled = "false"
+	}
+
+	managementRBACEnabled := "false"
+	if cr.Spec.DeploymentPlan.ManagementRBACEnabled {
+		managementRBACEnabled = "true"
+	} else {
+		managementRBACEnabled = "false"
+	}
+
 	envVar := []corev1.EnvVar{}
 	envVarArrayForBasic := environments.AddEnvVarForBasic(requireLogin, journalType)
 	envVar = append(envVar, envVarArrayForBasic...)
@@ -1610,6 +1647,12 @@ func MakeEnvVarArrayForCR(cr *brokerv2alpha4.ActiveMQArtemis) []corev1.EnvVar {
 	// TODO: Optimize for the single broker configuration
 	envVarArrayForCluster := environments.AddEnvVarForCluster()
 	envVar = append(envVar, envVarArrayForCluster...)
+
+	envVarArrayForJolokia := environments.AddEnvVarForJolokia(jolokiaAgentEnabled)
+	envVar = append(envVar, envVarArrayForJolokia...)
+
+	envVarArrayForManagement := environments.AddEnvVarForManagement(managementRBACEnabled)
+	envVar = append(envVar, envVarArrayForManagement...)
 
 	return envVar
 }
