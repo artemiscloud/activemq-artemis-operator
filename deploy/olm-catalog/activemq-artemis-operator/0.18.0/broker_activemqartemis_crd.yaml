@@ -520,7 +520,11 @@ spec:
                       maximum: 16
                       minimum: 0
                     storage:
-                      size: string
+                      description: the storage capacity
+                      type: object
+                      properties:
+                        size:
+                          type: string
                     resources:
                       type: object
                       properties:
@@ -1078,7 +1082,11 @@ spec:
                       maximum: 16
                       minimum: 0
                     storage:
-                      size: string
+                      description: the storage capacity
+                      type: object
+                      properties:
+                        size:
+                          type: string
                     resources:
                       type: object
                       properties:
