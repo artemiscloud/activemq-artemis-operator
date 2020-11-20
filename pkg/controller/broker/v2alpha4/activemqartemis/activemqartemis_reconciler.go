@@ -455,7 +455,7 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 		}
 		if ensureCOREOn61616Exists &&
 			(61616 == acceptor.Port) &&
-			!strings.Contains(acceptor.Protocols, "CORE") {
+			!strings.Contains(strings.ToUpper(acceptor.Protocols), "CORE") {
 			acceptorEntry = acceptorEntry + ",CORE"
 		}
 		if acceptor.SSLEnabled {
