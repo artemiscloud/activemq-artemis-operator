@@ -2,6 +2,7 @@ package v2alpha4activemqartemis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
@@ -1460,10 +1461,16 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		}
 		reqLogger.V(1).Info("Process addresssetting", "ApplyRule", *envVarApplyRuleValue)
 
-		brokerYaml := cr2jinja2v2alpha4.MakeBrokerCfgOverrides(customResource, nil, nil)
+		brokerYaml, specials := cr2jinja2v2alpha4.MakeBrokerCfgOverrides(customResource, nil, nil)
+
+		byteArray, err := json.Marshal(specials)
+		if err != nil {
+			log.Error(err, "failed to marshl specials")
+		}
+		jsonSpecials := string(byteArray)
 
 		//resolve initImage
-		initImage := "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.1"
+		initImage := "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2"
 		if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
 			initImage = customResource.Spec.DeploymentPlan.InitImage
 			log.Info("Using customized init image", "url", initImage)
@@ -1477,7 +1484,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 				Args: []string{"-c",
 					"echo \"" + brokerYaml + "\" > " + outputDir +
 						"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile artemis/2.15.0/default_with_user_address_settings.yaml.jinja2  --tune " +
-						outputDir + "/broker.yaml --output " + outputDir},
+						outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir},
 				Resources: customResource.Spec.DeploymentPlan.Resources,
 			},
 		}
