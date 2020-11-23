@@ -450,10 +450,12 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 	var portIncrement int32 = 10
 	var currentPortIncrement int32 = 0
 	var port61616InUse bool = false
+	var i uint32 = 0
 	for _, acceptor := range customResource.Spec.Acceptors {
 		if 0 == acceptor.Port {
 			acceptor.Port = 61626 + currentPortIncrement
 			currentPortIncrement += portIncrement
+			customResource.Spec.Acceptors[i].Port = acceptor.Port
 		}
 		if "" == acceptor.Protocols ||
 			"all" == strings.ToLower(acceptor.Protocols) {
@@ -500,6 +502,9 @@ func generateAcceptorsString(customResource *brokerv2alpha4.ActiveMQArtemis, cli
 		acceptorEntry = acceptorEntry + ";" + defaultArgs
 
 		acceptorEntry = acceptorEntry + "<\\/acceptor>"
+
+		// Used for indexing the original acceptor port to update it if required
+		i = i + 1
 	}
 	// TODO: Evaluate more dynamic messageMigration
 	if ensureCOREOn61616Exists && !port61616InUse {
