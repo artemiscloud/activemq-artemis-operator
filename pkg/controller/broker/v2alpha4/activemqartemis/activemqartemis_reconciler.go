@@ -250,7 +250,20 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessAddressSettings(customResour
 //returns true if currentAddressSettings need update
 func compareAddressSettings(currentAddressSettings *brokerv2alpha4.AddressSettingsType, newAddressSettings *brokerv2alpha4.AddressSettingsType) bool {
 
-	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule || !config.IsEqualV2Alpha4((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
+	if (*currentAddressSettings).ApplyRule == nil {
+		if (*newAddressSettings).ApplyRule != nil {
+			return true
+		}
+	} else {
+		if (*newAddressSettings).ApplyRule != nil {
+			if *(*currentAddressSettings).ApplyRule != *(*newAddressSettings).ApplyRule {
+				return true
+			}
+		} else {
+			return true
+		}
+	}
+	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || !config.IsEqualV2Alpha4((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
 		return true
 	}
 	return false
