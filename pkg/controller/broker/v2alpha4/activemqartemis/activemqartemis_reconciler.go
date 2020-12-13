@@ -1521,6 +1521,7 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha4.ActiveMQArtemis, arra
 
 	var pvc *corev1.PersistentVolumeClaim = nil
 	capacity := "2Gi"
+	storageClassName := ""
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
 
 	namespacedName := types.NamespacedName{
@@ -1532,8 +1533,12 @@ func NewPersistentVolumeClaimArrayForCR(cr *brokerv2alpha4.ActiveMQArtemis, arra
 		capacity = cr.Spec.DeploymentPlan.Storage.Size
 	}
 
+	if "" != cr.Spec.DeploymentPlan.Storage.StorageClassName {
+		storageClassName = cr.Spec.DeploymentPlan.Storage.StorageClassName
+	}
+
 	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacity(namespacedName, capacity)
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, storageClassName)
 		pvcArray = append(pvcArray, *pvc)
 	}
 

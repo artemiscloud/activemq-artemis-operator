@@ -114,6 +114,7 @@ type DeploymentPlanType struct {
 
 type StorageType struct {
 	Size string `json:"size,omitempty"`
+	StorageClassName   string `json:"storageClassName,omitempty"`
 }
 
 type AcceptorType struct {
