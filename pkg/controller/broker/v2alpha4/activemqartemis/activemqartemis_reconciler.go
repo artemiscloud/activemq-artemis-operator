@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	osruntime "runtime"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
@@ -22,7 +23,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
-	cr2jinja2 "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha1"
-	//	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha2"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
@@ -78,12 +78,10 @@ var lastStatus olm.DeploymentStatus
 // and run it if exists.
 var initHelperScript = "/opt/amq-broker/script/default.sh"
 var brokerConfigRoot = "/amq/init/config"
-var initImageName = "amq-broker-init"
-var defaultInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:0.2.3"
 
 //default ApplyRule for address-settings
 var defApplyRule string = "merge_all"
-var yacfgProfileVersion = "2.16.0"
+var yacfgProfileVersion = version.LatestVersion
 
 type ActiveMQArtemisReconciler struct {
 	statefulSetUpdates uint32
@@ -219,7 +217,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if imageSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
+	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
 		reconciler.statefulSetUpdates |= statefulSetImageUpdated
 	}
 
@@ -1034,13 +1032,13 @@ func persistentSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanT
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(deploymentPlan *brokerv2alpha4.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(customResource *brokerv2alpha4.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
-	// At implementation time only one container
-	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, deploymentPlan.Image) != 0 {
+	imageName := determineImageToUse(customResource, "Kubernetes")
+	if strings.Compare(currentStatefulSet.Spec.Template.Spec.Containers[0].Image, imageName) != 0 {
 		containerArrayLen := len(currentStatefulSet.Spec.Template.Spec.Containers)
 		for i := 0; i < containerArrayLen; i++ {
-			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = deploymentPlan.Image
+			currentStatefulSet.Spec.Template.Spec.Containers[i].Image = imageName
 		}
 		return true
 	}
@@ -1067,7 +1065,6 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessResources(customResource *br
 		requestedResources[index].SetNamespace(customResource.Namespace)
 	}
 
-	err = reconciler.checkUpgradeVersions(customResource, err, reqLogger)
 	deployed, err = getDeployedResources(customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources", "returned", stepsComplete)
@@ -1202,47 +1199,6 @@ func (reconciler *ActiveMQArtemisReconciler) deleteResource(customResource *brok
 	}
 
 	return deleted, stepsComplete
-}
-
-func (reconciler *ActiveMQArtemisReconciler) checkUpgradeVersions(customResource *brokerv2alpha4.ActiveMQArtemis, err error, reqLogger logr.Logger) error {
-	_, _, err = checkProductUpgrade(customResource)
-	//if err != nil {
-	//	log.Info("checkProductUpgrade failed")
-	//} else {
-	//	hasUpdates = true
-	//}
-	specifiedMinorVersion := getMinorImageVersion(customResource.Spec.Version)
-	if customResource.Spec.Upgrades.Enabled && customResource.Spec.Upgrades.Minor {
-		imageName, imageTag, imageContext := GetImage(customResource.Spec.DeploymentPlan.Image)
-		reqLogger.V(1).Info("Current imageName " + imageName)
-		reqLogger.V(1).Info("Current imageTag " + imageTag)
-		reqLogger.V(1).Info("Current imageContext " + imageContext)
-
-		imageTagNoDash := strings.Replace(imageTag, "-", ".", -1)
-		imageVersionSplitFromTag := strings.Split(imageTagNoDash, ".")
-		var currentMinorVersion = ""
-		if 3 == len(imageVersionSplitFromTag) {
-			currentMinorVersion = imageVersionSplitFromTag[0] + imageVersionSplitFromTag[1]
-		}
-		reqLogger.V(1).Info("Current minor version " + currentMinorVersion)
-
-		if specifiedMinorVersion != currentMinorVersion {
-			// reset current annotations and update CR use to specified product version
-			customResource.SetAnnotations(map[string]string{
-				brokerv2alpha4.SchemeGroupVersion.Group: FullVersionFromMinorVersion[specifiedMinorVersion]})
-			customResource.Spec.Version = FullVersionFromMinorVersion[specifiedMinorVersion]
-			upgradeVersionEnvBrokerImage := os.Getenv("BROKER_IMAGE_" + CompactFullVersionFromMinorVersion[specifiedMinorVersion])
-			if "" != upgradeVersionEnvBrokerImage {
-				customResource.Spec.DeploymentPlan.Image = upgradeVersionEnvBrokerImage
-			}
-
-			imageName, imageTag, imageContext = GetImage(customResource.Spec.DeploymentPlan.Image)
-			reqLogger.V(1).Info("Updated imageName " + imageName)
-			reqLogger.V(1).Info("Updated imageTag " + imageTag)
-			reqLogger.V(1).Info("Updated imageContext " + imageContext)
-		}
-	}
-	return err
 }
 
 func (reconciler *ActiveMQArtemisReconciler) createRequestedResource(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, createError error, kind string) (error, error) {
@@ -1431,7 +1387,6 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 	// Log where we are and what we're doing
 	reqLogger := log.WithName(customResource.Name)
-	//reqLogger.Info("Creating new pod template spec for custom resource")
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR")
 
 	namespacedName := types.NamespacedName{
@@ -1444,7 +1399,17 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	pts := pods.MakePodTemplateSpec(namespacedName, selectors.LabelBuilder.Labels())
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
-	container := containers.MakeContainer(customResource.Name, customResource.Spec.DeploymentPlan.Image, MakeEnvVarArrayForCR(customResource))
+
+	imageName := ""
+	if "placeholder" == customResource.Spec.DeploymentPlan.Image {
+		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
+		imageName = determineImageToUse(customResource, "Kubernetes")
+	} else {
+		imageName = customResource.Spec.DeploymentPlan.Image
+	}
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
+	container := containers.MakeContainer(customResource.Name, imageName, MakeEnvVarArrayForCR(customResource))
+
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
 	containerPorts := MakeContainerPorts(customResource)
@@ -1493,21 +1458,18 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	log.Info("Creating init container for broker configuration")
 	initContainer := containers.MakeInitContainer("", "", MakeEnvVarArrayForCR(customResource))
 
-	//if custom init images present, don't use internal init image
-	//instead use custom image
-	//do normal internal init image stuff, then pass control to custom
-	//inits. Custom init must built with internal init as base image.
-
-	//resolve initImage
-	initImage := defaultInitImage
-	if len(customResource.Spec.DeploymentPlan.InitImage) > 0 {
-		initImage = customResource.Spec.DeploymentPlan.InitImage
+	initImageName := ""
+	if "placeholder" == customResource.Spec.DeploymentPlan.InitImage ||
+		0 == len(customResource.Spec.DeploymentPlan.InitImage) {
+		reqLogger.Info("Determining the init image to use due to placeholder setting")
+		initImageName = determineImageToUse(customResource, "Init")
+	} else {
+		initImageName = customResource.Spec.DeploymentPlan.Image
 	}
+	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined initImage to use " + initImageName)
 
-	log.Info("Resolved init Image", "URL", initImage)
-
-	initContainer.Name = initImageName
-	initContainer.Image = initImage
+	initContainer.Name = customResource.Name + "-container-init"
+	initContainer.Image = initImageName
 	initContainer.Command = []string{"/bin/bash"}
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
@@ -1541,6 +1503,9 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 
 		envVarTuneFilePath := "TUNE_PATH"
 		outputDir := "/yacfg_etc"
+
+		compactVersionToUse := determineCompactVersionToUse(customResource)
+		yacfgProfileVersion = version.FullVersionFromCompactVersion[compactVersionToUse]
 
 		initCmd := "echo \"" + configYaml.String() + "\" > " + outputDir +
 			"/broker.yaml; cat /yacfg_etc/broker.yaml; yacfg --profile artemis/" +
@@ -1635,6 +1600,71 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 	pts.Spec = Spec
 
 	return pts
+}
+
+func determineImageToUse(customResource *brokerv2alpha4.ActiveMQArtemis, imageTypeName string) string {
+
+	imageName := ""
+	compactVersionToUse := determineCompactVersionToUse(customResource)
+
+	genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_" + imageTypeName + "_" + compactVersionToUse
+	// Default case of x86_64/amd64 covered here
+	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
+	if "s390x" == osruntime.GOARCH || "ppc64le" == osruntime.GOARCH {
+		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
+	}
+	log.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
+	imageName = os.Getenv(archSpecificRelatedImageEnvVarName)
+	log.V(1).Info("DetermineImageToUse imageName is " + imageName)
+
+	return imageName
+}
+
+func determineCompactVersionToUse(customResource *brokerv2alpha4.ActiveMQArtemis) string {
+
+	specifiedVersion := customResource.Spec.Version
+	compactVersionToUse := version.CompactLatestVersion
+	//yacfgProfileVersion
+
+	// See if we need to lookup what version to use
+	for {
+		// If there's no version specified just use the default above
+		if 0 == len(specifiedVersion) {
+			log.V(1).Info("DetermineImageToUse specifiedVersion was empty")
+			break
+		}
+		log.V(1).Info("DetermineImageToUse specifiedVersion was " + specifiedVersion)
+
+		// There is a version specified by the user...
+		// Are upgrades enabled?
+		if false == customResource.Spec.Upgrades.Enabled {
+			log.V(1).Info("DetermineImageToUse upgrades are disabled")
+			break
+		}
+		log.V(1).Info("DetermineImageToUse upgrades are enabled")
+
+		// We have a specified version and upgrades are enabled in general
+		// Is the version specified on "the list"
+		compactSpecifiedVersion := version.CompactVersionFromVersion[specifiedVersion]
+		if 0 == len(compactSpecifiedVersion) {
+			log.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + specifiedVersion)
+			break
+		}
+		log.V(1).Info("DetermineImageToUse found the compact form " + compactSpecifiedVersion + " of specifiedVersion")
+
+		// We found the compact form in our list, is it a minor bump?
+		if version.LastMinorVersion == specifiedVersion &&
+			!customResource.Spec.Upgrades.Minor {
+			log.V(1).Info("DetermineImageToUse requested minor version upgrade but minor upgrades NOT enabled")
+			break
+		}
+
+		log.V(1).Info("DetermineImageToUse all checks ok using user specified version " + specifiedVersion)
+		compactVersionToUse = compactSpecifiedVersion
+		break
+	}
+
+	return compactVersionToUse
 }
 
 func NewStatefulSetForCR(cr *brokerv2alpha4.ActiveMQArtemis) *appsv1.StatefulSet {
