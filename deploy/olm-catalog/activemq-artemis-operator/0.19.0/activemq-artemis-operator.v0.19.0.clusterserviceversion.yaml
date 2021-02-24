@@ -987,26 +987,9 @@ spec:
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
                         value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
-                        value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.3
+                        value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.4
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
                         value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
                       - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
                         value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
 
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150_ppc64le
-                        value: quay.io/artemiscloud/activemq-artemis-broker-init:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160_ppc64le
-                        value: quay.io/artemiscloud/activemq-artemis-broker-init:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150_ppc64le
-                        value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes-openj9-11-rhel8:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160_ppc64le
-                        value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes-openj9-11-rhel8:dev.latest
-
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150_s390x
-                        value: quay.io/artemiscloud/activemq-artemis-broker-init:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160_s390x
-                        value: quay.io/artemiscloud/activemq-artemis-broker-init:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150_s390x
-                        value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes-openj9-11-rhel8:dev.latest
-                      - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160_s390x
-                        value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes-openj9-11-rhel8:dev.latest
