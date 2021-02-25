@@ -1129,7 +1129,7 @@ func (reconciler *ActiveMQArtemisReconciler) createResource(customResource *brok
 		default:
 		}
 	} else if nil != createError {
-		reqLogger.Info("Failed to create resource " + kind + " named " + namespacedName.Name)
+		reqLogger.Error(createError, "Failed to create resource "+kind+" named "+namespacedName.Name)
 	}
 
 	return added, stepsComplete
