@@ -5,13 +5,22 @@ ENV GOOS=linux
 ENV CGO_ENABLED=0
 ENV BROKER_NAME=activemq-artemis
 
+#If buildx is not used, ARG can be passed for normal docker build
+ARG GOARCH=amd64
+RUN echo $GOARCH > /tmp/goarch
+
+#This arg is passed by docker buildx & contains the platform info in the form linux/amd64, linux/ppc64le etc.
+ARG TARGETPLATFORM
+#Capture ARCH and write to /tmp/goarch file for further reference
+RUN [ ! "x" = "x$TARGETPLATFORM" ] && `echo $TARGETPLATFORM |  awk '{split($0,a,"/"); print a[2]}' > /tmp/goarch` || echo "$GOARCH"
+
 RUN mkdir -p /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/bin
 RUN mkdir -p /tmp/activemq-artemis-operator
 
 ADD . ${GOPATH}/src/github.com/artemiscloud/activemq-artemis-operator
 WORKDIR ${GOPATH}/src/github.com/artemiscloud/activemq-artemis-operator
 
-RUN /opt/rh/go-toolset-1.13/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/cmd/manager
+RUN GOARCH=$(cat /tmp/goarch) /opt/rh/go-toolset-1.13/root/usr/bin/go build -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator /tmp/go/src/github.com/artemiscloud/activemq-artemis-operator/cmd/manager
 
 
 FROM registry.access.redhat.com/ubi8:8.3-289 AS base-env
@@ -55,7 +64,7 @@ RUN useradd ${BROKER_NAME}-operator
 RUN mkdir -p /home/${BROKER_NAME}-operator/bin && chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
 
 USER ${USER_UID}
-ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
+ENTRYPOINT ["/home/activemq-artemis-operator/bin/entrypoint"]
 
 LABEL \
       com.redhat.component="amq-broker-rhel8-operator-container"  \

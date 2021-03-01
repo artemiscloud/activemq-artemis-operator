@@ -1,8 +1,5 @@
 name: Release
-
-env:
-  IMAGE_NAME: activemq-artemis-operator
-
+  
 on:
   push:
     tags:
@@ -18,15 +15,35 @@ jobs:
 
       - name: Checkout the repo
         uses: actions/checkout@v2
+      
+      - name: "Set up QEMU"
+        uses: docker/setup-qemu-action@v1
 
-      - name: Build the image
-        run: docker build --file ./build/Dockerfile --tag $IMAGE_NAME:latest .
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v1
+      
+      - name: Prepare
+        id: prep
+        run: |
+          IMAGE_TAG=${GITHUB_REF#refs/tags/v}
+          echo ::set-output name=image_tag::${IMAGE_TAG}
+          PLATFORMS=linux/amd64,linux/ppc64le
+          echo ::set-output name=platforms::${PLATFORMS}
+          IMAGE_NAME=activemq-artemis-operator
+          echo ::set-output name=image_name::${IMAGE_NAME}
+          
+      - name: Login to quay.io
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
 
-      - name: Push the image
-        run: >
-          export IMAGE_TAG=${GITHUB_REF#refs/tags/v} &&
-          docker login --username=${{ secrets.QUAY_USERNAME }} --password=${{ secrets.QUAY_PASSWORD }} quay.io &&
-          docker tag $IMAGE_NAME:latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:$IMAGE_TAG &&
-          docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:$IMAGE_TAG &&
-          docker tag $IMAGE_NAME:latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:latest &&
-          docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:latest
+      - name: "Build and push"
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./build/Dockerfile
+          platforms: ${{ steps.prep.outputs.platforms }}
+          tags:  quay.io/${{ secrets.QUAY_NAMESPACE }}/${{ steps.prep.outputs.image_name }}:${{ steps.prep.outputs.image_tag }},quay.io/${{ secrets.QUAY_NAMESPACE }}/${{ steps.prep.outputs.image_name }}:latest
+          push: true
