@@ -12,9 +12,14 @@ import (
 
 var log = logf.Log.WithName("package ingresses")
 
+//leave this for backward compatibility
+func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string) *extv1b1.Ingress {
+	return NewIngressForCRWithSSL(namespacedName, labels, targetServiceName, targetPortName, false)
+}
+
 // Create newIngressForCR method to create exposed ingress
 //func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
-func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *extv1b1.Ingress {
+func NewIngressForCRWithSSL(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *extv1b1.Ingress {
 
 	ingress := &extv1b1.Ingress{
 		TypeMeta: metav1.TypeMeta{

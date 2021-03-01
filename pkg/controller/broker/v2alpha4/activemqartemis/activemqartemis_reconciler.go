@@ -734,7 +734,7 @@ func configureConsoleExposure(customResource *brokerv2alpha4.ActiveMQArtemis, cl
 			}
 		} else {
 			log.Info("Environment is not OpenShift, creating ingress")
-			ingressDefinition := ingresses.NewIngressForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
+			ingressDefinition := ingresses.NewIngressForCRWithSSL(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			ingressNamespacedName := types.NamespacedName{
 				Name:      ingressDefinition.Name,
 				Namespace: customResource.Namespace,
