@@ -305,6 +305,13 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessConsole(customResource *brok
 		return retVal
 	}
 
+	isOpenshift, _ := environments.DetectOpenshift()
+	if !isOpenshift && customResource.Spec.Console.Expose {
+		//if it is kubernetes the tls termination at ingress point
+		//so the console shouldn't be secured.
+		return retVal
+	}
+
 	sslFlags := ""
 	envVarName := "AMQ_CONSOLE_ARGS"
 	secretName := secrets.ConsoleNameBuilder.Name()
@@ -727,7 +734,7 @@ func configureConsoleExposure(customResource *brokerv2alpha4.ActiveMQArtemis, cl
 			}
 		} else {
 			log.Info("Environment is not OpenShift, creating ingress")
-			ingressDefinition := ingresses.NewIngressForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName)
+			ingressDefinition := ingresses.NewIngressForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			ingressNamespacedName := types.NamespacedName{
 				Name:      ingressDefinition.Name,
 				Namespace: customResource.Namespace,

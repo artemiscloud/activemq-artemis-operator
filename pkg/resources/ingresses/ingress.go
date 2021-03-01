@@ -14,7 +14,7 @@ var log = logf.Log.WithName("package ingresses")
 
 // Create newIngressForCR method to create exposed ingress
 //func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
-func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string) *extv1b1.Ingress {
+func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *extv1b1.Ingress {
 
 	ingress := &extv1b1.Ingress{
 		TypeMeta: metav1.TypeMeta{
@@ -45,6 +45,20 @@ func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]stri
 				},
 			},
 		},
+	}
+	if sslEnabled {
+		//ingress assumes TLS termination at the ingress point and uses default https port 443
+		//it requires a host name that matches the certificate's CN value
+		ingress.Spec.Rules[0].Host = "www.mgmtconsole.com"
+		tls := []extv1b1.IngressTLS{
+			{
+				Hosts: []string{
+					"www.mgmtconsole.com",
+				},
+				SecretName: "console-secret",
+			},
+		}
+		ingress.Spec.TLS = tls
 	}
 	return ingress
 }
