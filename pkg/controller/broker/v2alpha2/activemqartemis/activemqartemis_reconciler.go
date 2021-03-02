@@ -1326,8 +1326,8 @@ func GetPodStatus(cr *brokerv2alpha2.ActiveMQArtemis, client client.Client, name
 	}
 
 	// TODO: Remove global usage
-	log.V(5).Info("lastStatus.Ready len is " + string(len(lastStatus.Ready)))
-	log.V(5).Info("status.Ready len is " + string(len(status.Ready)))
+	log.V(5).Info("lastStatus.Ready len is " + fmt.Sprint(len(lastStatus.Ready)))
+	log.V(5).Info("status.Ready len is " + fmt.Sprint(len(lastStatus.Ready)))
 	if len(status.Ready) > len(lastStatus.Ready) {
 		// More pods ready, let the address controller know
 		newPodCount := len(status.Ready) - len(lastStatus.Ready)
