@@ -47,3 +47,5 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"2.15.0": "150",
 	"2.16.0": "160",
 }
+
+var YacfgProfileName string = "artemis"
