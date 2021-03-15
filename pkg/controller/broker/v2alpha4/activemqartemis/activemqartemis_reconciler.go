@@ -91,7 +91,7 @@ type ActiveMQArtemisIReconciler interface {
 	Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) uint32
 	ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
 	ProcessCredentials(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
+	ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
 	ProcessAcceptorsAndConnectors(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessConsole(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessResources(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
@@ -104,7 +104,7 @@ func (reconciler *ActiveMQArtemisReconciler) Process(fsm *ActiveMQArtemisFSM, cl
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version)
 
 	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
-	statefulSetUpdates := reconciler.ProcessDeploymentPlan(fsm.customResource, client, scheme, currentStatefulSet, firstTime)
+	statefulSetUpdates := reconciler.ProcessDeploymentPlan(fsm, client, scheme, currentStatefulSet, firstTime)
 	statefulSetUpdates |= reconciler.ProcessCredentials(fsm.customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessAcceptorsAndConnectors(fsm.customResource, client, scheme, currentStatefulSet)
 	statefulSetUpdates |= reconciler.ProcessConsole(fsm.customResource, client, scheme, currentStatefulSet)
@@ -207,9 +207,9 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(customResource *
 	return statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResource *brokerv2alpha4.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
+func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
 
-	deploymentPlan := &customResource.Spec.DeploymentPlan
+	deploymentPlan := &fsm.customResource.Spec.DeploymentPlan
 
 	// Ensure the StatefulSet size is the same as the spec
 	if *currentStatefulSet.Spec.Replicas != deploymentPlan.Size {
@@ -217,8 +217,13 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetSizeUpdated
 	}
 
-	if imageSyncCausedUpdateOn(customResource, currentStatefulSet) {
-		reconciler.statefulSetUpdates |= statefulSetImageUpdated
+	if fsm.imageUpgradable {
+		log.Info("CustomeResource has dynamic name, check update")
+		if imageSyncCausedUpdateOn(fsm.customResource, currentStatefulSet) {
+			reconciler.statefulSetUpdates |= statefulSetImageUpdated
+		}
+	} else {
+		log.Info("CustomResource has static name, don't check update")
 	}
 
 	if aioSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
@@ -236,7 +241,7 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessDeploymentPlan(customResourc
 		reconciler.statefulSetUpdates |= statefulSetRequireLoginUpdated
 	}
 
-	syncMessageMigration(customResource, client, scheme)
+	syncMessageMigration(fsm.customResource, client, scheme)
 
 	return reconciler.statefulSetUpdates
 }
@@ -1412,6 +1417,7 @@ func NewPodTemplateSpecForCR(customResource *brokerv2alpha4.ActiveMQArtemis) cor
 		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
 		imageName = determineImageToUse(customResource, "Kubernetes")
 	} else {
+		reqLogger.Info("Using user specified image " + imageName)
 		imageName = customResource.Spec.DeploymentPlan.Image
 	}
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR determined image to use " + imageName)
