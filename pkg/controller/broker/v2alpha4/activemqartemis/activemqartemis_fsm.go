@@ -63,7 +63,6 @@ type ActiveMQArtemisFSM struct {
 	customResource     *brokerv2alpha4.ActiveMQArtemis
 	prevCustomResource *brokerv2alpha4.ActiveMQArtemis
 	r                  *ReconcileActiveMQArtemis
-	imageUpgradable    bool
 }
 
 // Need to deep-copy the instance?
@@ -79,7 +78,6 @@ func MakeActiveMQArtemisFSM(instance *brokerv2alpha4.ActiveMQArtemis, _namespace
 
 	amqbfsm.namespacedName = _namespacedName
 	amqbfsm.customResource = instance
-	amqbfsm.imageUpgradable = amqbfsm.customResource.Spec.DeploymentPlan.Image == "placeholder"
 	amqbfsm.prevCustomResource = &brokerv2alpha4.ActiveMQArtemis{}
 	amqbfsm.r = r
 
@@ -137,7 +135,6 @@ func (amqbfsm *ActiveMQArtemisFSM) Enter(startStateID int) error {
 func (amqbfsm *ActiveMQArtemisFSM) UpdateCustomResource(newRc *brokerv2alpha4.ActiveMQArtemis) {
 	*amqbfsm.prevCustomResource = *amqbfsm.customResource
 	*amqbfsm.customResource = *newRc
-	amqbfsm.imageUpgradable = newRc.Spec.DeploymentPlan.Image == "placeholder"
 }
 
 func (amqbfsm *ActiveMQArtemisFSM) Update() (error, int) {
