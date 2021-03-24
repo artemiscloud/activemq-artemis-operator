@@ -13,7 +13,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: ActiveMQ Artemis Operator provides the ability to deploy and manage stateful ActiveMQ Artemis broker clusters
-    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.19.0
+    containerImage: quay.io/artemiscloud/activemq-artemis-operator:0.19.2
     createdAt: 2021-01-20T08:16:32Z
     capabilities: Seamless Upgrades
     repository: https://github.com/artemiscloud/activemq-artemis-operator
@@ -959,7 +959,7 @@ spec:
                 serviceAccountName: activemq-artemis-operator
                 containers:
                   - name: activemq-artemis-operator
-                    image: quay.io/artemiscloud/activemq-artemis-operator:0.19.0
+                    image: quay.io/artemiscloud/activemq-artemis-operator:0.19.2
                     args:
                       # Explicitly set the logging level.
                       # Valid values are debug, info, and error

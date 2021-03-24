@@ -23,7 +23,7 @@ spec:
         # Valid values are debug, info, and error
         # from most to least.
         # If running entrypoint_debug then use '-- --zap-level debug'
-        - '--zap-level debug'
+        - '--zap-level info'
         - '--zap-encoder console'
         command:
         - /home/activemq-artemis-operator/bin/entrypoint
@@ -50,7 +50,7 @@ spec:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
 
-        image: quay.io/artemiscloud/activemq-artemis-operator:0.19.1
+        image: quay.io/artemiscloud/activemq-artemis-operator:0.19.2
         imagePullPolicy: Always
         name: activemq-artemis-operator
         resources: {}
