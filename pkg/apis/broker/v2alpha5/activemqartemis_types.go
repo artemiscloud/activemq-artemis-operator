@@ -16,16 +16,22 @@ type ActiveMQArtemisSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	AdminUser      string                  `json:"adminUser,omitempty"`
-	AdminPassword  string                  `json:"adminPassword,omitempty"`
-	DeploymentPlan DeploymentPlanType      `json:"deploymentPlan,omitempty"`
-	Acceptors      []AcceptorType          `json:"acceptors,omitempty"`
-	Connectors     []ConnectorType         `json:"connectors,omitempty"`
-	Console        ConsoleType             `json:"console,omitempty"`
-	Version        string                  `json:"version,omitempty"`
-	Upgrades       ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
-	//below are v2alpha4 types
-	AddressSettings AddressSettingsType `json:"addressSettings,omitempty"`
+	AdminUser       string                  `json:"adminUser,omitempty"`
+	AdminPassword   string                  `json:"adminPassword,omitempty"`
+	DeploymentPlan  DeploymentPlanType      `json:"deploymentPlan,omitempty"`
+	Acceptors       []AcceptorType          `json:"acceptors,omitempty"`
+	Connectors      []ConnectorType         `json:"connectors,omitempty"`
+	Console         ConsoleType             `json:"console,omitempty"`
+	Version         string                  `json:"version,omitempty"`
+	Upgrades        ActiveMQArtemisUpgrades `json:"upgrades,omitempty"`
+	AddressSettings AddressSettingsType     `json:"addressSettings,omitempty"`
+	Users           []UserType              `json:"users,omitempty"`
+}
+
+type UserType struct {
+	Name     string   `json:"name,omitempty"`
+	Password string   `json:"password,omitempty"`
+	Roles    []string `json:"roles,omitempty"`
 }
 
 type AddressSettingsType struct {

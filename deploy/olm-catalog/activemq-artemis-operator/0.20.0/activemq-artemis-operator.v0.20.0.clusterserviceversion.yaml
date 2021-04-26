@@ -809,6 +809,24 @@ spec:
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:console'
               - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+          - description: The user name to be added to broker
+            displayName: User Name
+            path: users[0].name
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:users'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The user password
+            displayName: User password
+            path: users[0].password
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:users'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
+          - description: The roles the user belongs to
+            displayName: User Role
+            path: users[0].roles[0]
+            x-descriptors:
+              - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:users'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
 
           - description: Set to true to enable automatic micro version product upgrades, disabled by default.
             displayName: Enabled

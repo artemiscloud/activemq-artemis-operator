@@ -1,7 +1,9 @@
 package v2alpha5activemqartemis
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	osruntime "runtime"
@@ -224,6 +226,45 @@ func (reconciler *ActiveMQArtemisReconciler) ProcessCredentials(customResource *
 		AutoGen: true,
 	}
 	statefulSetUpdates := sourceEnvVarFromSecret2(customResource, currentStatefulSet, &envVars, secretName, client, scheme)
+
+	if len(customResource.Spec.Users) > 0 {
+
+		userSecretName := secrets.UsersNameBuilder.Name()
+		userEnvVars := make(map[string]ValueInfo)
+		var userNames bytes.Buffer
+		var userPasswords bytes.Buffer
+		var userRoles bytes.Buffer
+		var firstUser bool = true
+		for _, user := range customResource.Spec.Users {
+			if !firstUser {
+				userNames.WriteString(",")
+				userRoles.WriteString(";")
+				userPasswords.WriteString(",")
+			}
+			userNames.WriteString(user.Name)
+			userPasswords.WriteString(base64.StdEncoding.EncodeToString([]byte(user.Password)))
+			if len(user.Roles) > 0 {
+				userRoles.WriteString(strings.Join(user.Roles, ","))
+			}
+			if firstUser {
+				firstUser = false
+			}
+		}
+		userEnvVars["AMQ_USER_NAMES"] = ValueInfo{
+			Value:   userNames.String(),
+			AutoGen: false,
+		}
+		userEnvVars["AMQ_USER_PASSWORDS"] = ValueInfo{
+			Value:   userPasswords.String(),
+			AutoGen: false,
+		}
+		userEnvVars["AMQ_ROLES"] = ValueInfo{
+			Value:   userRoles.String(),
+			AutoGen: false,
+		}
+
+		statefulSetUpdates |= sourceEnvVarFromSecret2(customResource, currentStatefulSet, &userEnvVars, userSecretName, client, scheme)
+	}
 
 	return statefulSetUpdates
 }

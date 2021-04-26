@@ -18,6 +18,7 @@ var log = logf.Log.WithName("package secrets")
 var CredentialsNameBuilder namer.NamerData
 var ConsoleNameBuilder namer.NamerData
 var NettyNameBuilder namer.NamerData
+var UsersNameBuilder namer.NamerData
 
 func MakeStringDataMap(keyName string, valueName string, key string, value string) map[string]string {
 

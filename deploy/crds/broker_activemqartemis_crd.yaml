@@ -489,6 +489,23 @@ spec:
                     useClientAuth:
                       description: If the embedded server requires client authentication
                       type: boolean
+                users:
+                  description: users and roles for PropertiesLoginModule
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        description: user name
+                        type: string
+                      password:
+                        description: password for the user
+                        type: string
+                      roles:
+                        description: the role names the user belongs to
+                        type: array
+                        items:
+                          type: string
                 deploymentPlan:
                   type: object
                   properties:

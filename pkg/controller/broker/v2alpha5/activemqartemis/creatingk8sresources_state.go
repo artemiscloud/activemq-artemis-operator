@@ -71,6 +71,7 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 	secrets.CredentialsNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("credentials").Suffix("secret").Generate()
 	secrets.ConsoleNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("console").Suffix("secret").Generate()
 	secrets.NettyNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("netty").Suffix("secret").Generate()
+	secrets.UsersNameBuilder.Prefix(rs.parentFSM.customResource.Name).Base("users").Suffix("secret").Generate()
 }
 
 // First time entering state
