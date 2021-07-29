@@ -1,9 +1,9 @@
 package version
 
 var (
-	Version = "0.19.0"
+	Version = "0.20.0"
 	// PriorVersion - prior version
-	PriorVersion = "0.18.0"
+	PriorVersion = "0.19.0"
 )
 
 const (
