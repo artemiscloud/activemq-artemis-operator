@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi7/go-toolset:1.13.4-18 AS build-env
 
-ENV GOPATH=/tmp/go 
+ENV GOPATH=/tmp/go
 ENV GOOS=linux
 ENV CGO_ENABLED=0
 ENV BROKER_NAME=activemq-artemis
