@@ -279,7 +279,7 @@ spec:
             path: acceptors[0].protocols
             x-descriptors:
               - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:acceptors'
-              - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
+              - 'urn:alm:descriptor:com.tectonic.ui:text'
           - description:  Whether or not to enable SSL on this port
             displayName: Ssl Enabled
             path: acceptors[0].sslEnabled
