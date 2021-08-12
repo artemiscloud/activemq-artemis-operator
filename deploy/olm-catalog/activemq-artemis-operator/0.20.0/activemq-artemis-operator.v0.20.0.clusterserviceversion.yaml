@@ -119,9 +119,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: false
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemis
         description: An instance of Active MQ Artemis
         displayName: ActiveMQ Artemis
@@ -908,12 +905,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: false
-          - name: v1alpha2
-            served: true
-            storage: false
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemisAddress
         description: Adding and removing addresses via custom resource definitions
         displayName: ActiveMQ Artemis Address
@@ -1123,9 +1114,6 @@ spec:
           - name: v2alpha1
             served: true
             storage: true
-          - name: v1alpha1
-            served: false
-            storage: false
         kind: ActiveMQArtemisScaledown
         description: Provides message migration on clustered broker scaledown
         displayName: ActiveMQ Artemis Scaledown
