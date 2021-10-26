@@ -73,7 +73,7 @@ const (
 
 var defaultMessageMigration bool = true
 var requestedResources []resource.KubernetesResource
-var lastStatus olm.DeploymentStatus
+var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
 // and run it if exists.
@@ -2178,6 +2178,13 @@ func GetPodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, name
 	reqLogger.V(1).Info("Getting status for pods")
 
 	var status olm.DeploymentStatus
+	var lastStatus olm.DeploymentStatus
+
+	if lastStatus, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
+		log.Info("Creating lastStatus for new ss", "name", namespacedName)
+		lastStatus = olm.DeploymentStatus{}
+		lastStatusMap[namespacedName] = lastStatus
+	}
 
 	sfsFound := &appsv1.StatefulSet{}
 
@@ -2202,7 +2209,7 @@ func GetPodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, name
 			channels.AddressListeningCh <- types.NamespacedName{namespacedName.Namespace, status.Ready[i]}
 		}
 	}
-	lastStatus = status
+	lastStatusMap[namespacedName] = status
 
 	return status
 }
