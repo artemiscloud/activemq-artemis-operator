@@ -54,4 +54,11 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"2.18.0": "180",
 }
 
+//The yacfg profile to use for a given full version of broker
+var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
+	"2.15.0": "2.15.0",
+	"2.16.0": "2.16.0",
+	"2.18.0": "2.18.0",
+}
+
 var YacfgProfileName string = "artemis"
