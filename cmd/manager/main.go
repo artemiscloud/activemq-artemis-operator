@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 
+	"sort"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +46,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 	log.Info(fmt.Sprintf("Version of the operator: %s", version.Version))
+	log.Info(fmt.Sprintf("Supported ActiveMQArtemis Kubernetes Image Versions: %s", getSupportedBrokerVersions()))
 }
 
 func main() {
@@ -211,4 +214,29 @@ func setupAccountName(clnt client.Client, ctx context.Context, ns, podname strin
 			log.Error(err, "failed to set env variable")
 		}
 	}
+}
+
+func getSupportedBrokerVersions() string {
+	allSupportVersions := make([]string, 0, 10)
+	relatedImageEnvVarPrefix := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"
+	// The full env var name should be relatedImageEnvVarPrefix + compactVersion
+	for _, envLine := range os.Environ() {
+		envPair := strings.Split(envLine, "=")
+		if strings.HasPrefix(envPair[0], relatedImageEnvVarPrefix) {
+			//try get compact version
+			compactVersion := envPair[0][len(relatedImageEnvVarPrefix):]
+			if fullVersion, ok := version.FullVersionFromCompactVersion[compactVersion]; ok {
+				allSupportVersions = append(allSupportVersions, fullVersion)
+			}
+		}
+	}
+	sort.Strings(allSupportVersions)
+
+	supportedProductVersions := ""
+	for _, k := range allSupportVersions {
+		supportedProductVersions += k
+		supportedProductVersions += " "
+	}
+
+	return strings.TrimSpace(supportedProductVersions)
 }
