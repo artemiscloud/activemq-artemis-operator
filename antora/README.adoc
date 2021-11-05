@@ -1,0 +1,7 @@
+
+
+:toc: 1
+
+== Antora site
+
+The Antora asciidoc is located in `/docs`, but is symlinked into the required Antora directory structure.
