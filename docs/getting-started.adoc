@@ -1,0 +1,121 @@
+= Getting started with the Artemis operator
+
+:toc:
+
+== Installing the operator
+
+. Clone the repo:
++
+--
+//start step
+[source,p-setup]
+----
+$ git clone https://github.com/artemiscloud/activemq-artemis-operator.git ~/artemis-operator
+$ cd ~/artemis-operator
+----
+
+--
+//end step
+
+. Log into your cluster and create a namespace, for example:
++
+--
+//start step
+[source,p-setup]
+----
+$ kubectl create namespace myproject
+$ kubectl config set-context --current --namespace myproject
+----
+--
+//end step
+
+
+. Create the resources necessary for the operator:
++
+--
+//start step
+[source,p-setup]
+----
+$ kubectl create -f deploy/service_account.yaml --namespace myproject
+$ kubectl create -f deploy/role.yaml --namespace myproject
+$ kubectl create -f deploy/role_binding.yaml --namespace myproject
+----
+--
+//end step
+
+
+. Deploy all the CRDs:
++
+--
+//start step
+[source,p-setup]
+----
+$ kubectl create -f deploy/crds/broker_activemqartemis_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemisaddress_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemisscaledown_crd.yaml
+$ kubectl create -f deploy/crds/broker_activemqartemissecurity_crd.yaml
+----
+--
+//end step
+
+. Deploy the operator:
++
+--
+//start step
+[source,p-setup]
+----
+$ kubectl create -f deploy/operator.yaml --namespace myproject
+deployment.apps/activemq-artemis-operator created
+----
+--
+//end step
+
+. Check the status of the Operator:
++
+--
+//start step
+[source,p-setup]
+----
+$ kubectl get pod --namespace myproject
+NAME                                         READY   STATUS    RESTARTS   AGE
+activemq-artemis-operator-58bb658f4c-gthwb   1/1     Running   0          12s
+----
+--
+//end step
+
+
+. Create a broker instance:
++
+--
+//start step
+[source,p-broker]
+----
+$ kubectl create -f deploy/examples/artemis-basic-deployment.yaml -n myproject
+----
+--
+//end step
+
+. Create a queue:
++
+--
+//start step
+[source,p-broker]
+----
+$ kubectl create -f deploy/examples/address-queue-create-auto-removed.yaml -n myproject
+activemqartemisaddress.broker.amq.io/ex-aaoaddress created
+----
+--
+//end step
+
+. Send and receive messages:
++
+--
+//start step
+[source,p-broker]
+----
+$ kubectl exec ex-aao-ss-0 -n myproject -- /bin/bash /home/jboss/amq-broker/bin/artemis producer --user admin --password admin --url tcp://ex-aao-ss-0:61616 --destination myQueue0::myAddress0 --message-count 100
+----
+--
+//end step
+
+

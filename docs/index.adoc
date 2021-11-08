@@ -1,1 +1,6 @@
 = Artemis operator
+
+The following documentation is available:
+
+* xref:getting-started.adoc[]
+* xref:main-broker-cr.adoc[]
