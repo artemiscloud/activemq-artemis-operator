@@ -1,0 +1,1 @@
+~/repos/p-didact/plano -f ~/repos/p-didact/Planofile convert

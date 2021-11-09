@@ -1,0 +1,68 @@
+= Configuring security with the Artemis operator
+
+:toc:
+
+== Installing the operator
+
+. Clone the repo:
++
+--
+//start step
+[source,p-setup]
+----
+$ git clone https://github.com/artemiscloud/activemq-artemis-operator.git ~/artemis-operator
+$ cd ~/artemis-operator
+----
+
+--
+//end step
+
+
+In this tutorial, you:
+
+* configure authentication for a running broker.
+* set up users named `sam` and `rob` to send and receive messages respectively.
+
+
+.Procedure
+
+. Create a security CR file named security1.yaml
++
+[source,YAML]
+----
+include::security1.yaml[]
+----
+
+. Apply the CR:
+
++
+[source,bash,p-security]
+----
+$ kubectl apply -f ./docs/security1.yaml
+----
+
+
+. Create a queue:
++
+--
+//start step
+[source,p-broker]
+----
+$ kubectl create -f deploy/examples/address-queue-create-auto-removed.yaml -n myproject
+activemqartemisaddress.broker.amq.io/ex-aaoaddress created
+----
+--
+//end step
+
+. Send and receive messages:
++
+--
+//start step
+[source,p-broker]
+----
+$ kubectl exec ex-aao-ss-0 -n myproject -- /bin/bash /home/jboss/amq-broker/bin/artemis producer --user sam --password samsecret --url tcp://ex-aao-ss-0:61616 --destination myQueue0::myAddress0 --message-count 100
+----
+--
+//end step
+
+// currently javax.jms.JMSSecurityException: AMQ229032: User: sam does not have permission='CREATE_ADDRESS' on address myQueue0
