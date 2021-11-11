@@ -488,32 +488,35 @@ metadata:
 spec:
   loginModules:
     propertiesLoginModules:
-    - name: 'prop-module'
-      users:
-      - name: sam
-        password: samsecret
-        roles:
-        - sender
-      - name: rob
-        password: robsecret
-        roles:
-        - receiver
+      - name: "prop-module"
+        users:
+          - name: "sam"
+            password: "samsecret"
+            roles:
+              - "sender"
+          - name: "rob"
+            password: "robsecret"
+            roles:
+              - "receiver"
   securityDomains:
     brokerDomain:
-      name: 'activemq'
+      name: "activemq"
       loginModules:
-      - name: 'prop-module'
-        flag: 'sufficient'
+        - name: "prop-module"
+          flag: "sufficient"
   securitySettings:
     broker:
-    - match: '#'
-      permissions:
-      - operationType: 'send'
-        roles:
-        - 'sender'
-      - operationType: ‘consume’
-        roles:
-        - 'receiver'</code></pre>
+      - match: "#"
+        permissions:
+          - operationType: "send"
+            roles:
+              - "sender"
+          - operationType: "createAddress"
+            roles:
+              - "sender"
+          - operationType: "consume"
+            roles:
+              - "receiver"</code></pre>
 </div>
 </div>
 </li>

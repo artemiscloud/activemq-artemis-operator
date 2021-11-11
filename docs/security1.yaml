@@ -28,6 +28,12 @@ spec:
           - operationType: "send"
             roles:
               - "sender"
+          - operationType: "createAddress"
+            roles:
+              - "sender"
+          - operationType: "createDurableQueue"
+            roles:
+              - "sender"
           - operationType: "consume"
             roles:
               - "receiver"
