@@ -6,4 +6,89 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: e-sdk15
 repo: github.com/artemiscloud/activemq-artemis-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1
+  version: v2alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2
+  version: v2alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3
+  version: v2alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4
+  version: v2alpha4
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5
+  version: v2alpha5
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisAddress
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1
+  version: v2alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisAddress
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2
+  version: v2alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisAddress
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3
+  version: v2alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisScaledown
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1
+  version: v2alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisSecurity
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

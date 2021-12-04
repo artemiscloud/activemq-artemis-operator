@@ -1,0 +1,6 @@
+apiVersion: broker.amq.io/v2alpha4
+kind: ActiveMQArtemis
+metadata:
+  name: activemqartemis-sample
+spec:
+  # Add fields here

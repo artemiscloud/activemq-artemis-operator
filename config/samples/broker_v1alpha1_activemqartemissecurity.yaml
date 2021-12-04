@@ -1,0 +1,6 @@
+apiVersion: broker.amq.io/v1alpha1
+kind: ActiveMQArtemisSecurity
+metadata:
+  name: activemqartemissecurity-sample
+spec:
+  # Add fields here
