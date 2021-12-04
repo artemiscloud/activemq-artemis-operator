@@ -1,0 +1,9 @@
+domain: amq.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: e-sdk15
+repo: github.com/artemiscloud/activemq-artemis-operator
+version: "3"
