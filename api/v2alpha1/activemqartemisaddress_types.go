@@ -28,8 +28,9 @@ type ActiveMQArtemisAddressSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ActiveMQArtemisAddress. Edit activemqartemisaddress_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	AddressName string `json:"addressName"`
+	QueueName   string `json:"queueName"`
+	RoutingType string `json:"routingType"`
 }
 
 // ActiveMQArtemisAddressStatus defines the observed state of ActiveMQArtemisAddress

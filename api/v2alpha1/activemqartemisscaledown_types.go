@@ -28,8 +28,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ActiveMQArtemisScaledown. Edit activemqartemisscaledown_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	LocalOnly bool `json:"localOnly"`
 }
 
 // ActiveMQArtemisScaledownStatus defines the observed state of ActiveMQArtemisScaledown
