@@ -48,6 +48,11 @@ resources:
   kind: ActiveMQArtemis
   path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5
   version: v2alpha5
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -73,6 +78,11 @@ resources:
   kind: ActiveMQArtemisAddress
   path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3
   version: v2alpha3
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -91,4 +101,9 @@ resources:
   kind: ActiveMQArtemisSecurity
   path: github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

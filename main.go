@@ -116,6 +116,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)
 	}
+	if err = (&brokerv2alpha5.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
+		os.Exit(1)
+	}
+	if err = (&brokerv2alpha3.ActiveMQArtemisAddress{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
+		os.Exit(1)
+	}
+	if err = (&brokerv1alpha1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
