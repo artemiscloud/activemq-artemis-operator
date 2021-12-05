@@ -1,0 +1,112 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemis/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisaddresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisaddresses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisaddresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisscaledowns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisscaledowns/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemisscaledowns/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemissecurities
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemissecurities/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemissecurities/status
+  verbs:
+  - get
+  - patch
+  - update
