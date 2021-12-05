@@ -82,5 +82,6 @@ tags
 
 amqversion/*
 
+# Since using sdk v1.15.0
 tmp
-
+bin
