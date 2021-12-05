@@ -8,7 +8,7 @@ VERSION ?= 0.0.1
 OPERATOR_VERSION := 0.20.1
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := activemq-artemis-operator
-OPERATOR_IMAGE_URL := quay.io/artemiscloud/activemq-artemis-operator:$(OPERATOR_VERSION)
+OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -34,14 +34,14 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # amq.io/e-sdk15-bundle:$VERSION and amq.io/e-sdk15-catalog:$VERSION.
-IMAGE_TAG_BASE ?= quay.io/activemq-artemis-operator
+IMAGE_TAG_BASE ?= quay.io/artemiscloud/olm
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= $(OPERATOR_IMAGE_URL)
+IMG ?= $(OPERATOR_IMAGE_REPO):$(OPERATOR_VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
 
@@ -117,7 +117,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	# $(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default > tmp/deploy.yaml
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
