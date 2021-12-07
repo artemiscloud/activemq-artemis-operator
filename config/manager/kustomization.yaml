@@ -1,4 +1,5 @@
 resources:
+- webhook_secret.yaml
 - manager.yaml
 
 generatorOptions:
