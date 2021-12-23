@@ -21,6 +21,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM registry.access.redhat.com/ubi8:8.5-200 AS base-env
 
+RUN yum --setopt=tsflags=nodocs install -y unzip tar rsync shadow-utils
+RUN yum --setopt=tsflags=nodocs install -y java-1.8.0-openjdk-devel
+RUN yum --setopt=tsflags=nodocs install -y hostname libaio python2
+RUN yum clean all && [ ! -d /var/cache/yum ] || rm -rf /var/cache/yum
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
