@@ -3,4 +3,8 @@ kind: ActiveMQArtemisAddress
 metadata:
   name: activemqartemisaddress-sample
 spec:
-  # Add fields here
+  addressName: emptyAddress
+  queueName: ""
+  routingType: multicast
+  removeFromBrokerOnDelete: true
+
