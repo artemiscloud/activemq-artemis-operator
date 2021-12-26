@@ -73,3 +73,6 @@ func (r *ActiveMQArtemis) ValidateDelete() error {
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
+
+func (r *ActiveMQArtemis) Hub() {
+}
