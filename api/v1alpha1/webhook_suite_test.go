@@ -60,6 +60,7 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
+	logger := logf.Log.WithName("Testing webhook")
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
@@ -71,6 +72,7 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
+	logger.Info("----- starting testenv", "env", testEnv)
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
