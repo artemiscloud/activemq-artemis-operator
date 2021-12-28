@@ -12,6 +12,10 @@ func (r *ActiveMQArtemis) ConvertTo(dst conversion.Hub) error {
 	log.Info("==== trying converting from v2alpha4 to v1beta1")
 	target := dst.(*v1beta1.ActiveMQArtemis)
 	log.Info("target got", "dst", target.APIVersion)
+
+	target.ObjectMeta = r.ObjectMeta
+	//Todo: covert all artemis cr data to target
+
 	return nil
 }
 
