@@ -49,7 +49,7 @@ patchesJson6902:
     version: v1 # apiVersion
     kind: CustomResourceDefinition
     name: activemqartemissecurities.broker.amq.io
-  path: patch_webhook_client_ca_bundles.yaml
+  path: ../extrapatches/patch_conversion_webhook_client_ca_bundles.yaml
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:

@@ -8,13 +8,13 @@ patchesJson6902:
     version: v1 # apiVersion
     kind: MutatingWebhookConfiguration
     name: mutating-webhook-configuration
-  path: patch_webhook_client_ca_bundles.yaml
+  path: ../extrapatches/patch_webhook_client_ca_bundles.yaml
 - target:
     group: "admissionregistration.k8s.io" 
     version: v1 # apiVersion
     kind: ValidatingWebhookConfiguration
     name: validating-webhook-configuration
-  path: patch_webhook_client_ca_bundles.yaml
+  path: ../extrapatches/patch_webhook_client_ca_bundles.yaml
 
 configurations:
 - kustomizeconfig.yaml
