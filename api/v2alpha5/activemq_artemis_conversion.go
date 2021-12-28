@@ -1,7 +1,7 @@
-package v2alpha4
+package v2alpha5
 
 import (
-	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -9,10 +9,9 @@ import (
 var log = logf.Log.WithName("v2alpha4Conversion")
 
 func (r *ActiveMQArtemis) ConvertTo(dst conversion.Hub) error {
-	log.Info("==== trying converting from v2alpha4 to v2alpha5")
-	target := dst.(*v2alpha5.ActiveMQArtemis)
+	log.Info("==== trying converting from v2alpha5 to v1beta1")
+	target := dst.(*v1beta1.ActiveMQArtemis)
 	log.Info("target got", "dst", target.APIVersion)
-	//target.ObjectMeta = r.ObjectMeta
 	return nil
 }
 

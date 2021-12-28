@@ -106,8 +106,9 @@ type ActiveMQArtemisStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:path=activemqartemises
 
-// ActiveMQArtemis is the Schema for the activemqartemis API
+// ActiveMQArtemis is the Schema for the activemqartemises API
 type ActiveMQArtemis struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha5
+package v1beta1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,7 +34,7 @@ func (r *ActiveMQArtemis) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-broker-amq-io-v2alpha5-activemqartemis,mutating=true,failurePolicy=fail,sideEffects=None,groups=broker.amq.io,resources=activemqartemis,verbs=create;update,versions=v2alpha5,name=mactivemqartemis.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-broker-amq-io-v1beta1-activemqartemis,mutating=true,failurePolicy=fail,sideEffects=None,groups=broker.amq.io,resources=activemqartemises,verbs=create;update,versions=v1beta1,name=mactivemqartemis.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &ActiveMQArtemis{}
 
@@ -46,7 +46,7 @@ func (r *ActiveMQArtemis) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-broker-amq-io-v2alpha5-activemqartemis,mutating=false,failurePolicy=fail,sideEffects=None,groups=broker.amq.io,resources=activemqartemis,verbs=create;update,versions=v2alpha5,name=vactivemqartemis.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-broker-amq-io-v1beta1-activemqartemis,mutating=false,failurePolicy=fail,sideEffects=None,groups=broker.amq.io,resources=activemqartemises,verbs=create;update,versions=v1beta1,name=vactivemqartemis.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &ActiveMQArtemis{}
 

@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 )
 
 // ActiveMQArtemisReconciler reconciles a ActiveMQArtemis object
@@ -33,9 +33,9 @@ type ActiveMQArtemisReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemis,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemis/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemis/finalizers,verbs=update
+//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,6 +57,6 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&brokerv2alpha5.ActiveMQArtemis{}).
+		For(&brokerv1beta1.ActiveMQArtemis{}).
 		Complete(r)
 }

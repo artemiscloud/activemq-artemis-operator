@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
@@ -55,6 +56,7 @@ func init() {
 	utilruntime.Must(brokerv2alpha4.AddToScheme(scheme))
 	utilruntime.Must(brokerv2alpha5.AddToScheme(scheme))
 	utilruntime.Must(brokerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(brokerv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -116,7 +118,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)
 	}
-	if err = (&brokerv2alpha5.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&brokerv1beta1.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
 		os.Exit(1)
 	}
@@ -126,6 +128,13 @@ func main() {
 	}
 	if err = (&brokerv1alpha1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
+		os.Exit(1)
+	}
+	if err = (&controllers.ActiveMQArtemisReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

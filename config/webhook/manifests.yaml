@@ -32,6 +32,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-broker-amq-io-v1beta1-activemqartemis
+  failurePolicy: Fail
+  name: mactivemqartemis.kb.io
+  rules:
+  - apiGroups:
+    - broker.amq.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - activemqartemises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-broker-amq-io-v2alpha3-activemqartemisaddress
   failurePolicy: Fail
   name: mactivemqartemisaddress.kb.io
@@ -45,26 +65,6 @@ webhooks:
     - UPDATE
     resources:
     - activemqartemisaddresses
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-broker-amq-io-v2alpha5-activemqartemis
-  failurePolicy: Fail
-  name: mactivemqartemis.kb.io
-  rules:
-  - apiGroups:
-    - broker.amq.io
-    apiVersions:
-    - v2alpha5
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - activemqartemis
   sideEffects: None
 
 ---
@@ -100,6 +100,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-broker-amq-io-v1beta1-activemqartemis
+  failurePolicy: Fail
+  name: vactivemqartemis.kb.io
+  rules:
+  - apiGroups:
+    - broker.amq.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - activemqartemises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-broker-amq-io-v2alpha3-activemqartemisaddress
   failurePolicy: Fail
   name: vactivemqartemisaddress.kb.io
@@ -113,24 +133,4 @@ webhooks:
     - UPDATE
     resources:
     - activemqartemisaddresses
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-broker-amq-io-v2alpha5-activemqartemis
-  failurePolicy: Fail
-  name: vactivemqartemis.kb.io
-  rules:
-  - apiGroups:
-    - broker.amq.io
-    apiVersions:
-    - v2alpha5
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - activemqartemis
   sideEffects: None

@@ -9,32 +9,6 @@ rules:
 - apiGroups:
   - broker.amq.io
   resources:
-  - activemqartemis
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemis/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
-  - activemqartemis/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - broker.amq.io
-  resources:
   - activemqartemisaddresses
   verbs:
   - create
@@ -54,6 +28,32 @@ rules:
   - broker.amq.io
   resources:
   - activemqartemisaddresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemises
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemises/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - activemqartemises/status
   verbs:
   - get
   - patch

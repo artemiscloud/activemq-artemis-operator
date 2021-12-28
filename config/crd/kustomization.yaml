@@ -2,7 +2,7 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/broker.amq.io_activemqartemis.yaml
+- bases/broker.amq.io_activemqartemises.yaml
 - bases/broker.amq.io_activemqartemisaddresses.yaml
 - bases/broker.amq.io_activemqartemisscaledowns.yaml
 - bases/broker.amq.io_activemqartemissecurities.yaml
@@ -11,7 +11,7 @@ resources:
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-- patches/webhook_in_activemqartemis.yaml
+- patches/webhook_in_activemqartemises.yaml
 - patches/webhook_in_activemqartemisaddresses.yaml
 - patches/webhook_in_activemqartemisscaledowns.yaml
 - patches/webhook_in_activemqartemissecurities.yaml
@@ -19,7 +19,7 @@ patchesStrategicMerge:
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
-#- patches/cainjection_in_activemqartemis.yaml
+#- patches/cainjection_in_activemqartemises.yaml
 #- patches/cainjection_in_activemqartemisaddresses.yaml
 #- patches/cainjection_in_activemqartemisscaledowns.yaml
 #- patches/cainjection_in_activemqartemissecurities.yaml

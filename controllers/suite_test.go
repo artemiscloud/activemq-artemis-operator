@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
@@ -75,6 +76,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = brokerv1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
