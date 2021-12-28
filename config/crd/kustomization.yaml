@@ -30,7 +30,7 @@ patchesJson6902:
     group: "apiextensions.k8s.io" 
     version: v1 # apiVersion
     kind: CustomResourceDefinition
-    name: activemqartemis.broker.amq.io
+    name: activemqartemises.broker.amq.io
   path: patches/patch_conversion_webhook_client_ca_bundles.yaml
 - target:
     group: "apiextensions.k8s.io" 
