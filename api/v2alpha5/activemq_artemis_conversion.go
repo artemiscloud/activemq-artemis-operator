@@ -28,5 +28,19 @@ func (r *ActiveMQArtemis) ConvertTo(dst conversion.Hub) error {
 
 //may not need it if the Hub (storage version) is the latest
 func (r *ActiveMQArtemis) ConvertFrom(src conversion.Hub) error {
+	log.Info("<<<<< trying convert from v1beta1 to v2alpha5", "src", src)
+	source := src.(*v1beta1.ActiveMQArtemis)
+
+	log.Info("target v2alpha5 before convert", "r", *r)
+
+	r.ObjectMeta = source.ObjectMeta
+	r.Name = source.Name
+	r.Namespace = source.Namespace
+	r.Spec.DeploymentPlan.Size = source.Spec.DeploymentPlan.Size
+	r.Spec.DeploymentPlan.Image = source.Spec.DeploymentPlan.Image
+	r.Spec.DeploymentPlan.PersistenceEnabled = source.Spec.DeploymentPlan.PersistenceEnabled
+
+	log.Info("**** converted to v2alpha5", "target", *r)
+
 	return nil
 }
