@@ -11,7 +11,7 @@ make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 undepl
 
 to create bundle manifests/metadata:
 
-make IMAGE_TAG_BASE=quay.io/hgao/operator bundle
+make IMAGE_TAG_BASE=quay.io/hgao/operator OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 bundle
 
 to build bundle image:
 
