@@ -95,7 +95,7 @@ type ActiveMQArtemisFSMData struct {
 	StateScalingEnteringObservedGeneration int64 `json:"statescalingenteringobservedgeneration,omitempty"`
 }
 
-func MakeActiveMQArtemisFSMFromData(fsmData *ActiveMQArtemisFSMData, instance *brokerv1beta1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ReconcileActiveMQArtemis) *ActiveMQArtemisFSM {
+func MakeActiveMQArtemisFSMFromData(fsmData *ActiveMQArtemisFSMData, instance *brokerv1beta1.ActiveMQArtemis, _namespacedName types.NamespacedName, r *ActiveMQArtemisReconciler) *ActiveMQArtemisFSM {
 
 	var creatingK8sResourceIState fsm.IState
 	var containerRunningIState fsm.IState

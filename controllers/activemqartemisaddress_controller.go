@@ -100,7 +100,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 					glog.Info("Not to delete address", "address", addressInstance)
 				}
 				delete(namespacedNameToAddressName, request.NamespacedName)
-				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getLabels(&addressInstance.AddressResource), r.Client)
+				lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "address", getAddressLabels(&addressInstance.AddressResource), r.Client)
 			}
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -113,7 +113,7 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 
 	if !lookupSucceeded {
 		//check stored cr
-		if existingCr := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "address", r.Client, getLabels(instance)); existingCr != nil {
+		if existingCr := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "address", r.Client, getAddressLabels(instance)); existingCr != nil {
 			//compare resource version
 			if existingCr.Checksum == instance.ResourceVersion {
 				glog.V(1).Info("The incoming address CR is identical to stored CR, don't do reconcile")
@@ -133,13 +133,13 @@ func (r *ActiveMQArtemisAddressReconciler) Reconcile(ctx context.Context, reques
 		if merr != nil {
 			glog.Error(merr, "failed to marshal cr")
 		}
-		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getLabels(instance), r.Client, r.Scheme)
+		lsrcrs.StoreLastSuccessfulReconciledCR(instance, instance.Name, instance.Namespace, "address", crstr, "", instance.ResourceVersion, getAddressLabels(instance), r.Client, r.Scheme)
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func getLabels(cr *brokerv1beta1.ActiveMQArtemisAddress) map[string]string {
+func getAddressLabels(cr *brokerv1beta1.ActiveMQArtemisAddress) map[string]string {
 	labelBuilder := selectors.LabelerData{}
 	labelBuilder.Base(cr.Name).Suffix("addr").Generate()
 	return labelBuilder.Labels()
@@ -316,7 +316,7 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 
 	reqLogger.Info("target Cr names", "result", targetCrNamespacedNames)
 
-	ssInfos := brokerv1beta1.GetDeployedStatefuleSetNames(targetCrNamespacedNames)
+	ssInfos := GetDeployedStatefuleSetNames(targetCrNamespacedNames)
 
 	reqLogger.Info("got taget ssNames from broker controller", "ssInfos", ssInfos)
 
@@ -496,7 +496,7 @@ func GetStatefulSetNameForPod(pod *types.NamespacedName) (string, int, map[strin
 		if len(addressDeployment.SsTargetNameBuilders) == 0 {
 			glog.Info("this cr doesn't have target specified, it will be applied to all")
 			//deploy to all sts, need get from broker controller
-			ssInfos := brokerv1beta1.GetDeployedStatefuleSetNames(nil)
+			ssInfos := GetDeployedStatefuleSetNames(nil)
 			if len(ssInfos) == 0 {
 				glog.Info("No statefulset found")
 				return "", -1, nil

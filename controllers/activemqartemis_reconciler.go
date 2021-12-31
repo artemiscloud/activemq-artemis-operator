@@ -6,12 +6,11 @@ import (
 	"fmt"
 	osruntime "runtime"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
+	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -23,6 +22,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/config"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
@@ -41,11 +42,11 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 
 	"strconv"
 	"strings"
@@ -100,12 +101,12 @@ type ActiveMQArtemisIReconciler interface {
 	ProcessAcceptorsAndConnectors(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessConsole(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
 	ProcessResources(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
-	ProcessAddressSettings(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client) bool
+	ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client) bool
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8, *appsv1.StatefulSet) {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version)
 
 	currentStatefulSet, firstTime := reconciler.ProcessStatefulSet(fsm, client, log, firstTime)
@@ -157,9 +158,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 			// got at least one owner
 			log.V(1).Info("ownerReferenceArray has at least one owner")
 			log.V(1).Info(fmt.Sprintf("ownerReference[0].APIVersion: %s", ownerReferenceArray[0].APIVersion))
-			if "broker.amq.io/v2alpha5" != ownerReferenceArray[0].APIVersion {
+			if "broker.amq.io/v1beta1" != ownerReferenceArray[0].APIVersion {
 				// nuke it and recreate
-				log.V(1).Info(fmt.Sprintf("ownerReference[0].APIVersion: %s - removing in favour of upgraded v2alpha5", ownerReferenceArray[0].APIVersion))
+				log.V(1).Info(fmt.Sprintf("ownerReference[0].APIVersion: %s - removing in favour of upgraded v1beta1", ownerReferenceArray[0].APIVersion))
 				log.Info("Statefulset recreation required for current operator compatibility")
 				statefulsetRecreationRequired = true
 			}
@@ -239,21 +240,21 @@ func checkGeneralStatefulSetUpdate(fsm *ActiveMQArtemisFSM, currentStatefulSet *
 	currConsole := fsm.customResource.Spec.Console
 
 	if prevConsole != currConsole {
-		log.Info("Console config has changed, statefulset need update", "old", prevConsole, "new", currConsole)
+		clog.Info("Console config has changed, statefulset need update", "old", prevConsole, "new", currConsole)
 		return true
 	}
 	prevResources := fsm.prevCustomResource.Spec.DeploymentPlan.Resources
 	currResources := fsm.customResource.Spec.DeploymentPlan.Resources
 
 	if !common.CompareRequiredResources(&prevResources, &currResources) {
-		log.Info("Pod resources has changed, statefulset need update", "old", prevResources, "new", currResources)
+		clog.Info("Pod resources has changed, statefulset need update", "old", prevResources, "new", currResources)
 		return true
 	}
 
 	return false
 }
 
-func isClustered(customResource *brokerv2alpha5.ActiveMQArtemis) bool {
+func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 	if customResource.Spec.DeploymentPlan.Clustered != nil {
 		return *customResource.Spec.DeploymentPlan.Clustered
 	}
@@ -262,7 +263,7 @@ func isClustered(customResource *brokerv2alpha5.ActiveMQArtemis) bool {
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 	log.V(1).Info("ProcessCredentials")
 
 	envVars := make(map[string]ValueInfo)
@@ -334,7 +335,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *Acti
 
 	deploymentPlan := &fsm.customResource.Spec.DeploymentPlan
 
-	log.Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", fsm.customResource.Name)
+	clog.Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", fsm.customResource.Name)
 	// Ensure the StatefulSet size is the same as the spec
 	if *currentStatefulSet.Spec.Replicas != deploymentPlan.Size {
 		currentStatefulSet.Spec.Replicas = &deploymentPlan.Size
@@ -365,20 +366,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *Acti
 	}
 
 	if clusterSyncCausedUpdateOn(deploymentPlan, currentStatefulSet) {
-		log.Info("Clustered is false")
+		clog.Info("Clustered is false")
 		reconciler.statefulSetUpdates |= statefulSetClusterConfigUpdated
 	}
 
-	log.Info("Now sync Message migration", "for cr", fsm.customResource.Name)
+	clog.Info("Now sync Message migration", "for cr", fsm.customResource.Name)
 
 	syncMessageMigration(fsm, client, scheme)
 
 	return reconciler.statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv2alpha5.ActiveMQArtemis, prevCustomResource *brokerv2alpha5.ActiveMQArtemis, client client.Client) bool {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis, client client.Client) bool {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 	log.Info("Process addresssettings")
 
 	if len(customResource.Spec.AddressSettings.AddressSetting) == 0 {
@@ -390,7 +391,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customRe
 }
 
 //returns true if currentAddressSettings need update
-func compareAddressSettings(currentAddressSettings *brokerv2alpha5.AddressSettingsType, newAddressSettings *brokerv2alpha5.AddressSettingsType) bool {
+func compareAddressSettings(currentAddressSettings *brokerv1beta1.AddressSettingsType, newAddressSettings *brokerv1beta1.AddressSettingsType) bool {
 
 	if (*currentAddressSettings).ApplyRule == nil {
 		if (*newAddressSettings).ApplyRule != nil {
@@ -405,7 +406,7 @@ func compareAddressSettings(currentAddressSettings *brokerv2alpha5.AddressSettin
 			return true
 		}
 	}
-	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || !config.IsEqualV2Alpha5((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
+	if len((*currentAddressSettings).AddressSetting) != len((*newAddressSettings).AddressSetting) || !config.IsEqualV1Beta1((*currentAddressSettings).AddressSetting, (*newAddressSettings).AddressSetting) {
 		return true
 	}
 	return false
@@ -507,22 +508,22 @@ func syncMessageMigration(fsm *ActiveMQArtemisFSM, client client.Client, scheme 
 
 	if *fsm.customResource.Spec.DeploymentPlan.MessageMigration && clustered {
 		if !fsm.customResource.Spec.DeploymentPlan.PersistenceEnabled {
-			log.Info("Won't set up scaledown for non persistent deployment")
+			clog.Info("Won't set up scaledown for non persistent deployment")
 			return
 		}
-		log.Info("we need scaledown for this cr", "crName", fsm.customResource.Name, "scheme", scheme)
+		clog.Info("we need scaledown for this cr", "crName", fsm.customResource.Name, "scheme", scheme)
 		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
 			// err means not found so create
-			log.Info("Creating builtin drainer CR ", "scaledown", scaledown)
+			clog.Info("Creating builtin drainer CR ", "scaledown", scaledown)
 			if retrieveError = resources.Create(fsm.customResource, namespacedName, client, scheme, scaledown); retrieveError == nil {
-				log.Info("drainer created successfully", "drainer", scaledown)
+				clog.Info("drainer created successfully", "drainer", scaledown)
 			} else {
-				log.Error(retrieveError, "we have error retrieving drainer", "drainer", scaledown, "scheme", scheme)
+				clog.Error(retrieveError, "we have error retrieving drainer", "drainer", scaledown, "scheme", scheme)
 			}
 		}
 	} else {
 		if err = resources.Retrieve(namespacedName, client, scaledown); err == nil {
-			activemqartemisscaledown.ReleaseController(fsm.customResource.Name)
+			ReleaseController(fsm.customResource.Name)
 			// err means not found so delete
 			if retrieveError = resources.Delete(namespacedName, client, scaledown); retrieveError == nil {
 			}
@@ -541,7 +542,7 @@ func isLocalOnly() bool {
 
 func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]string, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 	var err error = nil
 	var retVal uint32 = statefulSetNotUpdated
@@ -630,7 +631,7 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 
 func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 
 	var err error = nil
 	var retVal uint32 = statefulSetNotUpdated
@@ -978,11 +979,11 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 		isOpenshift := false
 
 		if isOpenshift, err = environments.DetectOpenshift(); err != nil {
-			log.Error(err, "Failed to get env, will try kubernetes")
+			clog.Error(err, "Failed to get env, will try kubernetes")
 		}
 		if isOpenshift {
-			log.Info("Environment is OpenShift")
-			log.Info("Checking routeDefinition for " + targetPortName)
+			clog.Info("Environment is OpenShift")
+			clog.Info("Checking routeDefinition for " + targetPortName)
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			routeNamespacedName := types.NamespacedName{
 				Name:      routeDefinition.Name,
@@ -995,7 +996,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, routeNamespacedName, routeDefinition)
 			}
 		} else {
-			log.Info("Environment is not OpenShift, creating ingress")
+			clog.Info("Environment is not OpenShift, creating ingress")
 			ingressDefinition := ingresses.NewIngressForCRWithSSL(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
 			ingressNamespacedName := types.NamespacedName{
 				Name:      ingressDefinition.Name,
@@ -1101,7 +1102,7 @@ func generateAcceptorConnectorSSLArguments(fsm *ActiveMQArtemisFSM, client clien
 	return sslArguments
 }
 
-func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha5.AcceptorType) string {
+func generateAcceptorSSLOptionalArguments(acceptor brokerv1beta1.AcceptorType) string {
 
 	sslOptionalArguments := ""
 
@@ -1130,7 +1131,7 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv2alpha5.AcceptorType) 
 	return sslOptionalArguments
 }
 
-func generateConnectorSSLOptionalArguments(connector brokerv2alpha5.ConnectorType) string {
+func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType) string {
 
 	sslOptionalArguments := ""
 
@@ -1166,7 +1167,7 @@ func remove(s []corev1.EnvVar, i int) []corev1.EnvVar {
 	return s[:len(s)-1]
 }
 
-func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func aioSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundAio := false
 	foundNio := false
@@ -1214,7 +1215,7 @@ func aioSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType, cu
 	return extraArgsNeedsUpdate
 }
 
-func persistentSyncCausedUpdateOn(fsm *ActiveMQArtemisFSM, deploymentPlan *brokerv2alpha5.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func persistentSyncCausedUpdateOn(fsm *ActiveMQArtemisFSM, deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	foundDataDir := false
 	foundDataDirLogging := false
@@ -1301,10 +1302,10 @@ func persistentSyncCausedUpdateOn(fsm *ActiveMQArtemisFSM, deploymentPlan *broke
 	return statefulSetUpdated
 }
 
-func imageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func imageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithName(customResource.Name)
+	reqLogger := ctrl.Log.WithName(customResource.Name)
 	reqLogger.V(1).Info("imageSyncCausedUpdateOn")
 
 	imageName := ""
@@ -1328,10 +1329,10 @@ func imageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis, cur
 }
 
 // TODO: Eliminate duplication between this and the original imageSyncCausedUpdateOn
-func initImageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
+func initImageSyncCausedUpdateOn(customResource *brokerv1beta1.ActiveMQArtemis, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithName(customResource.Name)
+	reqLogger := clog.WithName(customResource.Name)
 	reqLogger.V(1).Info("initImageSyncCausedUpdateOn")
 
 	initImageName := ""
@@ -1354,7 +1355,7 @@ func initImageSyncCausedUpdateOn(customResource *brokerv2alpha5.ActiveMQArtemis,
 	return false
 }
 
-func clusterSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
+func clusterSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType, currentStatefulSet *appsv1.StatefulSet) bool {
 
 	isClustered := true
 	if deploymentPlan.Clustered != nil {
@@ -1374,7 +1375,7 @@ func clusterSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType
 			for j, envVar := range container.Env {
 				if "AMQ_CLUSTERED" == envVar.Name {
 					container.Env[j].Value = "false"
-					log.Info("Setting clustered env to false", "envs", container.Env)
+					clog.Info("Setting clustered env to false", "envs", container.Env)
 				}
 			}
 		}
@@ -1384,7 +1385,7 @@ func clusterSyncCausedUpdateOn(deploymentPlan *brokerv2alpha5.DeploymentPlanType
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
+	reqLogger := clog.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
 	reqLogger.Info("Processing resources")
 
 	var err error = nil
@@ -1471,7 +1472,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(fsm *ActiveMQArt
 	return added, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, updated bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, updateError error, stepsComplete uint8) (bool, uint8) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, updated bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, updateError error, stepsComplete uint8) (bool, uint8) {
 
 	kind := requested.GetName()
 	updated = true
@@ -1504,7 +1505,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *
 	return updated, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, deleted bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, deleteError error, stepsComplete uint8) (bool, uint8) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, deleted bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, deleteError error, stepsComplete uint8) (bool, uint8) {
 
 	kind := requested.GetName()
 	deleted = true
@@ -1537,7 +1538,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *
 	return deleted, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, createError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, createError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1551,7 +1552,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customR
 	return err, createError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, updateError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, updateError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1565,7 +1566,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 	return err, updateError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv2alpha5.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1579,9 +1580,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 	return err, deleteError
 }
 
-func getDeployedResources(instance *brokerv2alpha5.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
+func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
 
-	var log = logf.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
 	var resourceMap map[reflect.Type][]resource.KubernetesResource
@@ -1703,7 +1704,7 @@ func MakeVolumeMounts(fsm *ActiveMQArtemisFSM) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func MakeContainerPorts(cr *brokerv2alpha5.ActiveMQArtemis) []corev1.ContainerPort {
+func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPort {
 
 	containerPorts := []corev1.ContainerPort{}
 	if cr.Spec.DeploymentPlan.JolokiaAgentEnabled {
@@ -1722,7 +1723,7 @@ func MakeContainerPorts(cr *brokerv2alpha5.ActiveMQArtemis) []corev1.ContainerPo
 func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithName(fsm.customResource.Name)
+	reqLogger := ctrl.Log.WithName(fsm.customResource.Name)
 	reqLogger.V(1).Info("NewPodTemplateSpecForCR")
 
 	namespacedName := types.NamespacedName{
@@ -1814,7 +1815,7 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	volumeMountForCfg := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	Spec.Containers[0].VolumeMounts = append(Spec.Containers[0].VolumeMounts, volumeMountForCfg)
 
-	log.Info("Creating init container for broker configuration")
+	clog.Info("Creating init container for broker configuration")
 	initContainer := containers.MakeInitContainer("", "", MakeEnvVarArrayForCR(fsm))
 
 	initImageName := ""
@@ -1864,7 +1865,7 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 		byteArray, err := json.Marshal(configSpecials)
 		if err != nil {
-			log.Error(err, "failed to marshal specials")
+			clog.Error(err, "failed to marshal specials")
 		}
 		jsonSpecials := string(byteArray)
 
@@ -1876,7 +1877,7 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 			yacfgProfileVersion + "/default_with_user_address_settings.yaml.jinja2  --tune " +
 			outputDir + "/broker.yaml --extra-properties '" + jsonSpecials + "' --output " + outputDir
 
-		log.Info("==debug==, initCmd: " + initCmd)
+		clog.Info("==debug==, initCmd: " + initCmd)
 		initCmds = append(initCmds, initCmd)
 
 		//populate args of init container
@@ -1914,14 +1915,14 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 		environments.Create(Spec.InitContainers, &tuneFile)
 
 	} else {
-		log.Info("No addressetings")
+		clog.Info("No addressetings")
 
 		Spec.InitContainers = []corev1.Container{
 			initContainer,
 		}
 	}
 	//now make volumes mount available to init image
-	log.Info("making volume mounts")
+	clog.Info("making volume mounts")
 
 	//setup volumeMounts
 	volumeMountForCfgRoot := volumes.MakeVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
@@ -1934,20 +1935,20 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	volumeForCfg = volumes.MakeVolumeForCfg("tool-dir")
 	Spec.Volumes = append(Spec.Volumes, volumeForCfg)
 
-	log.Info("Total volumes ", "volumes", Spec.Volumes)
+	clog.Info("Total volumes ", "volumes", Spec.Volumes)
 
 	var initArgs []string = []string{"-c"}
 
 	//provide a way to configuration after launch.sh
 	var brokerHandlerCmds []string = []string{}
-	log.Info("Checking if there are any config handlers", "main cr", namespacedName)
+	clog.Info("Checking if there are any config handlers", "main cr", namespacedName)
 	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
 	if brokerConfigHandler != nil {
-		log.Info("there is a config handler")
+		clog.Info("there is a config handler")
 		handlerCmds := brokerConfigHandler.Config(Spec.InitContainers, initCfgRootDir+"/security", yacfgProfileVersion, yacfgProfileName)
-		log.Info("Getting back some init commands", "handlerCmds", handlerCmds)
+		clog.Info("Getting back some init commands", "handlerCmds", handlerCmds)
 		if len(handlerCmds) > 0 {
-			log.Info("appending to initCmd array...")
+			clog.Info("appending to initCmd array...")
 			brokerHandlerCmds = append(brokerHandlerCmds, handlerCmds...)
 		}
 	}
@@ -1969,13 +1970,13 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	}
 	initArgs = append(initArgs, strBuilder.String())
 
-	log.Info("The final init cmds to init ", "the cmd array", initArgs)
+	clog.Info("The final init cmds to init ", "the cmd array", initArgs)
 
 	Spec.InitContainers[0].Args = initArgs
 
 	if len(extraVolumeMounts) > 0 {
 		Spec.InitContainers[0].VolumeMounts = append(Spec.InitContainers[0].VolumeMounts, extraVolumeMounts...)
-		log.Info("Added some extra mounts to init", "total mounts: ", Spec.InitContainers[0].VolumeMounts)
+		clog.Info("Added some extra mounts to init", "total mounts: ", Spec.InitContainers[0].VolumeMounts)
 	}
 
 	dontRun := corev1.EnvVar{
@@ -1992,20 +1993,20 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	configPodSecurity(&Spec, &fsm.customResource.Spec.DeploymentPlan.PodSecurity)
 
-	log.Info("Final Init spec", "Detail", Spec.InitContainers)
+	clog.Info("Final Init spec", "Detail", Spec.InitContainers)
 
 	pts.Spec = Spec
 
 	return pts
 }
 
-func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv2alpha5.PodSecurityType) {
+func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {
 	if podSecurity.ServiceAccountName != nil {
-		log.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
+		clog.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
 		podSpec.ServiceAccountName = *podSecurity.ServiceAccountName
 	}
 	if podSecurity.RunAsUser != nil {
-		log.Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
+		clog.Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
 		if podSpec.SecurityContext == nil {
 			secCtxt := corev1.PodSecurityContext{
 				RunAsUser: podSecurity.RunAsUser,
@@ -2017,7 +2018,7 @@ func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv2alpha5.PodS
 	}
 }
 
-func determineImageToUse(customResource *brokerv2alpha5.ActiveMQArtemis, imageTypeName string) string {
+func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeName string) string {
 
 	imageName := ""
 	compactVersionToUse := determineCompactVersionToUse(customResource)
@@ -2028,14 +2029,14 @@ func determineImageToUse(customResource *brokerv2alpha5.ActiveMQArtemis, imageTy
 	if "s390x" == osruntime.GOARCH || "ppc64le" == osruntime.GOARCH {
 		archSpecificRelatedImageEnvVarName = genericRelatedImageEnvVarName + "_" + osruntime.GOARCH
 	}
-	log.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
+	clog.V(1).Info("DetermineImageToUse GOARCH specific image env var is " + archSpecificRelatedImageEnvVarName)
 	imageName = os.Getenv(archSpecificRelatedImageEnvVarName)
-	log.V(1).Info("DetermineImageToUse imageName is " + imageName)
+	clog.V(1).Info("DetermineImageToUse imageName is " + imageName)
 
 	return imageName
 }
 
-func determineCompactVersionToUse(customResource *brokerv2alpha5.ActiveMQArtemis) string {
+func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis) string {
 
 	specifiedVersion := customResource.Spec.Version
 	compactVersionToUse := version.CompactLatestVersion
@@ -2045,36 +2046,36 @@ func determineCompactVersionToUse(customResource *brokerv2alpha5.ActiveMQArtemis
 	for {
 		// If there's no version specified just use the default above
 		if 0 == len(specifiedVersion) {
-			log.V(1).Info("DetermineImageToUse specifiedVersion was empty")
+			clog.V(1).Info("DetermineImageToUse specifiedVersion was empty")
 			break
 		}
-		log.V(1).Info("DetermineImageToUse specifiedVersion was " + specifiedVersion)
+		clog.V(1).Info("DetermineImageToUse specifiedVersion was " + specifiedVersion)
 
 		// There is a version specified by the user...
 		// Are upgrades enabled?
 		if false == customResource.Spec.Upgrades.Enabled {
-			log.V(1).Info("DetermineImageToUse upgrades are disabled")
+			clog.V(1).Info("DetermineImageToUse upgrades are disabled")
 			break
 		}
-		log.V(1).Info("DetermineImageToUse upgrades are enabled")
+		clog.V(1).Info("DetermineImageToUse upgrades are enabled")
 
 		// We have a specified version and upgrades are enabled in general
 		// Is the version specified on "the list"
 		compactSpecifiedVersion := version.CompactVersionFromVersion[specifiedVersion]
 		if 0 == len(compactSpecifiedVersion) {
-			log.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + specifiedVersion)
+			clog.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + specifiedVersion)
 			break
 		}
-		log.V(1).Info("DetermineImageToUse found the compact form " + compactSpecifiedVersion + " of specifiedVersion")
+		clog.V(1).Info("DetermineImageToUse found the compact form " + compactSpecifiedVersion + " of specifiedVersion")
 
 		// We found the compact form in our list, is it a minor bump?
 		if version.LastMinorVersion == specifiedVersion &&
 			!customResource.Spec.Upgrades.Minor {
-			log.V(1).Info("DetermineImageToUse requested minor version upgrade but minor upgrades NOT enabled")
+			clog.V(1).Info("DetermineImageToUse requested minor version upgrade but minor upgrades NOT enabled")
 			break
 		}
 
-		log.V(1).Info("DetermineImageToUse all checks ok using user specified version " + specifiedVersion)
+		clog.V(1).Info("DetermineImageToUse all checks ok using user specified version " + specifiedVersion)
 		compactVersionToUse = compactSpecifiedVersion
 		break
 	}
@@ -2082,7 +2083,7 @@ func determineCompactVersionToUse(customResource *brokerv2alpha5.ActiveMQArtemis
 	return compactVersionToUse
 }
 
-func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMounts *brokerv2alpha5.ExtraMountsType) ([]corev1.Volume, []corev1.VolumeMount) {
+func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMounts *brokerv1beta1.ExtraMountsType) ([]corev1.Volume, []corev1.VolumeMount) {
 
 	var extraVolumes []corev1.Volume
 	var extraVolumeMounts []corev1.VolumeMount
@@ -2093,11 +2094,11 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMou
 	if len(extraMounts.ConfigMaps) > 0 {
 		for _, cfgmap := range extraMounts.ConfigMaps {
 			if cfgmap == "" {
-				log.Info("No ConfigMap name specified, ignore", "configMap", cfgmap)
+				clog.Info("No ConfigMap name specified, ignore", "configMap", cfgmap)
 				continue
 			}
 			cfgmapPath := cfgMapPathBase + cfgmap
-			log.Info("Resolved configMap path", "path", cfgmapPath)
+			clog.Info("Resolved configMap path", "path", cfgmapPath)
 			//now we have a config map. First create a volume
 			cfgmapVol := volumes.MakeVolumeForConfigMap(cfgmap)
 			cfgmapVolumeMount := volumes.MakeVolumeMountForCfg2(cfgmapVol.Name, cfgmapPath, true)
@@ -2109,7 +2110,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMou
 	if len(extraMounts.Secrets) > 0 {
 		for _, secret := range extraMounts.Secrets {
 			if secret == "" {
-				log.Info("No Secret name specified, ignore", "Secret", secret)
+				clog.Info("No Secret name specified, ignore", "Secret", secret)
 				continue
 			}
 			secretPath := secretPathBase + secret
@@ -2127,7 +2128,7 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, extraMou
 func NewStatefulSetForCR(fsm *ActiveMQArtemisFSM) *appsv1.StatefulSet {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithName(fsm.customResource.Name)
+	reqLogger := ctrl.Log.WithName(fsm.customResource.Name)
 	reqLogger.V(1).Info("NewStatefulSetForCR")
 
 	namespacedName := types.NamespacedName{
@@ -2168,9 +2169,9 @@ func NewPersistentVolumeClaimArrayForCR(fsm *ActiveMQArtemisFSM, arrayLength int
 }
 
 // TODO: Test namespacedName to ensure it's the right namespacedName
-func UpdatePodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
+func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, ssNamespacedName types.NamespacedName) error {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", cr.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", cr.Name)
 	reqLogger.V(1).Info("Updating status for pods")
 
 	podStatus := GetPodStatus(cr, client, ssNamespacedName)
@@ -2195,16 +2196,16 @@ func UpdatePodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, s
 	return nil
 }
 
-func GetPodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
 
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	reqLogger.V(1).Info("Getting status for pods")
 
 	var status olm.DeploymentStatus
 	var lastStatus olm.DeploymentStatus
 
 	if lastStatus, lastStatusExist := lastStatusMap[namespacedName]; !lastStatusExist {
-		log.Info("Creating lastStatus for new ss", "name", namespacedName)
+		ctrl.Log.Info("Creating lastStatus for new ss", "name", namespacedName)
 		lastStatus = olm.DeploymentStatus{}
 		lastStatusMap[namespacedName] = lastStatus
 	}
@@ -2239,7 +2240,7 @@ func GetPodStatus(cr *brokerv2alpha5.ActiveMQArtemis, client client.Client, name
 
 func MakeEnvVarArrayForCR(fsm *ActiveMQArtemisFSM) []corev1.EnvVar {
 
-	reqLogger := log.WithName(fsm.customResource.Name)
+	reqLogger := clog.WithName(fsm.customResource.Name)
 	reqLogger.V(1).Info("Adding Env variable ")
 
 	requireLogin := "false"
