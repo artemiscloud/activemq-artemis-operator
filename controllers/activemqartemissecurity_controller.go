@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 )
 
 // ActiveMQArtemisSecurityReconciler reconciles a ActiveMQArtemisSecurity object
@@ -57,6 +57,6 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, req c
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisSecurityReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&brokerv1alpha1.ActiveMQArtemisSecurity{}).
+		For(&brokerv1beta1.ActiveMQArtemisSecurity{}).
 		Complete(r)
 }

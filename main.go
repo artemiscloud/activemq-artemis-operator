@@ -240,15 +240,8 @@ func main() {
 		log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisAddress")
 		os.Exit(1)
 	}
-	if err = (&brokerv1alpha1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&brokerv1beta1.ActiveMQArtemisSecurity{}).SetupWebhookWithManager(mgr); err != nil {
 		log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemisSecurity")
-		os.Exit(1)
-	}
-	if err = (&controllers.ActiveMQArtemisReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
