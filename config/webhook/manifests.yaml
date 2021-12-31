@@ -52,6 +52,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-broker-amq-io-v1beta1-activemqartemisaddress
+  failurePolicy: Fail
+  name: mactivemqartemisaddress.kb.io
+  rules:
+  - apiGroups:
+    - broker.amq.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - activemqartemisaddresses
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-broker-amq-io-v1beta1-activemqartemissecurity
   failurePolicy: Fail
   name: mactivemqartemissecurity.kb.io
@@ -133,6 +153,26 @@ webhooks:
     - UPDATE
     resources:
     - activemqartemises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-broker-amq-io-v1beta1-activemqartemisaddress
+  failurePolicy: Fail
+  name: vactivemqartemisaddress.kb.io
+  rules:
+  - apiGroups:
+    - broker.amq.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - activemqartemisaddresses
   sideEffects: None
 - admissionReviewVersions:
   - v1

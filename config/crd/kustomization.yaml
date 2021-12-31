@@ -16,6 +16,7 @@ patchesStrategicMerge:
 - patches/webhook_in_activemqartemisscaledowns.yaml
 - patches/webhook_in_activemqartemissecurities.yaml
 #- patches/webhook_in_activemqartemissecurities.yaml
+#- patches/webhook_in_activemqartemisaddresses.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.

@@ -16,6 +16,119 @@ spec:
     singular: activemqartemisaddress
   scope: Namespaced
   versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ActiveMQArtemisAddressSpec defines the desired state of ActiveMQArtemisAddress
+            properties:
+              addressName:
+                type: string
+              applyToCrNames:
+                items:
+                  type: string
+                type: array
+              password:
+                type: string
+              queueConfiguration:
+                properties:
+                  autoCreateAddress:
+                    type: boolean
+                  autoDelete:
+                    type: boolean
+                  autoDeleteDelay:
+                    format: int64
+                    type: integer
+                  autoDeleteMessageCount:
+                    format: int64
+                    type: integer
+                  configurationManaged:
+                    type: boolean
+                  consumerPriority:
+                    format: int32
+                    type: integer
+                  consumersBeforeDispatch:
+                    format: int32
+                    type: integer
+                  delayBeforeDispatch:
+                    format: int64
+                    type: integer
+                  durable:
+                    type: boolean
+                  enabled:
+                    type: boolean
+                  exclusive:
+                    type: boolean
+                  filterString:
+                    type: string
+                  groupBuckets:
+                    format: int32
+                    type: integer
+                  groupFirstKey:
+                    type: string
+                  groupRebalance:
+                    type: boolean
+                  groupRebalancePauseDispatch:
+                    type: boolean
+                  ignoreIfExists:
+                    type: boolean
+                  lastValue:
+                    type: boolean
+                  lastValueKey:
+                    type: string
+                  maxConsumers:
+                    format: int32
+                    type: integer
+                  nonDestructive:
+                    type: boolean
+                  purgeOnNoConsumers:
+                    type: boolean
+                  ringSize:
+                    format: int64
+                    type: integer
+                  routingType:
+                    type: string
+                  temporary:
+                    type: boolean
+                  user:
+                    type: string
+                required:
+                - maxConsumers
+                - purgeOnNoConsumers
+                type: object
+              queueName:
+                type: string
+              removeFromBrokerOnDelete:
+                type: boolean
+              routingType:
+                type: string
+              user:
+                type: string
+            type: object
+          status:
+            description: ActiveMQArtemisAddressStatus defines the observed state of
+              ActiveMQArtemisAddress
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
   - name: v2alpha1
     schema:
       openAPIV3Schema:
@@ -211,7 +324,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
 status:
