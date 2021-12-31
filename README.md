@@ -1,3 +1,14 @@
+# ActiveMQ Artemis Operator
+
+This project is a [Kubernetes](https://kubernetes.io/) [operator](https://coreos.com/blog/introducing-operators.html)
+to manage the [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) message broker.
+
+## Status
+
+
+## Building 
+
+
 to build and push docker image:
 
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker-build
