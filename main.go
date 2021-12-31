@@ -207,6 +207,7 @@ func main() {
 	if err = (&controllers.ActiveMQArtemisReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Result: ctrl.Result{},
 	}).SetupWithManager(mgr); err != nil {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
 		os.Exit(1)
