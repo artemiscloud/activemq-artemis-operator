@@ -6,7 +6,7 @@ to manage the [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) me
 ## Status
 
 
-## Building 
+## Building
 
 Currently the head of the code doesn't compile.
 
@@ -14,8 +14,11 @@ Checkout commit 953b0ff7d0b48ef964c243236b9d6e8cc64f13e3 in order to try buildin
 with the following instructions:
 
 test env:
+
 go version 1.16
+
 Minikube v1.21.0
+
 operator-sdk v1.15.0
 
 
@@ -39,6 +42,7 @@ The operator will be deployed to namespace activemq-artemis-operator and watch a
 
 Now you can deploy a broker CR
 
+```
   apiVersion: broker.amq.io/v2alpha5
   kind: ActiveMQArtemis
   metadata:
@@ -48,6 +52,7 @@ Now you can deploy a broker CR
       size: 1
       image: placeholder
       persistenceEnabled: true
+```
 
 Check out the operator log to see some actions going. (basically just logs and doing nothing
 because the reconciler code is empty at this point)
@@ -86,7 +91,8 @@ operator-sdk olm install
 
 3. create a catalog source (catalog-source.yaml):
 
-    apiVersion: operators.coreos.com/v1alpha1
+```
+  apiVersion: operators.coreos.com/v1alpha1
     kind: CatalogSource
     metadata:
       name: artemis-index
@@ -99,6 +105,7 @@ operator-sdk olm install
       updateStrategy:
         registryPoll:
           interval: 10m
+```
 
 and deploy it:
 
@@ -106,17 +113,17 @@ and deploy it:
 
 4. create a subscription (subscription.yaml):
 
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: my-subscription
-      namespace: operators
-    spec:
-      channel: upstream
-      name: activemq-artemis-operator
-      source: artemis-index
-      sourceNamespace: olm
-      installPlanApproval: Automatic
+        apiVersion: operators.coreos.com/v1alpha1
+        kind: Subscription
+        metadata:
+          name: my-subscription
+          namespace: operators
+        spec:
+          channel: upstream
+          name: activemq-artemis-operator
+          source: artemis-index
+          sourceNamespace: olm
+          installPlanApproval: Automatic
 
 and deploy it:
 
@@ -125,6 +132,3 @@ and deploy it:
 5. Watch the operator is up and running in olm namespace
 
 (the operator watches all namespaces)
-
-
-
