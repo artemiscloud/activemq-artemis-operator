@@ -17,6 +17,7 @@ limitations under the License.
 package v2alpha3
 
 import (
+	"github.com/RHsyseng/operator-utils/pkg/olm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -182,7 +183,7 @@ type ActiveMQArtemisStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// PodStatus olm.DeploymentStatus `json:"podStatus"`
+	PodStatus olm.DeploymentStatus `json:"podStatus"`
 }
 
 //+kubebuilder:object:root=true

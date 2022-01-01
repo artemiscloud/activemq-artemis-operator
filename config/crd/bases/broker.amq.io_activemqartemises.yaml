@@ -545,6 +545,28 @@ spec:
             type: object
           status:
             description: ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
+            properties:
+              podStatus:
+                properties:
+                  ready:
+                    description: Deployments are ready to serve requests
+                    items:
+                      type: string
+                    type: array
+                  starting:
+                    description: Deployments are starting, may or may not succeed
+                    items:
+                      type: string
+                    type: array
+                  stopped:
+                    description: Deployments are not starting, unclear what next step
+                      will be
+                    items:
+                      type: string
+                    type: array
+                type: object
+            required:
+            - podStatus
             type: object
         type: object
     served: true
@@ -696,6 +718,28 @@ spec:
             type: object
           status:
             description: ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
+            properties:
+              podStatus:
+                properties:
+                  ready:
+                    description: Deployments are ready to serve requests
+                    items:
+                      type: string
+                    type: array
+                  starting:
+                    description: Deployments are starting, may or may not succeed
+                    items:
+                      type: string
+                    type: array
+                  stopped:
+                    description: Deployments are not starting, unclear what next step
+                      will be
+                    items:
+                      type: string
+                    type: array
+                type: object
+            required:
+            - podStatus
             type: object
         type: object
     served: true
@@ -1041,6 +1085,28 @@ spec:
             type: object
           status:
             description: ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
+            properties:
+              podStatus:
+                properties:
+                  ready:
+                    description: Deployments are ready to serve requests
+                    items:
+                      type: string
+                    type: array
+                  starting:
+                    description: Deployments are starting, may or may not succeed
+                    items:
+                      type: string
+                    type: array
+                  stopped:
+                    description: Deployments are not starting, unclear what next step
+                      will be
+                    items:
+                      type: string
+                    type: array
+                type: object
+            required:
+            - podStatus
             type: object
         type: object
     served: true
@@ -1392,6 +1458,28 @@ spec:
             type: object
           status:
             description: ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
+            properties:
+              podStatus:
+                properties:
+                  ready:
+                    description: Deployments are ready to serve requests
+                    items:
+                      type: string
+                    type: array
+                  starting:
+                    description: Deployments are starting, may or may not succeed
+                    items:
+                      type: string
+                    type: array
+                  stopped:
+                    description: Deployments are not starting, unclear what next step
+                      will be
+                    items:
+                      type: string
+                    type: array
+                type: object
+            required:
+            - podStatus
             type: object
         type: object
     served: true
@@ -1789,6 +1877,31 @@ spec:
             type: object
           status:
             description: ActiveMQArtemisStatus defines the observed state of ActiveMQArtemis
+            properties:
+              podStatus:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                properties:
+                  ready:
+                    description: Deployments are ready to serve requests
+                    items:
+                      type: string
+                    type: array
+                  starting:
+                    description: Deployments are starting, may or may not succeed
+                    items:
+                      type: string
+                    type: array
+                  stopped:
+                    description: Deployments are not starting, unclear what next step
+                      will be
+                    items:
+                      type: string
+                    type: array
+                type: object
+            required:
+            - podStatus
             type: object
         type: object
     served: true
