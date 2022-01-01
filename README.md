@@ -8,16 +8,49 @@ to manage the [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) me
 
 ## Building 
 
+Currently the head of the code doesn't compile.
+
+Checkout commit 953b0ff7d0b48ef964c243236b9d6e8cc64f13e3 in order to try building and deploying operator
+with the following instructions:
+
+test env:
+go version 1.16
+Minikube v1.21.0
+operator-sdk v1.15.0
+
 
 to build and push docker image:
 
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker-build
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker-push
 
-to test your image ovverride the image:
+(give OPERATOR_IMAGE_REPO and OPERATOR_VERSION proper values based on your env)
+
+to test your operator image:
 
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 deploy
+(for now this output to tmp/deploy.yaml instead of deploy directly to cluster)
 
+kubectl create -f tmp/deploy.yaml
+
+The operator will be deployed to namespace activemq-artemis-operator and watch all namespaces.
+
+Now you can deploy a broker CR
+
+apiVersion: broker.amq.io/v2alpha5
+kind: ActiveMQArtemis
+metadata:
+  name: ex-v2alpha5
+spec:
+  deploymentPlan:
+    size: 1
+    image: placeholder
+    persistenceEnabled: true
+
+Check out the operator log to see some actions going. (basically just logs and doing nothing
+because the reconciler code is empty at this point)
+
+to undeploy:
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 undeploy
 
 to create bundle manifests/metadata:
