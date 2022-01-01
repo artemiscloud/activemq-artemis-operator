@@ -22,6 +22,7 @@ operator-sdk v1.15.0
 to build and push docker image:
 
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker-build
+
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker-push
 
 (give OPERATOR_IMAGE_REPO and OPERATOR_VERSION proper values based on your env)
@@ -29,6 +30,7 @@ make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 docker
 to test your operator image:
 
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 deploy
+
 (for now this output to tmp/deploy.yaml instead of deploy directly to cluster)
 
 kubectl create -f tmp/deploy.yaml
@@ -37,20 +39,21 @@ The operator will be deployed to namespace activemq-artemis-operator and watch a
 
 Now you can deploy a broker CR
 
-apiVersion: broker.amq.io/v2alpha5
-kind: ActiveMQArtemis
-metadata:
-  name: ex-v2alpha5
-spec:
-  deploymentPlan:
-    size: 1
-    image: placeholder
-    persistenceEnabled: true
+  apiVersion: broker.amq.io/v2alpha5
+  kind: ActiveMQArtemis
+  metadata:
+    name: ex-v2alpha5
+  spec:
+    deploymentPlan:
+      size: 1
+      image: placeholder
+      persistenceEnabled: true
 
 Check out the operator log to see some actions going. (basically just logs and doing nothing
 because the reconciler code is empty at this point)
 
 to undeploy:
+
 make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 undeploy
 
 to create bundle manifests/metadata:
@@ -83,19 +86,19 @@ operator-sdk olm install
 
 3. create a catalog source (catalog-source.yaml):
 
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-  name: artemis-index
-  namespace: olm
-spec:
-  sourceType: grpc
-  image: quay.io/hgao/operator-catalog:v0.0.1
-  displayName: ArtemisCloud Index
-  publisher: ArtemisCloud
-  updateStrategy:
-    registryPoll:
-      interval: 10m
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: CatalogSource
+    metadata:
+      name: artemis-index
+      namespace: olm
+    spec:
+      sourceType: grpc
+      image: quay.io/hgao/operator-catalog:v0.0.1
+      displayName: ArtemisCloud Index
+      publisher: ArtemisCloud
+      updateStrategy:
+        registryPoll:
+          interval: 10m
 
 and deploy it:
 
@@ -103,23 +106,24 @@ and deploy it:
 
 4. create a subscription (subscription.yaml):
 
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: my-subscription
-  namespace: operators
-spec:
-  channel: upstream
-  name: activemq-artemis-operator
-  source: artemis-index
-  sourceNamespace: olm
-  installPlanApproval: Automatic
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: my-subscription
+      namespace: operators
+    spec:
+      channel: upstream
+      name: activemq-artemis-operator
+      source: artemis-index
+      sourceNamespace: olm
+      installPlanApproval: Automatic
 
 and deploy it:
 
   kubectl create -f subscription.yaml
 
 5. Watch the operator is up and running in olm namespace
+
 (the operator watches all namespaces)
 
 
