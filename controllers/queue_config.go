@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+var qlog = ctrl.Log.WithValues("queue_configuration")
 
 var defaultRoutingType string = "MULTICAST"
 
@@ -89,7 +92,7 @@ func GetQueueConfig(addressRes *brokerv1beta1.ActiveMQArtemisAddress) (string, b
 
 	bytes, err := json.Marshal(artemisQueueConfig)
 	if err != nil {
-		log.Error(err, "Error marshalling queue config", "config", artemisQueueConfig)
+		qlog.Error(err, "Error marshalling queue config", "config", artemisQueueConfig)
 		return "", false, err
 	}
 	return string(bytes), ignoreIfExists, nil

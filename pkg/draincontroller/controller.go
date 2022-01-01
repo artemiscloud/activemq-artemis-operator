@@ -17,6 +17,7 @@ limitations under the License.
 package draincontroller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -472,7 +473,7 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 				}
 				dlog.Info("Now creating the drain pod in namespace "+sts.Namespace, "pod", pod)
 				// needs a proper account for the pod to be created/start.
-				pod, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(pod)
+				pod, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 
 				// If an error occurs during Create, we'll requeue the item so we can
 				// attempt processing again later. This could have been caused by a
@@ -589,7 +590,7 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
 			pvcName := getPVCName(sts, pvcTemplate.Name, int32(ordinal))
 			dlog.Info("Deleting PVC " + pvcName)
-			err := c.kubeclientset.CoreV1().PersistentVolumeClaims(sts.Namespace).Delete(pvcName, nil)
+			err := c.kubeclientset.CoreV1().PersistentVolumeClaims(sts.Namespace).Delete(context.TODO(), pvcName, metav1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
@@ -602,7 +603,7 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		// TODO what if we crash after we delete the PVC, but before we delete the pod?
 
 		dlog.Info("Deleting drain pod " + podName)
-		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(podName, nil)
+		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}

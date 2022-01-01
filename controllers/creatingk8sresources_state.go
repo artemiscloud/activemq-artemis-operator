@@ -13,6 +13,7 @@ import (
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"strconv"
@@ -73,7 +74,7 @@ func (rs *CreatingK8sResourcesState) generateNames() {
 func (rs *CreatingK8sResourcesState) enterFromInvalidState() error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("CreateK8sResourceState enterFromInvalidstate")
 
 	var err error = nil
@@ -99,14 +100,14 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 		"AMQ_USER":             "",
 		"AMQ_PASSWORD":         "",
 	}
-	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition := secrets.Create(rs.parentFSM.customResource, namespacedName, stringDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.Client, rs.parentFSM.r.Scheme)
 
 	namespacedName.Name = rs.parentFSM.GetNettySecretName()
 	nettyDataMap := map[string]string{
 		"AMQ_ACCEPTORS":  "",
 		"AMQ_CONNECTORS": "",
 	}
-	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.client, rs.parentFSM.r.scheme)
+	secretDefinition = secrets.Create(rs.parentFSM.customResource, namespacedName, nettyDataMap, rs.parentFSM.namers.LabelBuilder.Labels(), rs.parentFSM.r.Client, rs.parentFSM.r.Scheme)
 
 	return secretDefinition
 }
@@ -114,7 +115,7 @@ func (rs *CreatingK8sResourcesState) generateSecrets() *corev1.Secret {
 func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Entering CreatingK8sResourcesState from " + strconv.Itoa(previousStateID))
 
 	var stepsComplete uint8 = 0
@@ -129,7 +130,7 @@ func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 		// No brokers running; safe to touch journals etc...
 	}
 
-	_, stepsComplete, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+	_, stepsComplete, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
 	rs.stepsComplete = stepsComplete
 
 	return nil
@@ -138,7 +139,7 @@ func (rs *CreatingK8sResourcesState) Enter(previousStateID int) error {
 func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Updating CreatingK8sResourcesState")
 
 	var err error = nil
@@ -146,7 +147,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 
 	currentStatefulSet := &appsv1.StatefulSet{}
 	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
-	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
+	err = rs.parentFSM.r.Client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 	for {
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Error(err, "Failed to get StatefulSet.", "Deployment.Namespace", currentStatefulSet.Namespace, "Deployment.Name", currentStatefulSet.Name)
@@ -160,7 +161,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 		if rs.stepsComplete&CreatedStatefulSet > 0 { //&&
 			firstTime := false
 
-			_, _, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+			_, _, _ = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
 			if rs.parentFSM.customResource.Spec.DeploymentPlan.Size != currentStatefulSet.Status.ReadyReplicas {
 				if rs.parentFSM.customResource.Spec.DeploymentPlan.Size > 0 {
 					nextStateID = ScalingID
@@ -172,7 +173,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 			}
 		} else {
 			// Not ready... requeue to wait? What other action is required - try to recreate?
-			rs.parentFSM.r.result = reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}
+			rs.parentFSM.r.Result = reconcile.Result{Requeue: true, RequeueAfter: time.Second * 5}
 			rs.enterFromInvalidState()
 			reqLogger.Info("CreatingK8sResourcesState requesting reconcile requeue for 5 seconds due to k8s resources not created")
 			break
@@ -187,7 +188,7 @@ func (rs *CreatingK8sResourcesState) Update() (error, int) {
 func (rs *CreatingK8sResourcesState) Exit() error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Exiting CreatingK8sResourceState")
 
 	return nil

@@ -34,10 +34,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var slog = ctrl.Log.WithName("controller_v1alpha1activemqartemissecurity")
+var elog = ctrl.Log.WithName("controller_v1alpha1activemqartemissecurity")
 
 // ActiveMQArtemisSecurityReconciler reconciles a ActiveMQArtemisSecurity object
 type ActiveMQArtemisSecurityReconciler struct {
@@ -72,7 +71,7 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 			// Setting err to nil to prevent requeue
 			err = nil
 			//clean the CR
-			lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "security", getLabels(instance), r.client)
+			lsrcrs.DeleteLastSuccessfulReconciledCR(request.NamespacedName, "security", getLabels(instance), r.Client)
 		} else {
 			reqLogger.Error(err, "Reconcile errored thats not IsNotFound, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
 		}
@@ -83,10 +82,10 @@ func (r *ActiveMQArtemisSecurityReconciler) Reconcile(ctx context.Context, reque
 	toReconcile := true
 	if securityHandler := GetBrokerConfigHandler(request.NamespacedName); securityHandler == nil {
 		reqLogger.Info("Operator doesn't have the security handler, try retrive it from secret")
-		if existingHandler := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "security", r.client, getLabels(instance)); existingHandler != nil {
+		if existingHandler := lsrcrs.RetrieveLastSuccessfulReconciledCR(request.NamespacedName, "security", r.Client, getLabels(instance)); existingHandler != nil {
 			//compare resource version
 			if existingHandler.Checksum == instance.ResourceVersion {
-				log.V(1).Info("The incoming security CR is identical to stored CR, no reconcile")
+				elog.V(1).Info("The incoming security CR is identical to stored CR, no reconcile")
 				toReconcile = false
 			}
 		}

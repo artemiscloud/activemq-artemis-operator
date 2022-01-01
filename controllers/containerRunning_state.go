@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -46,7 +47,7 @@ func (rs *ContainerRunningState) ID() int {
 func (rs *ContainerRunningState) Enter(previousStateID int) error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Entering ContainerRunningState from " + strconv.Itoa(previousStateID))
 
 	// TODO: Clear up ambiguity in usage between container and pod
@@ -58,21 +59,21 @@ func (rs *ContainerRunningState) Enter(previousStateID int) error {
 func (rs *ContainerRunningState) Update() (error, int) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Updating ContainerRunningState")
 
 	var err error = nil
 	var nextStateID int = ContainerRunningID
 	var statefulSetUpdates uint32 = 0
 
-	reconciler := ActiveMQArtemisReconciler{
+	reconciler := ActiveMQArtemisReconcilerImpl{
 		statefulSetUpdates: 0,
 	}
 	ssNamespacedName := types.NamespacedName{Name: rs.parentFSM.GetStatefulSetName(), Namespace: rs.parentFSM.customResource.Namespace}
 	currentStatefulSet := &appsv1.StatefulSet{}
 	var newss *appsv1.StatefulSet
 
-	err = rs.parentFSM.r.client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
+	err = rs.parentFSM.r.Client.Get(context.TODO(), ssNamespacedName, currentStatefulSet)
 
 	firstTime := false
 	for {
@@ -83,20 +84,20 @@ func (rs *ContainerRunningState) Update() (error, int) {
 		}
 
 		if *currentStatefulSet.Spec.Replicas != currentStatefulSet.Status.ReadyReplicas {
-			rs.parentFSM.r.result = reconcile.Result{Requeue: true}
+			rs.parentFSM.r.Result = reconcile.Result{Requeue: true}
 			reqLogger.Info("ContainerRunningState requesting reconcile requeue for immediate reissue due to continued scaling")
 			nextStateID = ScalingID
 			break
 		}
 
-		statefulSetUpdates, _, newss = reconciler.Process(rs.parentFSM, rs.parentFSM.r.client, rs.parentFSM.r.scheme, firstTime)
+		statefulSetUpdates, _, newss = reconciler.Process(rs.parentFSM, rs.parentFSM.r.Client, rs.parentFSM.r.Scheme, firstTime)
 		break
 	}
 
 	if statefulSetUpdates > 0 {
 		//https://stackoverflow.com/questions/65987577/kubectl-apply-reports-error-operation-cannot-be-fulfilled-on-serviceaccounts
 		currentStatefulSet.ResourceVersion = ""
-		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.client, newss); err != nil {
+		if err := resources.Update(rs.parentFSM.namespacedName, rs.parentFSM.r.Client, newss); err != nil {
 			reqLogger.Error(err, "Failed to update StatefulSet.", "Deployment.Namespace", newss.Namespace, "Deployment.Name", newss.Name)
 		}
 		nextStateID = ScalingID
@@ -108,7 +109,7 @@ func (rs *ContainerRunningState) Update() (error, int) {
 func (rs *ContainerRunningState) Exit() error {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
+	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", rs.parentFSM.customResource.Name)
 	reqLogger.Info("Exiting ContainerRunningState")
 
 	return nil

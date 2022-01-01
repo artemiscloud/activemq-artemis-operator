@@ -1,9 +1,9 @@
 package cr2jinja2
 
 import (
-	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha3"
-	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha4"
-	v2alpha5 "github.com/artemiscloud/activemq-artemis-operator/pkg/apis/broker/v2alpha5"
+	v2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
+	v2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
+	v2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 
 	//k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 	"fmt"
@@ -11,8 +11,12 @@ import (
 	"strconv"
 	"strings"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/google/uuid"
 )
+
+var cr2jinja2Log = ctrl.Log.WithValues("cr2jinja2")
 
 //the following values in string type will be parsed as bool values
 //exception empty string which will be translated to None
@@ -114,6 +118,21 @@ func checkFloat32(prop *float32) *string {
 	}
 	tmp := fmt.Sprint(*prop)
 	return &tmp
+}
+
+func checkFloat32AsString(propstr *string) *string {
+	var prop *float32 = nil
+	var value float64
+	var err error
+	if nil != propstr {
+		if value, err = strconv.ParseFloat(*propstr, 32); err != nil {
+			cr2jinja2Log.Error(err, "failed to convert to float32 from string", "value", propstr)
+		} else {
+			tmpval := float32(value)
+			prop = &tmpval
+		}
+	}
+	return checkFloat32(prop)
 }
 
 /* return a yaml string and a map of special values that need to pass to yacfg */
@@ -241,7 +260,7 @@ func processAddressSettings(sb *strings.Builder, addressSettings *[]v2alpha3.Add
 		if value := checkInt32(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
@@ -435,10 +454,10 @@ func processAddressSettingsV2alpha5(sb *strings.Builder, addressSettings *[]v2al
 		if value := checkInt32(s.RedeliveryDelay); value != nil {
 			sb.WriteString("  redelivery_delay: " + *value + "\n")
 		}
-		if value := checkFloat32(s.RedeliveryDelayMultiplier); value != nil {
+		if value := checkFloat32AsString(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkFloat32(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {
