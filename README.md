@@ -129,6 +129,6 @@ and deploy it:
 
   kubectl create -f subscription.yaml
 
-5. Watch the operator is up and running in olm namespace
+5. Watch the operator is up and running in **operators** namespace
 
 (the operator watches all namespaces)
