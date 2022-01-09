@@ -8,7 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var qlog = ctrl.Log.WithValues("queue_configuration")
+var qlog = ctrl.Log.WithName("queue_configuration")
 
 var defaultRoutingType string = "MULTICAST"
 
