@@ -7,7 +7,6 @@ import (
 	osruntime "runtime"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
-	"github.com/RHsyseng/operator-utils/pkg/resource"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
@@ -32,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
@@ -71,7 +71,7 @@ const (
 )
 
 var defaultMessageMigration bool = true
-var requestedResources []resource.KubernetesResource
+var requestedResources []rtclient.Object
 var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types.NamespacedName]olm.DeploymentStatus)
 
 // the helper script looks for "/amq/scripts/post-config.sh"
@@ -94,17 +94,17 @@ type ValueInfo struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) uint32
-	ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
-	ProcessCredentials(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
-	ProcessAcceptorsAndConnectors(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
-	ProcessConsole(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
-	ProcessResources(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
-	ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client) bool
+	Process(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, firstTime bool) uint32
+	ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client rtclient.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
+	ProcessCredentials(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
+	ProcessAcceptorsAndConnectors(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
+	ProcessConsole(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet)
+	ProcessResources(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8
+	ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) bool
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8, *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, firstTime bool) (uint32, uint8, *appsv1.StatefulSet) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Reconciler Processing...", "Operator version", version.Version, "ActiveMQArtemis release", fsm.customResource.Spec.Version)
@@ -134,7 +134,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(fsm *ActiveMQArtemisFSM
 	return statefulSetUpdates, stepsComplete, currentStatefulSet
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client client.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveMQArtemisFSM, client rtclient.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool) {
 
 	statefulsetRecreationRequired := false
 
@@ -261,7 +261,7 @@ func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 	return true
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 	log.V(1).Info("ProcessCredentials")
@@ -331,7 +331,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveM
 	return statefulSetUpdates
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32 {
 
 	deploymentPlan := &fsm.customResource.Spec.DeploymentPlan
 
@@ -432,7 +432,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(f
 	return retVal
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
 	var retVal uint32 = statefulSetNotUpdated
 
@@ -462,7 +462,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(fsm *ActiveMQArt
 	return retVal
 }
 
-func syncMessageMigration(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme) {
+func syncMessageMigration(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var err error = nil
 	var retrieveError error = nil
@@ -718,7 +718,7 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 	return retVal
 }
 
-func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client client.Client) string {
+func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client rtclient.Client) string {
 
 	// TODO: Optimize for the single broker configuration
 	ensureCOREOn61616Exists := true // as clustered is no longer an option but true by default
@@ -805,7 +805,7 @@ func generateAcceptorsString(fsm *ActiveMQArtemisFSM, client client.Client) stri
 	return acceptorEntry
 }
 
-func generateConnectorsString(fsm *ActiveMQArtemisFSM, client client.Client) string {
+func generateConnectorsString(fsm *ActiveMQArtemisFSM, client rtclient.Client) string {
 
 	connectorEntry := ""
 	connectors := fsm.customResource.Spec.Connectors
@@ -834,7 +834,7 @@ func generateConnectorsString(fsm *ActiveMQArtemisFSM, client client.Client) str
 	return connectorEntry
 }
 
-func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -885,7 +885,7 @@ func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, s
 	return causedUpdate, err
 }
 
-func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -938,7 +938,7 @@ func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client client.Client, 
 	return causedUpdate, err
 }
 
-func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme) (bool, error) {
+func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
 
 	var i int32 = 0
 	var err error = nil
@@ -1014,7 +1014,7 @@ func configureConsoleExposure(fsm *ActiveMQArtemisFSM, client client.Client, sch
 	return causedUpdate, err
 }
 
-func generateConsoleSSLFlags(fsm *ActiveMQArtemisFSM, client client.Client, secretName string) string {
+func generateConsoleSSLFlags(fsm *ActiveMQArtemisFSM, client rtclient.Client, secretName string) string {
 
 	sslFlags := ""
 	secretNamespacedName := types.NamespacedName{
@@ -1058,7 +1058,7 @@ func generateConsoleSSLFlags(fsm *ActiveMQArtemisFSM, client client.Client, secr
 	return sslFlags
 }
 
-func generateAcceptorConnectorSSLArguments(fsm *ActiveMQArtemisFSM, client client.Client, secretName string) string {
+func generateAcceptorConnectorSSLArguments(fsm *ActiveMQArtemisFSM, client rtclient.Client, secretName string) string {
 
 	sslArguments := "sslEnabled=true"
 	secretNamespacedName := types.NamespacedName{
@@ -1383,14 +1383,14 @@ func clusterSyncCausedUpdateOn(deploymentPlan *brokerv1beta1.DeploymentPlanType,
 	return !isClustered
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint8 {
 
 	reqLogger := clog.WithValues("ActiveMQArtemis Name", fsm.customResource.Name)
 	reqLogger.Info("Processing resources")
 
 	var err error = nil
 	var createError error = nil
-	var deployed map[reflect.Type][]resource.KubernetesResource
+	var deployed map[reflect.Type][]rtclient.Object
 	var hasUpdates bool
 	var stepsComplete uint8 = 0
 
@@ -1442,7 +1442,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(fsm *ActiveMQA
 	return stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(fsm *ActiveMQArtemisFSM, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, added bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, createError error, stepsComplete uint8) (bool, uint8) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, added bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, createError error, stepsComplete uint8) (bool, uint8) {
 
 	kind := requested.GetName()
 	added = true
@@ -1472,7 +1472,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createResource(fsm *ActiveMQArt
 	return added, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, updated bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, updateError error, stepsComplete uint8) (bool, uint8) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, updated bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, updateError error, stepsComplete uint8) (bool, uint8) {
 
 	kind := requested.GetName()
 	updated = true
@@ -1505,7 +1505,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateResource(customResource *
 	return updated, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, requested resource.KubernetesResource, deleted bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, deleteError error, stepsComplete uint8) (bool, uint8) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, requested rtclient.Object, deleted bool, reqLogger logr.Logger, namespacedName types.NamespacedName, err error, deleteError error, stepsComplete uint8) (bool, uint8) {
 
 	kind := requested.GetName()
 	deleted = true
@@ -1538,7 +1538,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteResource(customResource *
 	return deleted, stepsComplete
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, createError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, createError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1552,7 +1552,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) createRequestedResource(customR
 	return err, createError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, updateError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, updateError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1566,7 +1566,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) updateRequestedResource(customR
 	return err, updateError
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested resource.KubernetesResource, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customResource *brokerv1beta1.ActiveMQArtemis, client client.Client, scheme *runtime.Scheme, namespacedName types.NamespacedName, requested rtclient.Object, reqLogger logr.Logger, deleteError error, kind string) (error, error) {
 
 	var err error = nil
 
@@ -1580,12 +1580,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 	return err, deleteError
 }
 
-func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client client.Client) (map[reflect.Type][]resource.KubernetesResource, error) {
+func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
 
 	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
-	var resourceMap map[reflect.Type][]resource.KubernetesResource
+	var resourceMap map[reflect.Type][]rtclient.Object
 	var err error
 	if isOpenshift, _ := environments.DetectOpenshift(); isOpenshift {
 		resourceMap, err = reader.ListAll(
@@ -2196,7 +2196,7 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, ss
 	return nil
 }
 
-func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
+func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
 
 	reqLogger := ctrl.Log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	reqLogger.V(1).Info("Getting status for pods")

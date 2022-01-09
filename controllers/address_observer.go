@@ -64,8 +64,6 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
-
-	return nil
 }
 
 //if we support multiple statefulset in a namespace
