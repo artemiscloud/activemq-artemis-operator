@@ -1,6 +1,8 @@
 # Build the manager binary
 FROM golang:1.16 as builder
 
+RUN go get github.com/go-delve/delve/cmd/dlv
+
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
