@@ -17,7 +17,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -73,21 +72,13 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 		log.Error(err, "Error building kubernetes clientset: %s", err.Error())
 	}
 
-	namespace, err := k8sutil.GetWatchNamespace()
-
-	if err != nil {
-		log.Error(err, "Failed to get watch namespace")
-		return
-	}
-
-	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient(), mgr.GetScheme())
+	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme())
 
 	if err = observer.Run(channels.AddressListeningCh); err != nil {
 		log.Error(err, "Error running controller: %s", err.Error())
 	}
 
 	log.Info("Finish setup address observer")
-	return
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
