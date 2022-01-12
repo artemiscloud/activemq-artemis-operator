@@ -35,7 +35,6 @@ type AddressObserver struct {
 
 func NewAddressObserver(
 	kubeclientset kubernetes.Interface,
-	namespace string,
 	client client.Client,
 	scheme *runtime.Scheme) *AddressObserver {
 

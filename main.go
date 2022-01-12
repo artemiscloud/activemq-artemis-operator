@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"fmt"
 	goruntime "runtime"
@@ -60,7 +59,6 @@ import (
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/controllers"
-	//sdkVersion "github.com/operator-framework/operator-sdk/internal/version"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -162,7 +160,8 @@ func main() {
 
 	ctx := context.TODO()
 
-	mgrOptions := manager.Options{
+	mgrOptions := ctrl.Options{
+		Scheme:             scheme,
 		Namespace:          watchNameSpace,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 		//webhook port
@@ -307,7 +306,7 @@ func setupAccountName(clnt client.Client, ctx context.Context, ns, podname strin
 	key := client.ObjectKey{Namespace: ns, Name: podname}
 	err := clnt.Get(ctx, key, pod)
 	if err != nil {
-		log.Error(err, "failed to get pod")
+		log.Error(err, "failed to get pod", "namespace", ns, "pod name", podname)
 	} else {
 		log.Info("service account name: " + pod.Spec.ServiceAccountName)
 		err = os.Setenv("SERVICE_ACCOUNT", pod.Spec.ServiceAccountName)

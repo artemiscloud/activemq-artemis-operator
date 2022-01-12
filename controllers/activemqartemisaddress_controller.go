@@ -26,7 +26,6 @@ import (
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/lsrcrs"
@@ -543,14 +542,7 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 		glog.Error(err, "Error building kubernetes clientset: %s", err.Error())
 	}
 
-	namespace, err := sdkk8sutil.GetWatchNamespace()
-
-	if err != nil {
-		glog.Error(err, "Failed to get watch namespace")
-		return
-	}
-
-	observer := NewAddressObserver(kubeClient, namespace, mgr.GetClient(), mgr.GetScheme())
+	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme())
 
 	if err = observer.Run(channels.AddressListeningCh); err != nil {
 		glog.Error(err, "Error running controller: %s", err.Error())
