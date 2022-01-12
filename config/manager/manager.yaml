@@ -37,8 +37,8 @@ spec:
         # Valid values are debug, info, and error
         # from most to least.
         # If running entrypoint_debug then use '-- --zap-level debug'
-        - '--zap-log-level debug'
-        - '--zap-encoder console'
+        - --zap-log-level debug
+        - --zap-encoder console
         - --leader-elect
         env:
         - name: OPERATOR_NAME
