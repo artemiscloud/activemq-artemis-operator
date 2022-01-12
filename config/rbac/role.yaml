@@ -7,6 +7,22 @@ metadata:
   name: activemq-artemis-operator
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - broker.amq.io
   resources:
   - activemqartemisaddresses
@@ -110,3 +126,10 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - broker.amq.io
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
