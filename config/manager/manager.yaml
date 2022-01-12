@@ -17,6 +17,11 @@ spec:
     matchLabels:
       control-plane: controller-manager
   replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -28,7 +33,42 @@ spec:
       - command:
         - /manager
         args:
+        # Explicitly set the logging level.
+        # Valid values are debug, info, and error
+        # from most to least.
+        # If running entrypoint_debug then use '-- --zap-level debug'
+        - '--zap-level debug'
+        - '--zap-encoder console'
         - --leader-elect
+        env:
+        - name: OPERATOR_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['name']
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+          # to watch all namespaces use '*' or empty ''
+          # to watch multiple namespaces use comma separated list 'ns1,ns2'
+          # default is to watch the operator's namespace (backward compatibility)
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
+          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
+          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.4
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2180
+          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.10
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2180
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.7
         image: controller:latest
         imagePullPolicy: Always
         name: manager
