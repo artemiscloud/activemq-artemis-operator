@@ -111,6 +111,7 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups=broker.amq.io,resources=pods,verbs=get;list
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
