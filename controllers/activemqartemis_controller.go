@@ -105,6 +105,8 @@ type ActiveMQArtemisReconciler struct {
 	Result ctrl.Result
 }
 
+//run 'make manifests' after changing the following rbac markers
+
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/finalizers,verbs=update
@@ -112,6 +114,7 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
