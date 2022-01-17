@@ -1,6 +1,9 @@
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: activemqartemis-sample
+  name: ex-aao
 spec:
-  # Add fields here
+  deploymentPlan:
+    size: 1
+    image: placeholder
+
