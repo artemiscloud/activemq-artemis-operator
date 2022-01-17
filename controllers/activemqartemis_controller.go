@@ -111,10 +111,13 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemises/finalizers,verbs=update
 //+kubebuilder:rbac:groups=broker.amq.io,resources=pods,verbs=get;list
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list
+//+kubebuilder:rbac:groups="",resources=pods;services;endpoints;persistentvolumeclaims;events;configmaps;secrets;routes,verbs=*
+//+kubebuilder:rbac:groups="",resources=namespaces,verbs=get
+//+kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
+//+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=route.openshift.io,resources=routes;routes/custom-host;routes/status,verbs=get;list;watch;create;delete;update
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
+//+kubebuilder:rbac:groups=apps,resources=deployments/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

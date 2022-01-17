@@ -9,33 +9,37 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  - endpoints
+  - events
+  - persistentvolumeclaims
   - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
+  - routes
   - secrets
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
   - services
   verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
   - get
-  - list
 - apiGroups:
   - apps
   resources:
+  - daemonsets
+  - deployments
+  - replicasets
   - statefulsets
   verbs:
-  - get
-  - list
-  - watch
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
 - apiGroups:
   - broker.amq.io
   resources:
@@ -147,3 +151,33 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  - routes/custom-host
+  - routes/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
