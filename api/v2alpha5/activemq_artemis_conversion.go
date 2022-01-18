@@ -1,6 +1,7 @@
 package v2alpha5
 
 import (
+	"fmt"
 	"runtime/debug"
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -24,10 +25,9 @@ func (r *ActiveMQArtemis) ConvertTo(dst conversion.Hub) error {
 	target.Spec.DeploymentPlan.Image = r.Spec.DeploymentPlan.Image
 	target.Spec.DeploymentPlan.PersistenceEnabled = r.Spec.DeploymentPlan.PersistenceEnabled
 
-	log.Info("**** converted to v1beta1", "target", *target)
-	//Todo: covert all artemis cr data to target
+	err := fmt.Errorf("incomplete conversion %s", "convert-from")
 
-	return nil
+	return err
 }
 
 //may not need it if the Hub (storage version) is the latest
@@ -48,5 +48,7 @@ func (r *ActiveMQArtemis) ConvertFrom(src conversion.Hub) error {
 
 	log.Info("**** converted to v2alpha5", "target", *r)
 
-	return nil
+	err := fmt.Errorf("incomplete conversion %s", "convert-from")
+
+	return err
 }
