@@ -8,11 +8,11 @@ import (
 var log = logf.Log.WithName("v2alpha3Conversion")
 
 func (r *ActiveMQArtemis) ConvertTo(dst conversion.Hub) error {
-	log.Info("ConverTo not implemented")
+	log.V(1).Info("ConverTo not implemented")
 	return nil
 }
 
 func (r *ActiveMQArtemis) ConvertFrom(src conversion.Hub) error {
-	log.Info("ConvertFrom not implemented")
+	log.V(1).Info("ConvertFrom not implemented")
 	return nil
 }
