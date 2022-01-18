@@ -176,7 +176,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 			enableMetricsPluginEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, "AMQ_ENABLE_METRICS_PLUGIN")
 			enableMetricsPluginInCr := fsm.customResource.Spec.DeploymentPlan.EnableMetricsPlugin
 			if enableMetricsPluginEnvVar == nil || enableMetricsPluginEnvVar.Value == "false" {
-				if enableMetricsPluginInCr != nil && *enableMetricsPluginInCr == true {
+				if enableMetricsPluginInCr != nil && *enableMetricsPluginInCr {
 					log.Info("Need recreate statefuleset to update enableMetricsPlugin to true")
 					statefulsetRecreationRequired = true
 				}
@@ -194,7 +194,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 			log.Info("Recreating existing statefulset")
 			deleteErr := resources.Delete(ssNamespacedName, client, currentStatefulSet)
 			if nil == deleteErr {
-				log.Info(fmt.Sprintf("sucessfully deleted ownerReference[0].APIVersion: %s, recreating v2alpha5 version for use", ownerReferenceArray[0].APIVersion))
+				log.Info(fmt.Sprintf("sucessfully deleted ownerReference[0].APIVersion: %s, recreating v1beta1 version for use", ownerReferenceArray[0].APIVersion))
 				currentStatefulSet = NewStatefulSetForCR(fsm)
 				firstTime = true
 			} else {
@@ -263,7 +263,7 @@ func isClustered(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(fsm *ActiveMQArtemisFSM, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32 {
 
-	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.V(1).Info("ProcessCredentials")
 
 	envVars := make(map[string]ValueInfo)
@@ -379,7 +379,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(fsm *Acti
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis, client client.Client) bool {
 
-	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 	log.Info("Process addresssettings")
 
 	if len(customResource.Spec.AddressSettings.AddressSetting) == 0 {
@@ -631,7 +631,7 @@ func sourceEnvVarFromSecret(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.
 
 func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client client.Client, scheme *runtime.Scheme) uint32 {
 
-	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 	var err error = nil
 	var retVal uint32 = statefulSetNotUpdated
@@ -1582,7 +1582,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) deleteRequestedResource(customR
 
 func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
 
-	var log = ctrl.Log.WithName("controller_v2alpha5activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
 	var resourceMap map[reflect.Type][]rtclient.Object
