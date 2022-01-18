@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var activemqartemislog = logf.Log.WithName("activemqartemis-resource")
+var activemqartemislog = logf.Log.WithName("activemqartemis-webhookv1beta1")
 
 func (r *ActiveMQArtemis) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -72,7 +72,4 @@ func (r *ActiveMQArtemis) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
-}
-
-func (r *ActiveMQArtemis) Hub() {
 }

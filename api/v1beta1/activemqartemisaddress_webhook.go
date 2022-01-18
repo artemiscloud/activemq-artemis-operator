@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var activemqartemisaddresslog = logf.Log.WithName("activemqartemisaddress-resource")
+var activemqartemisaddresslog = logf.Log.WithName("activemqartemisaddress-webhookv1beta1")
 
 func (r *ActiveMQArtemisAddress) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).

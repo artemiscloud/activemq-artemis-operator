@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var activemqartemissecuritylog = logf.Log.WithName("activemqartemissecurity-resource")
+var activemqartemissecuritylog = logf.Log.WithName("activemqartemissecurity-webhookv1beta1")
 
 func (r *ActiveMQArtemisSecurity) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
