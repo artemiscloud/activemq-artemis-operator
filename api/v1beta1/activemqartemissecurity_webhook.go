@@ -40,7 +40,7 @@ var _ webhook.Defaulter = &ActiveMQArtemisSecurity{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ActiveMQArtemisSecurity) Default() {
-	activemqartemissecuritylog.Info("default", "name", r.Name)
+	activemqartemissecuritylog.V(1).Info("default", "name", r.Name)
 
 	// TODO(user): fill in your defaulting logic.
 }
@@ -52,7 +52,7 @@ var _ webhook.Validator = &ActiveMQArtemisSecurity{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisSecurity) ValidateCreate() error {
-	activemqartemissecuritylog.Info("validate create", "name", r.Name)
+	activemqartemissecuritylog.V(1).Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
 	return nil
@@ -60,7 +60,7 @@ func (r *ActiveMQArtemisSecurity) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisSecurity) ValidateUpdate(old runtime.Object) error {
-	activemqartemissecuritylog.Info("validate update", "name", r.Name)
+	activemqartemissecuritylog.V(1).Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil
@@ -68,7 +68,7 @@ func (r *ActiveMQArtemisSecurity) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisSecurity) ValidateDelete() error {
-	activemqartemissecuritylog.Info("validate delete", "name", r.Name)
+	activemqartemissecuritylog.V(1).Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil

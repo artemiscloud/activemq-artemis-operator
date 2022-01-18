@@ -40,7 +40,7 @@ var _ webhook.Defaulter = &ActiveMQArtemisAddress{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ActiveMQArtemisAddress) Default() {
-	activemqartemisaddresslog.Info("default", "name", r.Name)
+	activemqartemisaddresslog.V(1).Info("default", "name", r.Name)
 
 	// TODO(user): fill in your defaulting logic.
 }
@@ -52,7 +52,7 @@ var _ webhook.Validator = &ActiveMQArtemisAddress{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisAddress) ValidateCreate() error {
-	activemqartemisaddresslog.Info("validate create", "name", r.Name)
+	activemqartemisaddresslog.V(1).Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
 	return nil
@@ -60,7 +60,7 @@ func (r *ActiveMQArtemisAddress) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemisAddress) ValidateUpdate(old runtime.Object) error {
-	activemqartemisaddresslog.Info("validate update", "name", r.Name)
+	activemqartemisaddresslog.V(1).Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil

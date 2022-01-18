@@ -291,6 +291,14 @@ func GetDeployedStatefuleSetNames(targetCrNames []types.NamespacedName) []Statef
 	return result
 }
 
+//only test uses this
+func NewReconcileActiveMQArtemis(c client.Client, s *runtime.Scheme) ActiveMQArtemisReconciler {
+	return ActiveMQArtemisReconciler{
+		Client: c,
+		Scheme: s,
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
