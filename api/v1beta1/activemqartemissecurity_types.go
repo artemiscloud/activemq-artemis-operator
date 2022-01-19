@@ -220,3 +220,6 @@ type ActiveMQArtemisSecurityList struct {
 func init() {
 	SchemeBuilder.Register(&ActiveMQArtemisSecurity{}, &ActiveMQArtemisSecurityList{})
 }
+
+func (r *ActiveMQArtemisSecurity) Hub() {
+}

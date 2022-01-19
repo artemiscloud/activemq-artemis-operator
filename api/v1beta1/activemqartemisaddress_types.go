@@ -98,3 +98,6 @@ type ActiveMQArtemisAddressList struct {
 func init() {
 	SchemeBuilder.Register(&ActiveMQArtemisAddress{}, &ActiveMQArtemisAddressList{})
 }
+
+func (r *ActiveMQArtemisAddress) Hub() {
+}
