@@ -1,0 +1,19 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- address-create-auto-removed.yaml
+- address-queue-create.yaml
+- address-queue-create-auto-removed.yaml
+- artemis-aio-journal.yaml
+- artemis-basic-deployment.yaml
+- artemis-basic-address-settings-deployment.yaml
+- artemis-cluster-deployment.yaml
+- artemis-basic-resources-deployment.yaml
+- artemis-persistence-deployment.yaml
+- artemis-merge-replace-address-settings-deployment.yaml
+- artemis-ssl-deployment.yaml
+- artemis-replace-address-settings-deployment.yaml
+- artemis-ssl-persistence-deployment.yaml
+- artemis-ssl-persistence-cluster-deployment.yaml
+
+#+kubebuilder:scaffold:manifestskustomizesamples
+
