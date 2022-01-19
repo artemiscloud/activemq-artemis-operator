@@ -6,4 +6,4 @@ spec:
   deploymentPlan:
     size: 1
     image: placeholder
-
+    journalType: aio
