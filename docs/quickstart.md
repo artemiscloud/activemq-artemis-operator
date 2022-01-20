@@ -34,7 +34,7 @@ or if you have built your own image, overrides the defaults
 ```$xslt
 make OPERATOR_IMAGE_REPO=<your registry url> OPERATOR_VERSION=<your tag> deploy
 ```
-The defaults are specified in [Makefile](Makefile).
+The defaults are specified in [Makefile](../Makefile).
 
 The operator will be deployed into namespace **activemq-artemis-operator** and watches the same namespace.
 
@@ -51,7 +51,7 @@ activemq-artemis-controller-manager-5ff459cd95-kn22m   1/1     Running   0      
 
 ## Deploying the broker
 
-Now that the operator is running and listening for changes related to our crd we can deploy [one of our basic broker custom resource examples](config/samples/artemis-basic-deployment.yaml)
+Now that the operator is running and listening for changes related to our crd we can deploy [one of our basic broker custom resource examples](../config/samples/artemis-basic-deployment.yaml)
 which looks like
 
 ```$xslt
@@ -136,7 +136,7 @@ activemqartemis.broker.amq.io "ex-aao" deleted
 
 Users can use the activemqartemisaddress CRD to create and remove queues/address on a running broker pod.
 
-For example suppose you have deployed a broker pod like above, you can deploy an activemqartemisaddress resouce from the [samples dir](config/samples/address-queue-create-auto-removed.yaml):
+For example suppose you have deployed a broker pod like above, you can deploy an activemqartemisaddress resouce from the [samples dir](../config/samples/address-queue-create-auto-removed.yaml):
 
 address-queue-create-auto-removed.yaml:
 ```$xslt
