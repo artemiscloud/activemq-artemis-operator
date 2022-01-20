@@ -290,5 +290,5 @@ You can see the queue TEST has 200 messages now.
 Run this command to undeploy the operator
 
 ```$xslt
-make OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 undeploy
+make OPERATOR_IMAGE_REPO=<your repo> OPERATOR_VERSION=<tag> undeploy
 ```
