@@ -1,6 +1,18 @@
-to create bundle manifests/metadata:
+# Bunding A Bundle and Deploy it into the Operator Lifecycle Manager(OLM)
 
-make IMAGE_TAG_BASE=quay.io/hgao/operator OPERATOR_IMAGE_REPO=quay.io/hgao/operator OPERATOR_VERSION=new0.20.1 bundle
+## About the Operator Lifecycle Manager (OLM)
+
+The [Operator Lifecycle Manager](https://olm.operatorframework.io/) can help users to install and manage operators.
+The ArtemisCloud operator can be built into a bundle and installed into OLM.
+
+## Building the bundle
+
+### Creating the bundle's manifests/metadata
+
+Before you build the bundle image
+```$xslt
+make IMAGE_TAG_BASE=<bundle image registry> OPERATOR_IMAGE_REPO=<operator image registry> OPERATOR_VERSION=<operator tag> bundle
+```
 
 to build bundle image:
 
