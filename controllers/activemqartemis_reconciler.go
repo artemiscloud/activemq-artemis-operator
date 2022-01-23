@@ -1605,7 +1605,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 		)
 	}
 	if err != nil {
-		log.Error(err, "Failed to list deployed objects. ", err)
+		log.Error(err, "Failed to list deployed objects.")
 		return nil, err
 	}
 

@@ -14,4 +14,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/hgao/operator
-  newTag: new0.20.1
+  newTag: 0.20.2
