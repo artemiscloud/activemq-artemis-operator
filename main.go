@@ -50,6 +50,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
+	routev1 "github.com/openshift/api/route/v1"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -84,6 +85,7 @@ func printVersion() {
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme))
 
 	utilruntime.Must(brokerv2alpha1.AddToScheme(scheme))
 	utilruntime.Must(brokerv2alpha2.AddToScheme(scheme))
