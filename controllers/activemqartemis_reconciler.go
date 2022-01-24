@@ -40,7 +40,7 @@ import (
 	"reflect"
 
 	routev1 "github.com/openshift/api/route/v1"
-	extv1b1 "k8s.io/api/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1600,7 +1600,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 			&corev1.PersistentVolumeClaimList{},
 			&corev1.ServiceList{},
 			&appsv1.StatefulSetList{},
-			&extv1b1.IngressList{},
+			&netv1.IngressList{},
 			&corev1.SecretList{},
 		)
 	}

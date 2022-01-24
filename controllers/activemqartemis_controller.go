@@ -114,7 +114,7 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups="",resources=pods;services;endpoints;persistentvolumeclaims;events;configmaps;secrets;routes,verbs=*
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get
 //+kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=*
-//+kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=route.openshift.io,resources=routes;routes/custom-host;routes/status,verbs=get;list;watch;create;delete;update
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
 //+kubebuilder:rbac:groups=apps,resources=deployments/finalizers,verbs=update
