@@ -28,6 +28,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Triggered by main ActiveMQArtemis CRD messageMigration entry
 	LocalOnly bool `json:"localOnly"`
 }
 

@@ -39,6 +39,8 @@ spec:
               ActiveMQArtemisScaledown
             properties:
               localOnly:
+                description: Triggered by main ActiveMQArtemis CRD messageMigration
+                  entry
                 type: boolean
             required:
             - localOnly

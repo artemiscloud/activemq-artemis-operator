@@ -31,7 +31,8 @@ type ActiveMQArtemisSecuritySpec struct {
 	LoginModules     LoginModulesType     `json:"loginModules"`
 	SecurityDomains  SecurityDomainsType  `json:"securityDomains"`
 	SecuritySettings SecuritySettingsType `json:"securitySettings"`
-	ApplyToCrNames   []string             `json:"applyToCrNames,omitempty"`
+	// Apply this security config to the broker crs in the current namespace. A value of * or empty string means applying to all broker crs. Default apply to all broker crs
+	ApplyToCrNames []string `json:"applyToCrNames,omitempty"`
 }
 
 type LoginModulesType struct {
@@ -41,74 +42,126 @@ type LoginModulesType struct {
 }
 
 type PropertiesLoginModuleType struct {
+	// Name for PropertiesLoginModule
 	Name  string     `json:"name,omitempty"`
 	Users []UserType `json:"users,omitempty"`
 }
 
 type UserType struct {
-	Name     string   `json:"name,omitempty"`
-	Password *string  `json:"password,omitempty"`
-	Roles    []string `json:"roles,omitempty"`
+	// User name to be defined in properties login module
+	Name string `json:"name,omitempty"`
+	// Password to be defined in properties login module
+	Password *string `json:"password,omitempty"`
+	// Roles to be defined in properties login module
+	Roles []string `json:"roles,omitempty"`
 }
 
 type GuestLoginModuleType struct {
-	Name      string  `json:"name,omitempty"`
+	// Name for GuestLoginModule
+	Name string `json:"name,omitempty"`
+	// The guest user name
 	GuestUser *string `json:"guestUser,omitempty"`
+	// The guest user role
 	GuestRole *string `json:"guestRole,omitempty"`
 }
 
 type KeycloakLoginModuleType struct {
-	Name          string                          `json:"name,omitempty"`
+	// Name for KeycloakLoginModule
+	Name string `json:"name,omitempty"`
+	// Type of KeycloakLoginModule directAccess or bearerToken
 	ModuleType    *string                         `json:"moduleType,omitempty"`
 	Configuration KeycloakModuleConfigurationType `json:"configuration,omitempty"`
 }
 
 type KeycloakModuleConfigurationType struct {
-	Realm                         *string        `json:"realm,omitempty"`
-	RealmPublicKey                *string        `json:"realmPublicKey,omitempty"`
-	AuthServerUrl                 *string        `json:"authServerUrl,omitempty"`
-	SslRequired                   *string        `json:"sslRequired,omitempty"`
-	Resource                      *string        `json:"resource,omitempty"`
-	PublicClient                  *bool          `json:"publicClient,omitempty"`
-	Credentials                   []KeyValueType `json:"credentials,omitempty"`
-	UseResourceRoleMappings       *bool          `json:"useResourceRoleMappings,omitempty"`
-	EnableCors                    *bool          `json:"enableCors,omitempty"`
-	CorsMaxAge                    *int64         `json:"corsMaxAge,omitempty"`
-	CorsAllowedMethods            *string        `json:"corsAllowedMethods,omitempty"`
-	CorsAllowedHeaders            *string        `json:"corsAllowedHeaders,omitempty"`
-	CorsExposedHeaders            *string        `json:"corsExposedHeaders,omitempty"`
-	ExposeToken                   *bool          `json:"exposeToken,omitempty"`
-	BearerOnly                    *bool          `json:"bearerOnly,omitempty"`
-	AutoDetectBearerOnly          *bool          `json:"autoDetectBearerOnly,omitempty"`
-	ConnectionPoolSize            *int64         `json:"connectionPoolSize,omitempty"`
-	AllowAnyHostName              *bool          `json:"allowAnyHostName,omitempty"`
-	DisableTrustManager           *bool          `json:"disableTrustManager,omitempty"`
-	TrustStore                    *string        `json:"trustStore,omitempty"`
-	TrustStorePassword            *string        `json:"trustStorePassword,omitempty"`
-	ClientKeyStore                *string        `json:"clientKeyStore,omitempty"`
-	ClientKeyStorePassword        *string        `json:"clientKeyStorePassword,omitempty"`
-	ClientKeyPassword             *string        `json:"clientKeyPassword,omitempty"`
-	AlwaysRefreshToken            *bool          `json:"alwaysRefreshToken,omitempty"`
-	RegisterNodeAtStartup         *bool          `json:"registerNodeAtStartup,omitempty"`
-	RegisterNodePeriod            *int64         `json:"registerNodePeriod,omitempty"`
-	TokenStore                    *string        `json:"tokenStore,omitempty"`
-	TokenCookiePath               *string        `json:"tokenCookiePath,omitempty"`
-	PrincipalAttribute            *string        `json:"principalAttribute,omitempty"`
-	ProxyUrl                      *string        `json:"proxyUrl,omitempty"`
-	TurnOffChangeSessionIdOnLogin *bool          `json:"turnOffChangeSessionIdOnLogin,omitempty"`
-	TokenMinimumTimeToLive        *int64         `json:"tokenMinimumTimeToLive,omitempty"`
-	MinTimeBetweenJwksRequests    *int64         `json:"minTimeBetweenJwksRequests,omitempty"`
-	PublicKeyCacheTtl             *int64         `json:"publicKeyCacheTtl,omitempty"`
-	IgnoreOauthQueryParameter     *bool          `json:"ignoreOauthQueryParameter,omitempty"`
-	VerifyTokenAudience           *bool          `json:"verifyTokenAudience,omitempty"`
-	EnableBasicAuth               *bool          `json:"enableBasicAuth"`
-	ConfidentialPort              *int32         `json:"confidentialPort,omitempty"`
-	RedirectRewriteRules          []KeyValueType `json:"redirectRewriteRules,omitempty"`
-	Scope                         *string        `json:"scope,omitempty"`
+	// Realm for KeycloakLoginModule
+	Realm *string `json:"realm,omitempty"`
+	// Public key for the realm
+	RealmPublicKey *string `json:"realmPublicKey,omitempty"`
+	// URL of the keycloak authentication server
+	AuthServerUrl *string `json:"authServerUrl,omitempty"`
+	// How SSL is required
+	SslRequired *string `json:"sslRequired,omitempty"`
+	// Resource Name
+	Resource *string `json:"resource,omitempty"`
+	// If it is public client
+	PublicClient *bool          `json:"publicClient,omitempty"`
+	Credentials  []KeyValueType `json:"credentials,omitempty"`
+	// If to use resource role mappings
+	UseResourceRoleMappings *bool `json:"useResourceRoleMappings,omitempty"`
+	// If to enable CORS
+	EnableCors *bool `json:"enableCors,omitempty"`
+	// CORS max age
+	CorsMaxAge *int64 `json:"corsMaxAge,omitempty"`
+	// CORS allowed methods
+	CorsAllowedMethods *string `json:"corsAllowedMethods,omitempty"`
+	// CORS allowed headers
+	CorsAllowedHeaders *string `json:"corsAllowedHeaders,omitempty"`
+	// CORS exposed headers
+	CorsExposedHeaders *string `json:"corsExposedHeaders,omitempty"`
+	// If to expose access token
+	ExposeToken *bool `json:"exposeToken,omitempty"`
+	// If only verify bearer token
+	BearerOnly *bool `json:"bearerOnly,omitempty"`
+	// If auto-detect bearer token only
+	AutoDetectBearerOnly *bool `json:"autoDetectBearerOnly,omitempty"`
+	// Size of the connection pool
+	ConnectionPoolSize *int64 `json:"connectionPoolSize,omitempty"`
+	// If to allow any host name
+	AllowAnyHostName *bool `json:"allowAnyHostName,omitempty"`
+	// If to disable trust manager
+	DisableTrustManager *bool `json:"disableTrustManager,omitempty"`
+	// Path of a trust store
+	TrustStore *string `json:"trustStore,omitempty"`
+	// Truststore password
+	TrustStorePassword *string `json:"trustStorePassword,omitempty"`
+	// Path of a client keystore
+	ClientKeyStore *string `json:"clientKeyStore,omitempty"`
+	// Client keystore password
+	ClientKeyStorePassword *string `json:"clientKeyStorePassword,omitempty"`
+	// Client key password
+	ClientKeyPassword *string `json:"clientKeyPassword,omitempty"`
+	// If always refresh token
+	AlwaysRefreshToken *bool `json:"alwaysRefreshToken,omitempty"`
+	// If register node at startup
+	RegisterNodeAtStartup *bool `json:"registerNodeAtStartup,omitempty"`
+	// Period for re-registering node
+	RegisterNodePeriod *int64 `json:"registerNodePeriod,omitempty"`
+	// Type of token store. session or cookie
+	TokenStore *string `json:"tokenStore,omitempty"`
+	// Cookie path for a cookie store
+	TokenCookiePath *string `json:"tokenCookiePath,omitempty"`
+	// OpenID Connect ID Token attribute to populate the UserPrincipal name with
+	PrincipalAttribute *string `json:"principalAttribute,omitempty"`
+	// The proxy URL
+	ProxyUrl *string `json:"proxyUrl,omitempty"`
+	// If not to change session id on a successful login
+	TurnOffChangeSessionIdOnLogin *bool `json:"turnOffChangeSessionIdOnLogin,omitempty"`
+	// Minimum time to refresh an active access token
+	TokenMinimumTimeToLive *int64 `json:"tokenMinimumTimeToLive,omitempty"`
+	// Minimum interval between two requests to Keycloak to retrieve new public keys
+	MinTimeBetweenJwksRequests *int64 `json:"minTimeBetweenJwksRequests,omitempty"`
+	// Maximum interval between two requests to Keycloak to retrieve new public keys
+	PublicKeyCacheTtl *int64 `json:"publicKeyCacheTtl,omitempty"`
+	// Whether to turn off processing of the access_token query parameter for bearer token processing
+	IgnoreOauthQueryParameter *bool `json:"ignoreOauthQueryParameter,omitempty"`
+	// Verify whether the token contains this client name (resource) as an audience
+	VerifyTokenAudience *bool `json:"verifyTokenAudience,omitempty"`
+	// Whether to support basic authentication
+	EnableBasicAuth *bool `json:"enableBasicAuth"`
+	// The confidential port used by the Keycloak server for secure connections over SSL/TLS
+	ConfidentialPort *int32 `json:"confidentialPort,omitempty"`
+	// The regular expression to which the Redirect URI is to be matched
+	// value is the replacement String
+	RedirectRewriteRules []KeyValueType `json:"redirectRewriteRules,omitempty"`
+	// The OAuth2 scope parameter for DirectAccessGrantsLoginModule
+	Scope *string `json:"scope,omitempty"`
 }
 
 type KeyValueType struct {
-	Key   string  `json:"key,omitempty"`
+	// The credentials key
+	Key string `json:"key,omitempty"`
+	// The credentials value
 	Value *string `json:"value,omitempty"`
 }
 
@@ -118,15 +171,20 @@ type SecurityDomainsType struct {
 }
 
 type BrokerDomainType struct {
+	// Name for the broker/console domain
 	Name         *string                    `json:"name,omitempty"`
 	LoginModules []LoginModuleReferenceType `json:"loginModules,omitempty"`
 }
 
 type LoginModuleReferenceType struct {
-	Name   *string `json:"name,omitempty"`
-	Flag   *string `json:"flag,omitempty"`
-	Debug  *bool   `json:"debug,omitempty"`
-	Reload *bool   `json:"reload,omitempty"`
+	// Name for login modules for broker/console domain
+	Name *string `json:"name,omitempty"`
+	// Flag of login modules for broker/console domain
+	Flag *string `json:"flag,omitempty"`
+	// Debug option of login modules for broker/console domain
+	Debug *bool `json:"debug,omitempty"`
+	// Reload option of login modules for broker/console domain
+	Reload *bool `json:"reload,omitempty"`
 }
 
 type SecuritySettingsType struct {
@@ -135,36 +193,54 @@ type SecuritySettingsType struct {
 }
 
 type BrokerSecuritySettingType struct {
+	// The address match pattern of a security setting
 	Match       string           `json:"match,omitempty"`
 	Permissions []PermissionType `json:"permissions,omitempty"`
 }
 
 type PermissionType struct {
-	OperationType string   `json:"operationType"`
-	Roles         []string `json:"roles,omitempty"`
+	// The operation type of a security setting
+	OperationType string `json:"operationType"`
+	// The roles of a security setting
+	Roles []string `json:"roles,omitempty"`
 }
 
 type ManagementSecuritySettingsType struct {
+	// The roles allowed to login hawtio
 	HawtioRoles   []string                `json:"hawtioRoles,omitempty"`
 	Connector     ConnectorConfigType     `json:"connector,omitempty"`
 	Authorisation AuthorisationConfigType `json:"authorisation,omitempty"`
 }
 
 type ConnectorConfigType struct {
-	Host               *string `json:"host,omitempty"`
-	Port               *int32  `json:"port,omitempty"`
-	RmiRegistryPort    *int32  `json:"rmiRegistryPort,omitempty"`
-	JmxRealm           *string `json:"jmxRealm,omitempty"`
-	ObjectName         *string `json:"objectName,omitempty"`
-	AuthenticatorType  *string `json:"authenticatorType,omitempty"`
-	Secured            *bool   `json:"secured,omitempty"`
-	KeyStoreProvider   *string `json:"keyStoreProvider,omitempty"`
-	KeyStorePath       *string `json:"keyStorePath,omitempty"`
-	KeyStorePassword   *string `json:"keyStorePassword,omitempty"`
+	// The connector host for connecting to management
+	Host *string `json:"host,omitempty"`
+	// The connector port for connecting to management
+	Port *int32 `json:"port,omitempty"`
+	// The RMI registry port for management
+	RmiRegistryPort *int32 `json:"rmiRegistryPort,omitempty"`
+	// The JMX realm of management
+	JmxRealm *string `json:"jmxRealm,omitempty"`
+	// The JMX object name of management
+	ObjectName *string `json:"objectName,omitempty"`
+	// The management authentication type
+	AuthenticatorType *string `json:"authenticatorType,omitempty"`
+	// Whether management connection is secured
+	Secured *bool `json:"secured,omitempty"`
+	// The keystore provider for management connector
+	KeyStoreProvider *string `json:"keyStoreProvider,omitempty"`
+	// The keystore path for management connector
+	KeyStorePath *string `json:"keyStorePath,omitempty"`
+	// The keystore password for management connector
+	KeyStorePassword *string `json:"keyStorePassword,omitempty"`
+	// The truststore provider for management connector
 	TrustStoreProvider *string `json:"trustStoreProvider,omitempty"`
-	TrustStorePath     *string `json:"trustStorePath,omitempty"`
+	// The truststore path for management connector
+	TrustStorePath *string `json:"trustStorePath,omitempty"`
+	// The truststore password for management connector
 	TrustStorePassword *string `json:"trustStorePassword,omitempty"`
-	PasswordCodec      *string `json:"passwordCodec,omitempty"`
+	// The password codec for management connector
+	PasswordCodec *string `json:"passwordCodec,omitempty"`
 }
 
 type AuthorisationConfigType struct {
@@ -174,17 +250,23 @@ type AuthorisationConfigType struct {
 }
 
 type AllowedListEntryType struct {
+	// The domain of allowedList
 	Domain *string `json:"domain,omitempty"`
-	Key    *string `json:"key,omitempty"`
+	// The key of allowedList
+	Key *string `json:"key,omitempty"`
 }
 
 type DefaultAccessType struct {
-	Method *string  `json:"method,omitempty"`
-	Roles  []string `json:"roles,omitempty"`
+	// The method of defaultAccess/roleAccess List
+	Method *string `json:"method,omitempty"`
+	// The roles of defaultAccess/roleAccess List
+	Roles []string `json:"roles,omitempty"`
 }
 
 type RoleAccessType struct {
-	Domain     *string             `json:"domain,omitempty"`
+	// The domain of roleAccess List
+	Domain *string `json:"domain,omitempty"`
+	// The key of roleAccess List
 	Key        *string             `json:"key,omitempty"`
 	AccessList []DefaultAccessType `json:"accessList,omitempty"`
 }

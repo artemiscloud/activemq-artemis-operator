@@ -371,6 +371,9 @@ spec:
               ActiveMQArtemisSecurity
             properties:
               applyToCrNames:
+                description: Apply this security config to the broker crs in the current
+                  namespace. A value of * or empty string means applying to all broker
+                  crs. Default apply to all broker crs
                 items:
                   type: string
                 type: array
@@ -380,10 +383,13 @@ spec:
                     items:
                       properties:
                         guestRole:
+                          description: The guest user role
                           type: string
                         guestUser:
+                          description: The guest user name
                           type: string
                         name:
+                          description: Name for GuestLoginModule
                           type: string
                       type: object
                     type: array
@@ -393,114 +399,170 @@ spec:
                         configuration:
                           properties:
                             allowAnyHostName:
+                              description: If to allow any host name
                               type: boolean
                             alwaysRefreshToken:
+                              description: If always refresh token
                               type: boolean
                             authServerUrl:
+                              description: URL of the keycloak authentication server
                               type: string
                             autoDetectBearerOnly:
+                              description: If auto-detect bearer token only
                               type: boolean
                             bearerOnly:
+                              description: If only verify bearer token
                               type: boolean
                             clientKeyPassword:
+                              description: Client key password
                               type: string
                             clientKeyStore:
+                              description: Path of a client keystore
                               type: string
                             clientKeyStorePassword:
+                              description: Client keystore password
                               type: string
                             confidentialPort:
+                              description: The confidential port used by the Keycloak
+                                server for secure connections over SSL/TLS
                               format: int32
                               type: integer
                             connectionPoolSize:
+                              description: Size of the connection pool
                               format: int64
                               type: integer
                             corsAllowedHeaders:
+                              description: CORS allowed headers
                               type: string
                             corsAllowedMethods:
+                              description: CORS allowed methods
                               type: string
                             corsExposedHeaders:
+                              description: CORS exposed headers
                               type: string
                             corsMaxAge:
+                              description: CORS max age
                               format: int64
                               type: integer
                             credentials:
                               items:
                                 properties:
                                   key:
+                                    description: The credentials key
                                     type: string
                                   value:
+                                    description: The credentials value
                                     type: string
                                 type: object
                               type: array
                             disableTrustManager:
+                              description: If to disable trust manager
                               type: boolean
                             enableBasicAuth:
+                              description: Whether to support basic authentication
                               type: boolean
                             enableCors:
+                              description: If to enable CORS
                               type: boolean
                             exposeToken:
+                              description: If to expose access token
                               type: boolean
                             ignoreOauthQueryParameter:
+                              description: Whether to turn off processing of the access_token
+                                query parameter for bearer token processing
                               type: boolean
                             minTimeBetweenJwksRequests:
+                              description: Minimum interval between two requests to
+                                Keycloak to retrieve new public keys
                               format: int64
                               type: integer
                             principalAttribute:
+                              description: OpenID Connect ID Token attribute to populate
+                                the UserPrincipal name with
                               type: string
                             proxyUrl:
+                              description: The proxy URL
                               type: string
                             publicClient:
+                              description: If it is public client
                               type: boolean
                             publicKeyCacheTtl:
+                              description: Maximum interval between two requests to
+                                Keycloak to retrieve new public keys
                               format: int64
                               type: integer
                             realm:
+                              description: Realm for KeycloakLoginModule
                               type: string
                             realmPublicKey:
+                              description: Public key for the realm
                               type: string
                             redirectRewriteRules:
+                              description: The regular expression to which the Redirect
+                                URI is to be matched value is the replacement String
                               items:
                                 properties:
                                   key:
+                                    description: The credentials key
                                     type: string
                                   value:
+                                    description: The credentials value
                                     type: string
                                 type: object
                               type: array
                             registerNodeAtStartup:
+                              description: If register node at startup
                               type: boolean
                             registerNodePeriod:
+                              description: Period for re-registering node
                               format: int64
                               type: integer
                             resource:
+                              description: Resource Name
                               type: string
                             scope:
+                              description: The OAuth2 scope parameter for DirectAccessGrantsLoginModule
                               type: string
                             sslRequired:
+                              description: How SSL is required
                               type: string
                             tokenCookiePath:
+                              description: Cookie path for a cookie store
                               type: string
                             tokenMinimumTimeToLive:
+                              description: Minimum time to refresh an active access
+                                token
                               format: int64
                               type: integer
                             tokenStore:
+                              description: Type of token store. session or cookie
                               type: string
                             trustStore:
+                              description: Path of a trust store
                               type: string
                             trustStorePassword:
+                              description: Truststore password
                               type: string
                             turnOffChangeSessionIdOnLogin:
+                              description: If not to change session id on a successful
+                                login
                               type: boolean
                             useResourceRoleMappings:
+                              description: If to use resource role mappings
                               type: boolean
                             verifyTokenAudience:
+                              description: Verify whether the token contains this
+                                client name (resource) as an audience
                               type: boolean
                           required:
                           - enableBasicAuth
                           type: object
                         moduleType:
+                          description: Type of KeycloakLoginModule directAccess or
+                            bearerToken
                           type: string
                         name:
+                          description: Name for KeycloakLoginModule
                           type: string
                       type: object
                     type: array
@@ -508,15 +570,22 @@ spec:
                     items:
                       properties:
                         name:
+                          description: Name for PropertiesLoginModule
                           type: string
                         users:
                           items:
                             properties:
                               name:
+                                description: User name to be defined in properties
+                                  login module
                                 type: string
                               password:
+                                description: Password to be defined in properties
+                                  login module
                                 type: string
                               roles:
+                                description: Roles to be defined in properties login
+                                  module
                                 items:
                                   type: string
                                 type: array
@@ -533,16 +602,25 @@ spec:
                         items:
                           properties:
                             debug:
+                              description: Debug option of login modules for broker/console
+                                domain
                               type: boolean
                             flag:
+                              description: Flag of login modules for broker/console
+                                domain
                               type: string
                             name:
+                              description: Name for login modules for broker/console
+                                domain
                               type: string
                             reload:
+                              description: Reload option of login modules for broker/console
+                                domain
                               type: boolean
                           type: object
                         type: array
                       name:
+                        description: Name for the broker/console domain
                         type: string
                     type: object
                   consoleDomain:
@@ -551,16 +629,25 @@ spec:
                         items:
                           properties:
                             debug:
+                              description: Debug option of login modules for broker/console
+                                domain
                               type: boolean
                             flag:
+                              description: Flag of login modules for broker/console
+                                domain
                               type: string
                             name:
+                              description: Name for login modules for broker/console
+                                domain
                               type: string
                             reload:
+                              description: Reload option of login modules for broker/console
+                                domain
                               type: boolean
                           type: object
                         type: array
                       name:
+                        description: Name for the broker/console domain
                         type: string
                     type: object
                 type: object
@@ -570,13 +657,16 @@ spec:
                     items:
                       properties:
                         match:
+                          description: The address match pattern of a security setting
                           type: string
                         permissions:
                           items:
                             properties:
                               operationType:
+                                description: The operation type of a security setting
                                 type: string
                               roles:
+                                description: The roles of a security setting
                                 items:
                                   type: string
                                 type: array
@@ -594,8 +684,10 @@ spec:
                             items:
                               properties:
                                 domain:
+                                  description: The domain of allowedList
                                   type: string
                                 key:
+                                  description: The key of allowedList
                                   type: string
                               type: object
                             type: array
@@ -603,8 +695,12 @@ spec:
                             items:
                               properties:
                                 method:
+                                  description: The method of defaultAccess/roleAccess
+                                    List
                                   type: string
                                 roles:
+                                  description: The roles of defaultAccess/roleAccess
+                                    List
                                   items:
                                     type: string
                                   type: array
@@ -617,16 +713,22 @@ spec:
                                   items:
                                     properties:
                                       method:
+                                        description: The method of defaultAccess/roleAccess
+                                          List
                                         type: string
                                       roles:
+                                        description: The roles of defaultAccess/roleAccess
+                                          List
                                         items:
                                           type: string
                                         type: array
                                     type: object
                                   type: array
                                 domain:
+                                  description: The domain of roleAccess List
                                   type: string
                                 key:
+                                  description: The key of roleAccess List
                                   type: string
                               type: object
                             type: array
@@ -634,37 +736,52 @@ spec:
                       connector:
                         properties:
                           authenticatorType:
+                            description: The management authentication type
                             type: string
                           host:
+                            description: The connector host for connecting to management
                             type: string
                           jmxRealm:
+                            description: The JMX realm of management
                             type: string
                           keyStorePassword:
+                            description: The keystore password for management connector
                             type: string
                           keyStorePath:
+                            description: The keystore path for management connector
                             type: string
                           keyStoreProvider:
+                            description: The keystore provider for management connector
                             type: string
                           objectName:
+                            description: The JMX object name of management
                             type: string
                           passwordCodec:
+                            description: The password codec for management connector
                             type: string
                           port:
+                            description: The connector port for connecting to management
                             format: int32
                             type: integer
                           rmiRegistryPort:
+                            description: The RMI registry port for management
                             format: int32
                             type: integer
                           secured:
+                            description: Whether management connection is secured
                             type: boolean
                           trustStorePassword:
+                            description: The truststore password for management connector
                             type: string
                           trustStorePath:
+                            description: The truststore path for management connector
                             type: string
                           trustStoreProvider:
+                            description: The truststore provider for management connector
                             type: string
                         type: object
                       hawtioRoles:
+                        description: The roles allowed to login hawtio
                         items:
                           type: string
                         type: array
