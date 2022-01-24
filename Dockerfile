@@ -1,6 +1,12 @@
 # Build the manager binary
 FROM golang:1.16 as builder
 
+ENV GOOS=linux
+ENV CGO_ENABLED=0
+ENV BROKER_NAME=activemq-artemis
+
+RUN mkdir -p /tmp/activemq-artemis-operator
+
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -15,24 +21,32 @@ COPY api/ api/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY version/ version/
+COPY entrypoint/ entrypoint/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8:8.5-200 AS base-env
+FROM registry.access.redhat.com/ubi8:8.5-214 AS base-env
 
-RUN yum --setopt=tsflags=nodocs install -y unzip tar rsync shadow-utils
-RUN yum --setopt=tsflags=nodocs install -y java-1.8.0-openjdk-devel
-RUN yum --setopt=tsflags=nodocs install -y hostname libaio python2
-RUN yum clean all && [ ! -d /var/cache/yum ] || rm -rf /var/cache/yum
+ENV BROKER_NAME=activemq-artemis
+ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
+ENV USER_UID=1000
+ENV USER_NAME=${BROKER_NAME}-operator
+ENV CGO_ENABLED=0
+ENV GOPATH=/tmp/go
+ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
+ENV JBOSS_IMAGE_VERSION="0.20"
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
-USER 65532:65532
 
-ENTRYPOINT ["/manager"]
+COPY --from=builder /tmp/activemq-artemis-operator /home/${BROKER_NAME}-operator/bin
+COPY --from=builder /workspace/entrypoint/entrypoint /home/${BROKER_NAME}-operator/bin
+
+RUN useradd ${BROKER_NAME}-operator
+RUN chown -R `id -u`:0 /home/${BROKER_NAME}-operator/bin && chmod -R 755 /home/${BROKER_NAME}-operator/bin
+
+USER ${USER_UID}
+ENTRYPOINT ["/home/${BROKER_NAME}-operator/bin/entrypoint"]
 
 LABEL \
       com.redhat.component="amq-broker-rhel8-operator-container"  \
