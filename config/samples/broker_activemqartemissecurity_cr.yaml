@@ -8,7 +8,6 @@ spec:
     - name: 'prop-module'
       users:
       - name: bob
-        password: mysecret
         roles:
         - root
   securityDomains:
