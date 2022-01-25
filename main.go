@@ -202,7 +202,7 @@ func main() {
 		log.Error(err, "can't create client from config")
 		os.Exit(1)
 	} else {
-		setupAccountName(clnt, ctx, oprNameSpace, name, watchNameSpace == oprNameSpace)
+		setupAccountName(clnt, ctx, oprNameSpace, name)
 	}
 
 	if err = (&controllers.ActiveMQArtemisReconciler{
@@ -297,7 +297,7 @@ func getSupportedBrokerVersions() string {
 	return strings.TrimSpace(supportedProductVersions)
 }
 
-func setupAccountName(clnt client.Client, ctx context.Context, ns, podname string, watchLocal bool) {
+func setupAccountName(clnt client.Client, ctx context.Context, ns, podname string) {
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
