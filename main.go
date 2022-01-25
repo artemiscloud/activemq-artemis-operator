@@ -234,7 +234,8 @@ func main() {
 		log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisSecurity")
 		os.Exit(1)
 	}
-	if os.Getenv("ENABLE_WEBHOOKS") != "true" {
+	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
+		log.Info("Setting up webhook functions")
 		if err = (&brokerv1beta1.ActiveMQArtemis{}).SetupWebhookWithManager(mgr); err != nil {
 			log.Error(err, "unable to create webhook", "webhook", "ActiveMQArtemis")
 			os.Exit(1)
