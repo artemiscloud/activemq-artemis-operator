@@ -2181,8 +2181,8 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client client.Client, ss
 	reqLogger.V(1).Info("Stopped Count........................", "info:", len(podStatus.Stopped))
 	reqLogger.V(1).Info("Starting Count........................", "info:", len(podStatus.Starting))
 
-	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
-		cr.Status.PodStatus = podStatus
+	if !reflect.DeepEqual(podStatus, cr.Status.Deployment) {
+		cr.Status.Deployment = podStatus
 
 		err := resources.Update(ssNamespacedName, client, cr)
 		if err != nil {

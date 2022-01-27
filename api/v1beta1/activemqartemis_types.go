@@ -340,7 +340,7 @@ type ActiveMQArtemisStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Pod Status
-	PodStatus olm.DeploymentStatus `json:"podStatus"`
+	Deployment olm.DeploymentStatus `json:"podStatus"`
 	//Deployments olm.DeploymentStatus `json:"podStatus"`
 	//we probably use Deployments as operatorHub shows invalid field podStatus
 	//see 3scale https://github.com/3scale/3scale-operator/blob/8abbabd926616b98db0e7e736e68e5ceba90ed9d/apis/apps/v1alpha1/apimanager_types.go#L87
