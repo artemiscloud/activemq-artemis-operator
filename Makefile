@@ -3,10 +3,10 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+VERSION ?= 1.0.0
 
 KUBE_CLI=kubectl
-OPERATOR_VERSION := 0.20.1
+OPERATOR_VERSION := 1.0.0
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := activemq-artemis-operator
 OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator

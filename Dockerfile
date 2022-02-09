@@ -26,7 +26,7 @@ COPY entrypoint/ entrypoint/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator main.go
 
-FROM registry.access.redhat.com/ubi8:8.5-214 AS base-env
+FROM registry.access.redhat.com/ubi8:8.5-226 AS base-env
 
 ENV BROKER_NAME=activemq-artemis
 ENV OPERATOR=/home/${BROKER_NAME}-operator/bin/${BROKER_NAME}-operator
@@ -35,7 +35,7 @@ ENV USER_NAME=${BROKER_NAME}-operator
 ENV CGO_ENABLED=0
 ENV GOPATH=/tmp/go
 ENV JBOSS_IMAGE_NAME="amq7/amq-broker-rhel8-operator"
-ENV JBOSS_IMAGE_VERSION="0.20"
+ENV JBOSS_IMAGE_VERSION="1.0"
 
 WORKDIR /
 
@@ -60,4 +60,4 @@ LABEL \
       maintainer="Roddie Kieley <rkieley@redhat.com>"  \
       name="amq7/amq-broker-rhel8-operator" \
       summary="ActiveMQ Artemis Broker Operator"  \
-      version="0.20"
+      version="1.0"
