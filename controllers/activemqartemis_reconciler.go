@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -66,6 +67,9 @@ const (
 	statefulSetConnectorsUpdated = 1 << 9
 	statefulSetConsoleUpdated    = 1 << 10
 	statefulSetInitImageUpdated  = 1 << 11
+
+	livenessProbeGraceTime = 30
+	TCPLivenessPort        = 8161
 )
 
 var defaultMessageMigration bool = true
@@ -215,6 +219,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 			log.Info("Updating the pod template for ss as is marked invalid")
 			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
 			fsm.SetPodInvalid(false)
+			newPodTemplateCreated = true
+		}
+
+		if !processLivenessProbe(fsm.customResource, fsm.prevCustomResource) || !processReadinessProbe(fsm.customResource, fsm.prevCustomResource) {
+			*fsm.prevCustomResource = *fsm.customResource
+			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
 			newPodTemplateCreated = true
 		}
 	}
@@ -386,6 +396,14 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customRe
 
 	//we need to compare old with new and update if they are different.
 	return compareAddressSettings(&prevCustomResource.Spec.AddressSettings, &customResource.Spec.AddressSettings)
+}
+
+func processLivenessProbe(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
+}
+
+func processReadinessProbe(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.ReadinessProbe, customResource.Spec.DeploymentPlan.ReadinessProbe)
 }
 
 //returns true if currentAddressSettings need update
@@ -1791,15 +1809,8 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	}
 	reqLogger.V(1).Info("now mounts added to container", "new len", len(container.VolumeMounts))
 
-	if fsm.customResource.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds != nil {
-		container.LivenessProbe.TimeoutSeconds = *fsm.customResource.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds
-		reqLogger.V(1).Info("Setting liveness timeoutSeconds", "value", container.LivenessProbe.TimeoutSeconds)
-	}
-	reqLogger.V(1).Info("Checking out readiness", "crvalue", fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds)
-	if fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds != nil {
-		container.ReadinessProbe.TimeoutSeconds = *fsm.customResource.Spec.DeploymentPlan.ReadinessProbe.TimeoutSeconds
-		reqLogger.V(1).Info("Setting readiness timeoutSeconds", "value", container.ReadinessProbe.TimeoutSeconds)
-	}
+	container.LivenessProbe = configureLivenessProbe(&fsm.customResource.Spec.DeploymentPlan.LivenessProbe)
+	container.ReadinessProbe = configureReadinessProbe(&fsm.customResource.Spec.DeploymentPlan.ReadinessProbe)
 
 	Spec.Containers = append(Containers, container)
 	brokerVolumes := MakeVolumes(fsm)
@@ -2016,6 +2027,93 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	pts.Spec = Spec
 
 	return pts
+}
+
+func configureLivenessProbe(probe *corev1.Probe) *corev1.Probe {
+	clog.V(1).Info("Creating Liveness Probe")
+	if probe != nil {
+		//copy the probe
+
+		clog.V(1).Info("Liveness Probe provided by user")
+		livenessProbe := &corev1.Probe{
+			InitialDelaySeconds:           probe.InitialDelaySeconds,
+			TimeoutSeconds:                probe.TimeoutSeconds,
+			PeriodSeconds:                 probe.PeriodSeconds,
+			TerminationGracePeriodSeconds: probe.TerminationGracePeriodSeconds,
+			SuccessThreshold:              probe.SuccessThreshold,
+			FailureThreshold:              probe.FailureThreshold,
+		}
+		if probe.Exec == nil && probe.HTTPGet == nil && probe.TCPSocket == nil {
+			clog.V(1).Info("Adding default TCP check")
+			livenessProbe.Handler = corev1.Handler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt(TCPLivenessPort),
+				},
+			}
+		} else {
+			clog.V(1).Info("Using user provided Liveness Probe " + probe.Exec.String())
+			livenessProbe.Exec = probe.Exec
+		}
+		return livenessProbe
+	} else {
+		livenessProbe := &corev1.Probe{
+			InitialDelaySeconds: livenessProbeGraceTime,
+			TimeoutSeconds:      5,
+			Handler: corev1.Handler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt(TCPLivenessPort),
+				},
+			},
+		}
+		clog.V(1).Info("Creating Default Liveness Probe")
+		return livenessProbe
+	}
+}
+
+func configureReadinessProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe != nil {
+		//copy the probe
+		readinessProbe := &corev1.Probe{
+			InitialDelaySeconds:           probe.InitialDelaySeconds,
+			TimeoutSeconds:                probe.TimeoutSeconds,
+			PeriodSeconds:                 probe.PeriodSeconds,
+			TerminationGracePeriodSeconds: probe.TerminationGracePeriodSeconds,
+			SuccessThreshold:              probe.SuccessThreshold,
+			FailureThreshold:              probe.FailureThreshold,
+		}
+		if probe.Exec == nil && probe.HTTPGet == nil && probe.TCPSocket == nil {
+			//add the default readiness check if none
+			clog.V(1).Info("Using user provided readiness Probe")
+			readinessProbe.Handler = corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/bash",
+						"-c",
+						"/opt/amq/bin/readinessProbe.sh",
+					},
+				},
+			}
+		} else {
+			readinessProbe.Handler = probe.Handler
+		}
+		return readinessProbe
+	} else {
+		readinessProbe := &corev1.Probe{
+			InitialDelaySeconds: livenessProbeGraceTime,
+			TimeoutSeconds:      5,
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{
+						"/bin/bash",
+						"-c",
+						"/opt/amq/bin/readinessProbe.sh",
+					},
+				},
+			},
+		}
+		clog.V(1).Info("Creating Default readiness Probe")
+		return readinessProbe
+	}
 }
 
 func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {

@@ -208,22 +208,12 @@ type DeploymentPlanType struct {
 	ManagementRBACEnabled bool            `json:"managementRBACEnabled,omitempty"`
 	ExtraMounts           ExtraMountsType `json:"extraMounts,omitempty"`
 	// Whether broker is clustered
-	Clustered      *bool              `json:"clustered,omitempty"`
-	PodSecurity    PodSecurityType    `json:"podSecurity,omitempty"`
-	LivenessProbe  LivenessProbeType  `json:"livenessProbe,omitempty"`
-	ReadinessProbe ReadinessProbeType `json:"readinessProbe,omitempty"`
+	Clustered      *bool           `json:"clustered,omitempty"`
+	PodSecurity    PodSecurityType `json:"podSecurity,omitempty"`
+	LivenessProbe  corev1.Probe    `json:"livenessProbe,omitempty"`
+	ReadinessProbe corev1.Probe    `json:"readinessProbe,omitempty"`
 	// Whether or not to install the artemis metrics plugin
 	EnableMetricsPlugin *bool `json:"enableMetricsPlugin,omitempty"`
-}
-
-type LivenessProbeType struct {
-	// Liveness Probe timeoutSeconds for broker container
-	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
-}
-
-type ReadinessProbeType struct {
-	// Readiness Probe timeoutSeconds for broker container
-	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
 type PodSecurityType struct {

@@ -231,3 +231,118 @@ the broker and addressing are running, and that these controllers have started s
 It is recommended that you deploy only a single instance of the ActiveMQ Artemis Operator in a given Kubernetes project. 
 Setting the replicas element of your Operator deployment to a value greater than 1, or deploying the Operator more than 
 once in the same project is not recommended.
+
+## Configuring the Liveness and Readiness Probe
+
+The Liveness and readiness Probes are used by Kubernetes to detect when the Broker is started and to check it is still alive. 
+For full documentation on this topic refer to the [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) 
+chapter in the Kubernetes documentation.
+
+### The Liveness probe
+
+The Liveness probe is configured in the Artemis CR something like:
+
+```yaml
+spec:
+  deploymentPlan:
+    size: 1
+    image: placeholder
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+```
+
+If no Liveness probe is configured or the handler itself is missing from a configured Liveness Probe then  the Operator 
+will create a default TCP Probe that will check the liveness of the broker by connecting to the web Server port, the default config is:
+
+```yaml
+spec:
+  deploymentPlan:
+    livenessProbe:
+      tcpSocket:
+        port: 8181
+      initialDelaySeconds: 30,
+      timeoutSeconds:      5,
+```
+
+#### Using the Artemis Health Check
+
+you can also use the Artemis Health Checker to check that the broker is running, something like:
+
+```yaml
+spec:
+  deploymentPlan:
+    livenessProbe:
+      exec:
+        command:
+        - /home/jboss/amq-broker/bin/artemis 
+        - check 
+        - node 
+        - --silent
+        - --user
+        - $AMQ_USER
+        - --password
+        - $AMQ_PASSWORD
+      initialDelaySeconds: 30,
+      timeoutSeconds:
+
+```
+
+By default this uses the URI of the acceptor configured with the name **artemis**. Since this is not configured by default
+it will need configuring in the broker CR. Alternatively configure the acceptor used by passing the **--acceptor** 
+argument on the artemis check command.
+
+
+    NOTE: $AMQ_USER and $AMQ_PASSWORD are environment variables that are configured by the Operator
+    
+You can also check the status of the broker by producing and consuming a message:
+
+```yaml
+spec:
+  deploymentPlan:
+    livenessProbe:
+      exec:
+        command:
+          - /home/jboss/amq-broker/bin/artemis
+          - check
+          - queue
+          - --name
+          - livenessqueue
+          - --produce
+          - "1"
+          - --consume
+          - "1"
+          - --silent
+          - --user
+          - $AMQ_USER
+          - --password
+          - $AMQ_PASSWORD
+      initialDelaySeconds: 30,
+      timeoutSeconds:
+```
+
+The liveness queue must exist and be deployed the broker and be of type anycast with acceptable configuration, something like:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: livenessqueue
+  namespace: activemq-artemis-operator
+spec:
+  addressName: livenessqueue
+  queueConfiguration:
+    purgeOnNoConsumers: false
+    maxConsumers: -1
+    durable: true
+    enabled: true
+  queueName: livenessqueue
+  routingType: anycast
+```
+
+### The Readiness Probe
+
+As with the Liveness Probe the Readiness probe has a default probe if not configured. Unlike the readiness probe this is 
+a script that is shipped in the Kubernetes Image, this can be found [here](https://github.com/artemiscloud/activemq-artemis-broker-kubernetes-image/blob/main/modules/activemq-artemis-launch/added/readinessProbe.sh)
+
+The script will try to establish a tcp connection to each port configured in the broker.xml.  
