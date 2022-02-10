@@ -26,7 +26,7 @@ jobs:
         run: go get github.com/onsi/ginkgo/ginkgo && $(go env GOPATH)/bin/ginkgo ./...
 
       - name: Build the image
-        run: docker build --file ./build/Dockerfile --label \"quay.expires-after=1w\" --label \"git-sha=$GITHUB_SHA\" --tag $IMAGE_NAME:dev.latest .
+        run: docker build --label \"quay.expires-after=1w\" --label \"git-sha=$GITHUB_SHA\" --tag $IMAGE_NAME:dev.latest .
 
       - name: Execute the test suite
         uses: artemiscloud/activemq-artemis-operator-test-action@v1.1
