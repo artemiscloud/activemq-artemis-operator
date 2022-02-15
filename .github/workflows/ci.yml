@@ -23,18 +23,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Execute the tests
-        run: go get github.com/onsi/ginkgo/ginkgo && $(go env GOPATH)/bin/ginkgo ./...
+        run: make test
 
       - name: Build the image
         run: docker build --file ./build/Dockerfile --label \"quay.expires-after=1w\" --label \"git-sha=$GITHUB_SHA\" --tag $IMAGE_NAME:dev.latest .
-
-      - name: Execute the test suite
-        uses: artemiscloud/activemq-artemis-operator-test-action@v1.1
-        with:
-          test-packages: 'test/smoke/basic/...'
-          docker-images: 'activemq-artemis-operator:dev.latest'
-          operator-image: 'activemq-artemis-operator:dev.latest'
-          operator-deploy-path: 'deploy'
 
       - name: Push the image
         if: ${{ github.event_name == 'push' }}
