@@ -57,9 +57,12 @@ func RetrieveWithRetry(namespacedName types.NamespacedName, theClient client.Cli
 			} else {
 				//retry once using the non-cache client
 				reqLogger.V(1).Info("Retry retrieving object using new non-cached client")
-				newClient, err := client.New(common.GetManager().GetConfig(), client.Options{})
-				if err == nil {
-					return RetrieveWithRetry(namespacedName, newClient, clientObject, true)
+				// check to avoid a nil manager that may occur in test
+				if common.GetManager() != nil {
+					newClient, err := client.New(common.GetManager().GetConfig(), client.Options{})
+					if err == nil {
+						return RetrieveWithRetry(namespacedName, newClient, clientObject, true)
+					}
 				}
 			}
 		} else if runtime.IsNotRegisteredError(err) {
