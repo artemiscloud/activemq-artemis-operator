@@ -5,7 +5,7 @@ go 1.16
 require (
 	//this module is problematic
 	github.com/RHsyseng/operator-utils v1.4.7
-	github.com/artemiscloud/activemq-artemis-management v0.0.0-20211124154607-0acf12a607ee
+	github.com/artemiscloud/activemq-artemis-management v0.0.0-20220211120143-717f9a910005
 	github.com/go-logr/logr v0.4.0
 	github.com/google/uuid v1.1.2
 	github.com/onsi/ginkgo v1.16.4
