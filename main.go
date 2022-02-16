@@ -46,10 +46,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
-
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	routev1 "github.com/openshift/api/route/v1"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
@@ -188,6 +187,8 @@ func main() {
 	} else {
 		autodetect.Start()
 	}
+
+	common.SetManager(mgr)
 
 	// Set the service account name for the drainer pod
 	// It will be broken without this as it won't have
