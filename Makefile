@@ -10,6 +10,9 @@ OPERATOR_VERSION := 1.0.0
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := activemq-artemis-operator
 OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator
+OPERATOR_NAMESPACE := activemq-artemis-operator
+# directory to hold static resources for deploying operator
+DEPLOY := ./deploy
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -91,7 +94,7 @@ fmt: ## Run go fmt against code.
 	go fmt ./...
 
 vet: ## Run go vet against code.
-	go vet -composites=false ./... 
+	go vet -composites=false ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
@@ -131,6 +134,10 @@ deploy-dry-run: manifests kustomize ## Create deploy yaml file in tmp/deploy.yam
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | $(KUBE_CLI) delete -f -
+
+static-deploy: manifests kustomize ## Generate deployment artifacts in separate files in $(DEPLOY) dir
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | hack/static_manifest_gen.sh $(DEPLOY)
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
