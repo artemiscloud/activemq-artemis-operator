@@ -31,7 +31,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +38,7 @@ import (
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Uncomment this and the "test" import if you want to debug this set of tests
@@ -408,6 +408,62 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("With delopyed controller", func() {
+		It("Checking acceptor service while expose is false", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+				{
+					Name:   "new-acceptor",
+					Port:   61616,
+					Expose: false,
+				},
+			}
+			crd.Spec.Connectors = []brokerv1beta1.ConnectorType{
+				{
+					Name:   "new-connector",
+					Port:   61616,
+					Expose: false,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name + "-" + "new-acceptor-0-svc", Namespace: namespace}
+				acceptorService := &corev1.Service{}
+				err := k8sClient.Get(context.Background(), key, acceptorService)
+				if err != nil {
+					fmt.Printf("we got error getting acceptor service %v\n", err)
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name + "-" + "new-connector-0-svc", Namespace: namespace}
+				connectorService := &corev1.Service{}
+				err := k8sClient.Get(context.Background(), key, connectorService)
+				if err != nil {
+					fmt.Printf("we got error getting connector service %v\n", err)
+				}
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {
