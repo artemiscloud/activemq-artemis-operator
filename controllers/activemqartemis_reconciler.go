@@ -892,16 +892,8 @@ func configureAcceptorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client,
 
 		for _, acceptor := range fsm.customResource.Spec.Acceptors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, acceptor.Name+"-"+ordinalString, acceptor.Port, serviceRoutelabels, fsm.namers.LabelBuilder.Labels())
-			serviceNamespacedName := types.NamespacedName{
-				Name:      serviceDefinition.Name,
-				Namespace: fsm.customResource.Namespace,
-			}
-			if acceptor.Expose {
-				requestedResources = append(requestedResources, serviceDefinition)
-				//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
-			} else {
-				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
-			}
+
+			requestedResources = append(requestedResources, serviceDefinition)
 			targetPortName := acceptor.Name + "-" + ordinalString
 			targetServiceName := fsm.customResource.Name + "-" + targetPortName + "-svc"
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
@@ -944,16 +936,7 @@ func configureConnectorsExposure(fsm *ActiveMQArtemisFSM, client rtclient.Client
 		for _, connector := range fsm.customResource.Spec.Connectors {
 			serviceDefinition := svc.NewServiceDefinitionForCR(namespacedName, connector.Name+"-"+ordinalString, connector.Port, serviceRoutelabels, fsm.namers.LabelBuilder.Labels())
 
-			serviceNamespacedName := types.NamespacedName{
-				Name:      serviceDefinition.Name,
-				Namespace: fsm.customResource.Namespace,
-			}
-			if connector.Expose {
-				requestedResources = append(requestedResources, serviceDefinition)
-				//causedUpdate, err = resources.Enable(customResource, client, scheme, serviceNamespacedName, serviceDefinition)
-			} else {
-				causedUpdate, err = resources.Disable(fsm.customResource, client, scheme, serviceNamespacedName, serviceDefinition)
-			}
+			requestedResources = append(requestedResources, serviceDefinition)
 			targetPortName := connector.Name + "-" + ordinalString
 			targetServiceName := fsm.customResource.Name + "-" + targetPortName + "-svc"
 			routeDefinition := routes.NewRouteDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
