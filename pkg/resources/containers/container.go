@@ -2,7 +2,6 @@ package containers
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -18,28 +17,6 @@ func MakeContainer(customResourceName string, imageName string, envVarArray []co
 		Image:   imageName, //cr.Spec.DeploymentPlan.Image,
 		Command: []string{"/opt/amq/bin/launch.sh", "start"},
 		Env:     envVarArray, //environments.MakeEnvVarArrayForCR(cr),
-		ReadinessProbe: &corev1.Probe{
-			InitialDelaySeconds: graceTime,
-			TimeoutSeconds:      5,
-			Handler: corev1.Handler{
-				Exec: &corev1.ExecAction{
-					Command: []string{
-						"/bin/bash",
-						"-c",
-						"/opt/amq/bin/readinessProbe.sh",
-					},
-				},
-			},
-		},
-		LivenessProbe: &corev1.Probe{
-			InitialDelaySeconds: graceTime,
-			TimeoutSeconds:      5,
-			Handler: corev1.Handler{
-				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt(TCPLivenessPort),
-				},
-			},
-		},
 	}
 
 	return container
