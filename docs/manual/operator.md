@@ -346,3 +346,23 @@ As with the Liveness Probe the Readiness probe has a default probe if not config
 a script that is shipped in the Kubernetes Image, this can be found [here](https://github.com/artemiscloud/activemq-artemis-broker-kubernetes-image/blob/main/modules/activemq-artemis-launch/added/readinessProbe.sh)
 
 The script will try to establish a tcp connection to each port configured in the broker.xml.  
+
+##  Configuring Tolerations
+
+It is possible to configure tolerations on tge deployed broker image . An example of a toleration would be something like:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: broker
+  namespace: activemq-artemis-operator
+spec:
+  deploymentPlan:
+    size: 1
+    tolerations:
+      - key: "example-key"
+        operator: "Exists"
+        effect: "NoSchedule"
+```
+The use of Taints and Tolerations is outside the scope of this document, for full documentation see the [Kubernetes Documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)

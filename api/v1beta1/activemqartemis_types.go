@@ -213,7 +213,8 @@ type DeploymentPlanType struct {
 	LivenessProbe  corev1.Probe    `json:"livenessProbe,omitempty"`
 	ReadinessProbe corev1.Probe    `json:"readinessProbe,omitempty"`
 	// Whether or not to install the artemis metrics plugin
-	EnableMetricsPlugin *bool `json:"enableMetricsPlugin,omitempty"`
+	EnableMetricsPlugin *bool               `json:"enableMetricsPlugin,omitempty"`
+	Tolerations         []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type PodSecurityType struct {
