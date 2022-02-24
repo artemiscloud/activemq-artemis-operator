@@ -57,6 +57,100 @@ var _ = Describe("artemis controller", func() {
 		interval  = time.Millisecond * 250
 	)
 
+	Context("Tolerations Test", func() {
+		It("passing in 2 tolerations", func() {
+			By("Creating a crd with 2 tolerations")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
+				{
+					Key:    "foo",
+					Value:  "bar",
+					Effect: "NoSchedule",
+				},
+				{
+					Key:    "yes",
+					Value:  "No",
+					Effect: "NoSchedule",
+				},
+			}
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			createdSs := &appsv1.StatefulSet{}
+
+			By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+			By("Checking that Stateful Set is Created with the tolerations " + namer.CrToSS(createdCrd.Name))
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return len(createdSs.Spec.Template.Spec.Tolerations) == 2
+			}, timeout, interval).Should(Equal(true))
+			Expect(len(createdSs.Spec.Template.Spec.Tolerations) == 2).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Key == "foo").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Value == "bar").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Effect == "NoSchedule").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[1].Key == "yes").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[1].Value == "No").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[1].Effect == "NoSchedule").Should(BeTrue())
+
+			original := generateOriginalArtemisSpec(namespace, createdCrd.Name)
+			Eventually(func() bool {
+				return checkCrdUpTodate(crd.ObjectMeta.Name, namespace, createdCrd, original)
+			}, timeout, interval).Should(BeTrue())
+			original.Spec.DeploymentPlan.Tolerations = []corev1.Toleration{
+				{
+					Key:    "yes",
+					Value:  "No",
+					Effect: "NoSchedule",
+				},
+			}
+
+			By("Redeploying the CRD with different Tolerations " + original.Name)
+			Eventually(func() bool {
+				err := k8sClient.Update(ctx, original)
+
+				if err != nil {
+					fmt.Printf("Error updating cr: %v\n", err)
+					return false
+				}
+				return true
+			}, timeout, interval).Should(Equal(true))
+			By("and checking there is just a single Toleration")
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
+
+				err := k8sClient.Get(ctx, key, createdSs)
+
+				if err != nil {
+					return false
+				}
+				return len(createdSs.Spec.Template.Spec.Tolerations) == 1
+			}, timeout, interval).Should(Equal(true))
+			Expect(len(createdSs.Spec.Template.Spec.Tolerations) == 1).Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Key == "yes").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Value == "No").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Tolerations[0].Effect == "NoSchedule").Should(BeTrue())
+
+			By("check it has gone")
+			Expect(k8sClient.Delete(ctx, createdCrd))
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
 	Context("Liveness Probe Tests", func() {
 		It("Override Liveness Probe No Exec", func() {
 			By("By creating a crd with Liveness Probe")
@@ -78,7 +172,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			By("Making sure that the CRD gets deployed")
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that Stateful Set is Created with the Liveness Probe")
@@ -115,9 +211,10 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Equal(true))
 
 			By("Updating the CR")
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
 			original := generateOriginalArtemisSpec(namespace, createdCrd.Name)
-
+			Eventually(func() bool {
+				return checkCrdUpTodate(crd.ObjectMeta.Name, namespace, createdCrd, original)
+			}, timeout, interval).Should(BeTrue())
 			original.Spec.DeploymentPlan.LivenessProbe.PeriodSeconds = 15
 			original.Spec.DeploymentPlan.LivenessProbe.InitialDelaySeconds = 16
 			original.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds = 17
@@ -152,7 +249,9 @@ var _ = Describe("artemis controller", func() {
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("Override Liveness Probe Exec", func() {
@@ -173,7 +272,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			By("Making sure that the CRD gets deployed")
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that Stateful Set is Created with the Liveness Probe")
@@ -194,7 +295,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("Default Liveness Probe", func() {
@@ -206,7 +309,9 @@ var _ = Describe("artemis controller", func() {
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			createdSs := &appsv1.StatefulSet{}
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that the Liveness Probe is created")
@@ -226,7 +331,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 
@@ -250,7 +357,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			By("Making sure that the CRD gets deployed")
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that Stateful Set is Created with the Readiness Probe")
@@ -273,7 +382,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("Override Readiness Probe Exec", func() {
@@ -294,7 +405,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			By("Making sure that the CRD gets deployed")
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that Stateful Set is Created with the Readiness Probe")
@@ -315,7 +428,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("Default Readiness Probe", func() {
@@ -328,7 +443,9 @@ var _ = Describe("artemis controller", func() {
 			createdSs := &appsv1.StatefulSet{}
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			By("Checking that the Readiness Probe is created")
@@ -351,7 +468,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, createdCrd))
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 
@@ -364,7 +483,9 @@ var _ = Describe("artemis controller", func() {
 
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
-			Eventually(checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdCreated(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
 			// would like more status updates on createdCrd
@@ -404,7 +525,9 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
 
 			By("check it has gone")
-			Eventually(checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd), timeout, interval).Should(BeTrue())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, namespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 
@@ -516,6 +639,15 @@ func randString() string {
 	return b.String()
 }
 
+func checkCrdUpTodate(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis, original *brokerv1beta1.ActiveMQArtemis) bool {
+	key := types.NamespacedName{Name: name, Namespace: nameSpace}
+	err := k8sClient.Get(ctx, key, crd)
+	originalversion := original.ObjectMeta.ResourceVersion
+	fmt.Printf("Original Version %v Updated Version %v\n", originalversion, crd.ObjectMeta.ResourceVersion)
+	original.ObjectMeta.ResourceVersion = crd.ObjectMeta.ResourceVersion
+	return err == nil && crd.ObjectMeta.ResourceVersion == originalversion
+}
+
 func checkCrdCreated(name string, nameSpace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
 	key := types.NamespacedName{Name: name, Namespace: nameSpace}
 	err := k8sClient.Get(ctx, key, crd)
@@ -523,7 +655,6 @@ func checkCrdCreated(name string, nameSpace string, crd *brokerv1beta1.ActiveMQA
 }
 
 func checkCrdDeleted(name string, namespace string, crd *brokerv1beta1.ActiveMQArtemis) bool {
-	//fetched := &pscv1alpha1.PreScaledCronJob{}
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, crd)
 	return errors.IsNotFound(err)
 }

@@ -204,28 +204,26 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 			}
 		}
 
-		newPodTemplateCreated := false
 		//update statefulset with customer resource
 		log.Info("Calling ProcessAddressSettings")
 		if reconciler.ProcessAddressSettings(fsm.customResource, fsm.prevCustomResource, client) {
 			log.Info("There are new address settings change in the cr, creating a new pod template to update")
 			*fsm.prevCustomResource = *fsm.customResource
-			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
-			newPodTemplateCreated = true
+			//currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
+			//newPodTemplateCreated = true
+			fsm.SetPodInvalid(true)
 		}
 
-		podInvalid := fsm.GetPodInvalid()
-		if podInvalid && !newPodTemplateCreated {
-			log.Info("Updating the pod template for ss as is marked invalid")
+		//check the rest of the cr for changes
+		// we could probably do this as part of the ame if statement above
+		if checkHasChanged(fsm.customResource, fsm.prevCustomResource) {
+			*fsm.prevCustomResource = *fsm.customResource
+			//currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
+			fsm.SetPodInvalid(true)
+		}
+		if fsm.GetPodInvalid() {
 			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
 			fsm.SetPodInvalid(false)
-			newPodTemplateCreated = true
-		}
-
-		if !processLivenessProbe(fsm.customResource, fsm.prevCustomResource) || !processReadinessProbe(fsm.customResource, fsm.prevCustomResource) {
-			*fsm.prevCustomResource = *fsm.customResource
-			currentStatefulSet.Spec.Template = NewPodTemplateSpecForCR(fsm)
-			newPodTemplateCreated = true
 		}
 	}
 
@@ -398,12 +396,24 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customRe
 	return compareAddressSettings(&prevCustomResource.Spec.AddressSettings, &customResource.Spec.AddressSettings)
 }
 
-func processLivenessProbe(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
+func checkHasChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return checkLivenessProbeChanged(customResource, prevCustomResource) ||
+		checkReadinessProbeChanged(customResource, prevCustomResource) ||
+		checkTolerationsChanged(customResource, prevCustomResource)
+}
+func checkLivenessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
 }
 
-func processReadinessProbe(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.ReadinessProbe, customResource.Spec.DeploymentPlan.ReadinessProbe)
+func checkReadinessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.ReadinessProbe, customResource.Spec.DeploymentPlan.ReadinessProbe)
+}
+
+func checkTolerationsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	if prevCustomResource.Spec.DeploymentPlan.Tolerations == nil && customResource.Spec.DeploymentPlan.Tolerations == nil {
+		return false
+	}
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Tolerations, customResource.Spec.DeploymentPlan.Tolerations)
 }
 
 //returns true if currentAddressSettings need update
@@ -1795,6 +1805,10 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	container.LivenessProbe = configureLivenessProbe(&fsm.customResource.Spec.DeploymentPlan.LivenessProbe)
 	container.ReadinessProbe = configureReadinessProbe(&fsm.customResource.Spec.DeploymentPlan.ReadinessProbe)
 
+	if len(fsm.customResource.Spec.DeploymentPlan.Tolerations) > 0 {
+		Spec.Tolerations = fsm.customResource.Spec.DeploymentPlan.Tolerations
+	}
+
 	Spec.Containers = append(Containers, container)
 	brokerVolumes := MakeVolumes(fsm)
 	if len(extraVolumes) > 0 {
@@ -2010,6 +2024,10 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	pts.Spec = Spec
 
 	return pts
+}
+
+func configureTolerations() {
+
 }
 
 func configureLivenessProbe(probe *corev1.Probe) *corev1.Probe {
