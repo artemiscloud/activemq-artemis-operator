@@ -197,6 +197,16 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(fsm *ActiveM
 				}
 			}
 		}
+
+		if checkLabelsChanged(fsm.customResource, fsm.prevCustomResource) {
+			labels := fsm.namers.LabelBuilder.Labels()
+			for key := range fsm.prevCustomResource.Spec.DeploymentPlan.Labels {
+				delete(labels, key)
+			}
+			statefulsetRecreationRequired = true
+			fsm.SetPodInvalid(true)
+		}
+
 		if !statefulsetRecreationRequired {
 			statefulsetRecreationRequired = checkGeneralStatefulSetUpdate(fsm, currentStatefulSet)
 		}
@@ -426,7 +436,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customRe
 func checkHasChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
 	return checkLivenessProbeChanged(customResource, prevCustomResource) ||
 		checkReadinessProbeChanged(customResource, prevCustomResource) ||
-		checkTolerationsChanged(customResource, prevCustomResource)
+		checkTolerationsChanged(customResource, prevCustomResource) ||
+		checkLabelsChanged(customResource, prevCustomResource) ||
+		checkNodeSelectorsChanged(customResource, prevCustomResource) ||
+		checkAffinityChanged(customResource, prevCustomResource)
 }
 func checkLivenessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
 	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
@@ -441,6 +454,26 @@ func checkTolerationsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prev
 		return false
 	}
 	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Tolerations, customResource.Spec.DeploymentPlan.Tolerations)
+}
+
+func checkLabelsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	if len(prevCustomResource.Spec.DeploymentPlan.Labels) != len(customResource.Spec.DeploymentPlan.Labels) {
+		return true
+	}
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Labels, customResource.Spec.DeploymentPlan.Labels)
+}
+
+func checkNodeSelectorsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	if len(prevCustomResource.Spec.DeploymentPlan.NodeSelector) != len(customResource.Spec.DeploymentPlan.NodeSelector) {
+		return true
+	}
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.NodeSelector, customResource.Spec.DeploymentPlan.NodeSelector)
+}
+
+func checkAffinityChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
+	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAffinity) ||
+		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity) ||
+		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.NodeAffinity, customResource.Spec.DeploymentPlan.Affinity.NodeAffinity)
 }
 
 //returns true if currentAddressSettings need update
@@ -1751,7 +1784,16 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 
 	terminationGracePeriodSeconds := int64(60)
 
-	pts := pods.MakePodTemplateSpec(namespacedName, fsm.namers.LabelBuilder.Labels())
+	labels := fsm.namers.LabelBuilder.Labels()
+	//add any custom labels provided in CR before creating the pod template spec
+	if fsm.customResource.Spec.DeploymentPlan.Labels != nil {
+		for key, value := range fsm.customResource.Spec.DeploymentPlan.Labels {
+			labels[key] = value
+			reqLogger.V(1).Info("Adding Label", "key", key, "value", value)
+		}
+	}
+
+	pts := pods.MakePodTemplateSpec(namespacedName, labels)
 	Spec := corev1.PodSpec{}
 	Containers := []corev1.Container{}
 
@@ -1798,7 +1840,15 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	container.LivenessProbe = configureLivenessProbe(&fsm.customResource.Spec.DeploymentPlan.LivenessProbe)
 	container.ReadinessProbe = configureReadinessProbe(&fsm.customResource.Spec.DeploymentPlan.ReadinessProbe)
 
+	if len(fsm.customResource.Spec.DeploymentPlan.NodeSelector) > 0 {
+		reqLogger.V(1).Info("Adding Node Selectors", "len", len(fsm.customResource.Spec.DeploymentPlan.NodeSelector))
+		Spec.NodeSelector = fsm.customResource.Spec.DeploymentPlan.NodeSelector
+	}
+
+	configureAffinity(&Spec, &fsm.customResource.Spec.DeploymentPlan.Affinity)
+
 	if len(fsm.customResource.Spec.DeploymentPlan.Tolerations) > 0 {
+		reqLogger.V(1).Info("Adding Tolerations", "len", len(fsm.customResource.Spec.DeploymentPlan.Tolerations))
 		Spec.Tolerations = fsm.customResource.Spec.DeploymentPlan.Tolerations
 	}
 
@@ -2028,10 +2078,6 @@ func NewPodTemplateSpecForCR(fsm *ActiveMQArtemisFSM) corev1.PodTemplateSpec {
 	return pts
 }
 
-func configureTolerations() {
-
-}
-
 func configureLivenessProbe(probe *corev1.Probe) *corev1.Probe {
 	clog.V(1).Info("Creating Liveness Probe")
 	if probe != nil {
@@ -2196,6 +2242,24 @@ func brokerPropertiesData(props map[string]string) map[string]string {
 	}
 
 	return map[string]string{"broker.properties": buf.String()}
+}
+
+func configureAffinity(podSpec *corev1.PodSpec, affinity *corev1.Affinity) {
+	if affinity != nil {
+		podSpec.Affinity = &corev1.Affinity{}
+		if affinity.PodAffinity != nil {
+			clog.V(1).Info("Adding Pod Affinity")
+			podSpec.Affinity.PodAffinity = affinity.PodAffinity
+		}
+		if affinity.PodAntiAffinity != nil {
+			clog.V(1).Info("Adding Pod AntiAffinity")
+			podSpec.Affinity.PodAntiAffinity = affinity.PodAntiAffinity
+		}
+		if affinity.NodeAffinity != nil {
+			clog.V(1).Info("Adding Node Affinity")
+			podSpec.Affinity.NodeAffinity = affinity.NodeAffinity
+		}
+	}
 }
 
 func sortedKeys(props map[string]string) []string {
