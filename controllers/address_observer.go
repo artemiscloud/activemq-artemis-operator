@@ -154,7 +154,7 @@ func (c *AddressObserver) checkCRsForNewPod(newPod *corev1.Pod, labels map[strin
 			var jolokiaSecretName string = podCrName + "-jolokia-secret"
 			olog.Info("Recreating address resources on new Pod", "Name", newPod.Name, "secret name", jolokiaSecretName)
 			jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(newPod.Namespace,
-				&a, c.opclient, c.opscheme, jolokiaSecretName, &newPod.Spec.Containers, podNamespacedName, statefulset, labels)
+				&a, c.opclient, c.opscheme, jolokiaSecretName, &newPod.Spec.InitContainers, podNamespacedName, statefulset, labels)
 
 			olog.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol)
 			artemis := mgmt.GetArtemis(newPod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)

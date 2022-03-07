@@ -773,6 +773,49 @@ var _ = Describe("artemis controller", func() {
 			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
 		})
 	})
+
+	Context("With delopyed controller", func() {
+		It("Checking AMQ_USER and AMQ_PASSWORD is not exposed", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdSs)
+				return err == nil
+			}, timeout, interval).Should(Equal(true))
+
+			Expect(len(createdSs.Spec.Template.Spec.Containers)).To(Equal(1))
+
+			brokerContainer := createdSs.Spec.Template.Spec.Containers[0]
+			varExposed := false
+			for _, envVar := range brokerContainer.Env {
+				if envVar.Name == "AMQ_USER" || envVar.Name == "AMQ_PASSWORD" || envVar.Name == "AMQ_CLUSTER_USER" || envVar.Name == "AMQ_CLUSTER_PASSWORD" {
+					varExposed = true
+					break
+				}
+			}
+			Expect(varExposed).To(BeFalse())
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {

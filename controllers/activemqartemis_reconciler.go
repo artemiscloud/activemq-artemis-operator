@@ -757,16 +757,13 @@ func sourceEnvVarFromSecret2(fsm *ActiveMQArtemisFSM, currentStatefulSet *appsv1
 			Value:     "",
 			ValueFrom: acceptorsEnvVarSource,
 		}
-		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
-			log.V(1).Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
-			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
-			retVal = statefulSetAcceptorsUpdated
-		}
+
 		//custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
 			log.Info("we have custom init-containers")
 			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
 				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
+				retVal = statefulSetAcceptorsUpdated
 			}
 		}
 	}

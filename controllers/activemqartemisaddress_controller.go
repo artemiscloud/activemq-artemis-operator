@@ -349,7 +349,7 @@ func getPodBrokers(instance *AddressDeployment, request ctrl.Request, client cli
 					}
 				} else {
 					reqLogger.Info("Pod found", "Namespace", request.Namespace, "Name", request.Name)
-					containers := pod.Spec.Containers //get env from this
+					containers := pod.Spec.InitContainers //get env from this
 
 					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(request.Namespace, &instance.AddressResource, client, scheme, jolokiaSecretName, &containers, podNamespacedName, statefulset, info.Labels)
 
