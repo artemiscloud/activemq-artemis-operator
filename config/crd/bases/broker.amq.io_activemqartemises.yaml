@@ -1564,6 +1564,16 @@ spec:
                     type: boolean
                   podSecurity:
                     properties:
+                      fsGroup:
+                        description: fsGroup as defined in PodSecurityContext for
+                          the pod
+                        format: int64
+                        type: integer
+                      runAsGroup:
+                        description: runAsUser as defined in PodSecurityContext for
+                          the pod
+                        format: int64
+                        type: integer
                       runAsUser:
                         description: runAsUser as defined in PodSecurityContext for
                           the pod

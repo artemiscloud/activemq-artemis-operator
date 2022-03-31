@@ -2087,6 +2087,28 @@ func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSe
 			podSpec.SecurityContext.RunAsUser = podSecurity.RunAsUser
 		}
 	}
+	if podSecurity.RunAsGroup != nil {
+		clog.Info("Pod runAsGroup specified", "runAsGroup", *podSecurity.RunAsGroup)
+		if podSpec.SecurityContext == nil {
+			secCtxt := corev1.PodSecurityContext{
+				RunAsGroup: podSecurity.RunAsGroup,
+			}
+			podSpec.SecurityContext = &secCtxt
+		} else {
+			podSpec.SecurityContext.RunAsGroup = podSecurity.RunAsGroup
+		}
+	}
+	if podSecurity.FSGroup != nil {
+		clog.Info("Pod fsGroup specified", "fsGroup", *podSecurity.FSGroup)
+		if podSpec.SecurityContext == nil {
+			secCtxt := corev1.PodSecurityContext{
+				FSGroup: podSecurity.FSGroup,
+			}
+			podSpec.SecurityContext = &secCtxt
+		} else {
+			podSpec.SecurityContext.FSGroup = podSecurity.FSGroup
+		}
+	}
 }
 
 func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeName string) string {

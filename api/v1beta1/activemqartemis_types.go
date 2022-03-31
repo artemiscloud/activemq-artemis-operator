@@ -229,6 +229,10 @@ type PodSecurityType struct {
 	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
 	// runAsUser as defined in PodSecurityContext for the pod
 	RunAsUser *int64 `json:"runAsUser,omitempty"`
+	// runAsUser as defined in PodSecurityContext for the pod
+	RunAsGroup *int64 `json:"runAsGroup,omitempty"`
+	// fsGroup as defined in PodSecurityContext for the pod
+	FSGroup *int64 `json:"fsGroup,omitempty"`
 }
 
 type ExtraMountsType struct {
