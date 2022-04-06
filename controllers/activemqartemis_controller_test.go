@@ -1051,9 +1051,8 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
 
-			crd.Spec.BrokerProperties = map[string]string{
-				"globalMaxSize": "512m",
-			}
+			crd.Spec.BrokerProperties = []string{"globalMaxSize=512m"}
+
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
@@ -1131,9 +1130,7 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
 
-			crd.Spec.BrokerProperties = map[string]string{
-				"globalMaxSize": "64g",
-			}
+			crd.Spec.BrokerProperties = []string{"globalMaxSize=64g"}
 			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
@@ -1165,7 +1162,7 @@ var _ = Describe("artemis controller", func() {
 				if err == nil {
 
 					// add a new property
-					createdCrd.Spec.BrokerProperties["gen"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
 					err = k8sClient.Update(ctx, createdCrd)
 					if err != nil {
@@ -1215,9 +1212,7 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(namespace)
 
-			crd.Spec.BrokerProperties = map[string]string{
-				"globalMaxSize": "65g",
-			}
+			crd.Spec.BrokerProperties = []string{"globalMaxSize=65g"}
 
 			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -1250,7 +1245,7 @@ var _ = Describe("artemis controller", func() {
 				if err == nil {
 
 					// add a new property
-					createdCrd.Spec.BrokerProperties["gen"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
 					// sdd address settings, to an existing crd
 					ma := "merge_all"
@@ -1313,7 +1308,7 @@ var _ = Describe("artemis controller", func() {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
 				if err == nil {
 
-					createdCrd.Spec.BrokerProperties["gen2"] = strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10)
+					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen2="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
 					// sdd address settings, to an existing crd
 					ma := "merge_all"
