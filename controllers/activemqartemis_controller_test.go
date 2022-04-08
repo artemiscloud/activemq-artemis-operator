@@ -34,10 +34,11 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1345,11 +1346,8 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			By("verifying no config maps leaked")
-			Eventually(func() bool {
-				k8sClient.List(ctx, configMapList, opts)
-				return len(configMapList.Items) == 0
-			}, timeout, interval).Should(BeTrue())
-
+			// cannot verify no leaks b/c gc is not enabled on envTest
+			// and on delete we don't have any state to determine the owner reference
 		})
 
 	})
@@ -1631,7 +1629,6 @@ var _ = Describe("artemis controller", func() {
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
 					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
 				}
 			}
@@ -1700,7 +1697,6 @@ var _ = Describe("artemis controller", func() {
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
 					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61666")).To(BeTrue())
 				}
 			}
@@ -1779,7 +1775,6 @@ var _ = Describe("artemis controller", func() {
 					//<acceptor name="new-acceptor">...</acceptor><another one>...
 					//we need to locate our target acceptor and do the check
 					//we use the port as a clue
-					fmt.Printf("got value: %v\n", string(data))
 					Expect(strings.Contains(string(data), "0.0.0.0:61666")).To(BeTrue())
 					//the other one not affected
 					Expect(strings.Contains(string(data), "ACCEPTOR_IP:61777")).To(BeTrue())
