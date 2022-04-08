@@ -47,6 +47,10 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.10
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2200
           value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.12
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_100
+          value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.12
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_101
+          value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.1
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
@@ -55,9 +59,13 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.7
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2200
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.9
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_100
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.9
+        - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_101
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.1
         - name: ENABLE_WEBHOOKS
           value: "false"
-        image: quay.io/artemiscloud/activemq-artemis-operator:1.0.0
+        image: quay.io/artemiscloud/activemq-artemis-operator:1.0.1
         livenessProbe:
           httpGet:
             path: /healthz
