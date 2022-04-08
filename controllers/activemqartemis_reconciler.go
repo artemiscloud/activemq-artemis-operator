@@ -1001,6 +1001,18 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv1beta1.AcceptorType) s
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + acceptor.SNIHost
 	}
 
+	if "" != acceptor.KeyStoreProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + acceptor.KeyStoreProvider
+	}
+
+	if "" != acceptor.TrustStoreType {
+		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + acceptor.TrustStoreType
+	}
+
+	if "" != acceptor.TrustStoreProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + acceptor.TrustStoreProvider
+	}
+
 	return sslOptionalArguments
 }
 
@@ -1028,6 +1040,18 @@ func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType
 	}
 	if "" != connector.SNIHost {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + connector.SNIHost
+	}
+
+	if "" != connector.KeyStoreProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + connector.KeyStoreProvider
+	}
+
+	if "" != connector.TrustStoreType {
+		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + connector.TrustStoreType
+	}
+
+	if "" != connector.TrustStoreProvider {
+		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + connector.TrustStoreProvider
 	}
 
 	return sslOptionalArguments
