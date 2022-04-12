@@ -112,6 +112,10 @@ var _ = Describe("artemis controller", func() {
 
 			imageToUse = determineImageToUse(&crd, "Init")
 			Expect(imageToUse).To(Equal(latestInitImage), "actual", imageToUse)
+			brokerCr := generateArtemisSpec(namespace)
+			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
+			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
+			Expect(yacfgProfileVersion).To(Equal("2.18.0"))
 		})
 	})
 
