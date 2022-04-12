@@ -25,7 +25,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"0.20.0": "2.18.0",
 	"0.20.1": "2.18.0",
 	"1.0.0":  "2.20.0",
-	"1.0.1":  "2.21.0",
+	"1.0.1":  "1.0.1",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"150": "2.15.0",
@@ -33,7 +33,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"180": "2.18.0",
 	"200": "2.20.0",
 	"100": "2.20.0",
-	"101": "2.21.0",
+	"101": "1.0.1",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -42,7 +42,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"180": "2180",
 	"200": "2200",
 	"100": "2200",
-	"101": "2210",
+	"101": "101",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -51,7 +51,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"2.18.0": "2180",
 	"2.20.0": "2200",
 	"1.0.0":  "2200",
-	"1.0.1":  "2210",
+	"1.0.1":  "101",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -59,7 +59,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"2160": "2.16.0",
 	"2180": "2.18.0",
 	"2200": "2.20.0",
-	"2210": "2.21.0",
+	"101":  "1.0.1",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -67,7 +67,8 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"2.16.0": "160",
 	"2.18.0": "180",
 	"2.20.0": "200",
-	"2.21.0": "210",
+	"1.0.0":  "200",
+	"1.0.1":  "01",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -76,7 +77,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"2.16.0": "2.16.0",
 	"2.18.0": "2.18.0",
 	"2.20.0": "2.18.0",
-	"2.21.0": "2.18.0",
+	"1.0.1":  "2.18.0",
 }
 
 var YacfgProfileName string = "artemis"
