@@ -1545,9 +1545,16 @@ var _ = Describe("artemis controller", func() {
 			createdSs := &appsv1.StatefulSet{}
 			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: namespace}
 
-			Expect(k8sClient.Get(ctx, key, createdSs))
+			var initArgsString string
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, key, createdSs); err != nil {
+					return false
+				}
 
-			initArgsString := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				initArgsString = strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
+				//make sure it gets the address settings in
+				return strings.Contains(initArgsString, "user_address_settings")
+			}, timeout, interval).Should(BeTrue())
 
 			By("pushing another update on the current version...")
 			Eventually(func() bool {
@@ -1606,16 +1613,11 @@ var _ = Describe("artemis controller", func() {
 
 			By("verifying init command args did not change")
 			Eventually(func() bool {
-				fmt.Println("========= trying verification")
 				if err := k8sClient.Get(ctx, key, createdSs); err != nil {
 					return false
 				}
 
 				updatesInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
-				fmt.Printf("===== Got Init args ||%v||\n", updatesInitArgs)
-				fmt.Printf("===== Compare to ||%v||\n", initArgsString)
-				result := initArgsString == updatesInitArgs
-				fmt.Printf("==== The result is %v\n", result)
 				return initArgsString == updatesInitArgs
 			}, timeout, interval).Should(BeTrue())
 
