@@ -77,7 +77,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"2.16.0": "2.16.0",
 	"2.18.0": "2.18.0",
 	"2.20.0": "2.18.0",
-	"1.0.1":  "2.18.0",
+	"1.0.1":  "2.21.0",
 }
 
 var YacfgProfileName string = "artemis"

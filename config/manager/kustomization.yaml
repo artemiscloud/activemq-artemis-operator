@@ -1,5 +1,4 @@
 resources:
-- webhook_secret.yaml
 - manager.yaml
 
 generatorOptions:
@@ -14,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/artemiscloud/activemq-artemis-operator
-  newTag: 1.0.0
+  newTag: 1.0.1
