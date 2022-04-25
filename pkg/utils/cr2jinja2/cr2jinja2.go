@@ -68,10 +68,11 @@ func isSpecialValue(value string) bool {
 	return false
 }
 
-func getUniqueShellSafeSubstution(specialVal string) string {
+func GetUniqueShellSafeSubstution(specialVal string) string {
 	hasher := fnv.New64a()
 	hasher.Write([]byte(specialVal))
-	return strconv.FormatUint(hasher.Sum64(), 10)
+	// append a character to make sure the key not to be interpreted as a number
+	return strconv.FormatUint(hasher.Sum64(), 10) + "s"
 }
 
 //Used to check properties that has a special values
@@ -81,7 +82,7 @@ func checkStringSpecial(prop *string, specials map[string]string) *string {
 	if nil == prop {
 		return nil
 	} else if isSpecialValue(*prop) {
-		uniqueKey := getUniqueShellSafeSubstution(*prop)
+		uniqueKey := GetUniqueShellSafeSubstution(*prop)
 		specials[uniqueKey] = *prop
 		return &uniqueKey
 	}
@@ -827,6 +828,12 @@ func processAddressSettingsV1beta1(sb *strings.Builder, addressSettings *[]v1bet
 		}
 		if value := checkBool(s.EnableIngressTimestamp); value != nil {
 			sb.WriteString("  enable_ingress_timestamp: " + *value + "\n")
+		}
+		if value := checkInt64(s.MaxSizeMessages); value != nil {
+			sb.WriteString("  max_size_messages: " + *value + "\n")
+		}
+		if value := checkStringSpecial(s.ConfigDeleteDiverts, specials); value != nil {
+			sb.WriteString("  config_delete_diverts: " + *value + "\n")
 		}
 	}
 
