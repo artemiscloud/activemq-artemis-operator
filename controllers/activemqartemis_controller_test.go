@@ -186,6 +186,67 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("SS delete recreate Test", func() {
+		It("deploy, delete ss, verify", func() {
+
+			crd := generateArtemisSpec(namespace)
+			crd.Spec.DeploymentPlan.Size = 1
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			key := types.NamespacedName{
+				Name:      namer.CrToSS(crd.Name),
+				Namespace: namespace,
+			}
+
+			currentSS := &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			brokerKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: namespace}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("manually deleting SS quickly")
+			ssVersion := currentSS.ResourceVersion
+			Expect(k8sClient.Delete(ctx, currentSS)).Should(Succeed())
+
+			By("checking new version created")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+				g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
+				ssVersion = currentSS.ResourceVersion
+			}, timeout, interval).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verying started")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, timeout*5, interval).Should(Succeed())
+
+				By("manually deleting SS again once ready")
+				Expect(k8sClient.Delete(ctx, currentSS)).Should(Succeed())
+
+				By("checking new version created again")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, key, currentSS)).Should(Succeed())
+					g.Expect(currentSS.ResourceVersion).ShouldNot(Equal(ssVersion))
+				}, timeout*5, interval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+	})
+
 	Context("Console secret Test", func() {
 
 		crd := generateArtemisSpec(namespace)
