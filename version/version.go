@@ -1,17 +1,17 @@
 package version
 
 var (
-	Version = "1.0.2"
+	Version = "1.0.3"
 	// PriorVersion - prior version
-	PriorVersion = "1.0.1"
+	PriorVersion = "1.0.2"
 )
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "1.0.2"
-	CompactLatestVersion = "102"
+	LatestVersion        = "1.0.3"
+	CompactLatestVersion = "103"
 	// LastMicroVersion product version supported
-	LastMicroVersion = "1.0.1"
+	LastMicroVersion = "1.0.2"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "2.15.0"
 )
@@ -27,6 +27,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"1.0.0":  "2.20.0",
 	"1.0.1":  "1.0.1",
 	"1.0.2":  "1.0.2",
+	"1.0.3":  "1.0.3",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"150": "2.15.0",
@@ -36,6 +37,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"100": "2.20.0",
 	"101": "1.0.1",
 	"102": "1.0.2",
+	"103": "1.0.3",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -46,6 +48,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"100": "2200",
 	"101": "101",
 	"102": "102",
+	"103": "103",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -56,6 +59,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"1.0.0":  "2200",
 	"1.0.1":  "101",
 	"1.0.2":  "102",
+	"1.0.3":  "103",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -65,6 +69,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"2200": "2.20.0",
 	"101":  "1.0.1",
 	"102":  "1.0.2",
+	"103":  "1.0.3",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -75,6 +80,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"1.0.0":  "200",
 	"1.0.1":  "01",
 	"1.0.2":  "02",
+	"1.0.3":  "03",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -85,6 +91,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"2.20.0": "2.18.0",
 	"1.0.1":  "2.21.0",
 	"1.0.2":  "2.21.0",
+	"1.0.3":  "2.21.0",
 }
 
 var YacfgProfileName string = "artemis"
