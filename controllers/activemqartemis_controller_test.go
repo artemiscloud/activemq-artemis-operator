@@ -166,8 +166,8 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("Versions Test", func() {
-		latestKubeImage := "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.1"
-		latestInitImage := "quay.io/artemiscloud/activemq-artemis-broker-init:1.0.1"
+		latestKubeImage := "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:" + version.LatestVersion
+		latestInitImage := "quay.io/artemiscloud/activemq-artemis-broker-init: " + version.LatestVersion
 
 		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, latestInitImage)
 		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, latestKubeImage)
