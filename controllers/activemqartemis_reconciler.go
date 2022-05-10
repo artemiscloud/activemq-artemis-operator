@@ -345,49 +345,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAddressSettings(customRe
 	return compareAddressSettings(&prevCustomResource.Spec.AddressSettings, &customResource.Spec.AddressSettings)
 }
 
-func checkHasChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return checkLivenessProbeChanged(customResource, prevCustomResource) ||
-		checkReadinessProbeChanged(customResource, prevCustomResource) ||
-		checkTolerationsChanged(customResource, prevCustomResource) ||
-		checkLabelsChanged(customResource, prevCustomResource) ||
-		checkNodeSelectorsChanged(customResource, prevCustomResource) ||
-		checkAffinityChanged(customResource, prevCustomResource)
-}
-func checkLivenessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.LivenessProbe, customResource.Spec.DeploymentPlan.LivenessProbe)
-}
-
-func checkReadinessProbeChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.ReadinessProbe, customResource.Spec.DeploymentPlan.ReadinessProbe)
-}
-
-func checkTolerationsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if prevCustomResource.Spec.DeploymentPlan.Tolerations == nil && customResource.Spec.DeploymentPlan.Tolerations == nil {
-		return false
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Tolerations, customResource.Spec.DeploymentPlan.Tolerations)
-}
-
-func checkLabelsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if len(prevCustomResource.Spec.DeploymentPlan.Labels) != len(customResource.Spec.DeploymentPlan.Labels) {
-		return true
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Labels, customResource.Spec.DeploymentPlan.Labels)
-}
-
-func checkNodeSelectorsChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if len(prevCustomResource.Spec.DeploymentPlan.NodeSelector) != len(customResource.Spec.DeploymentPlan.NodeSelector) {
-		return true
-	}
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.NodeSelector, customResource.Spec.DeploymentPlan.NodeSelector)
-}
-
-func checkAffinityChanged(customResource *brokerv1beta1.ActiveMQArtemis, prevCustomResource *brokerv1beta1.ActiveMQArtemis) bool {
-	return !reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAffinity) ||
-		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity, customResource.Spec.DeploymentPlan.Affinity.PodAntiAffinity) ||
-		!reflect.DeepEqual(prevCustomResource.Spec.DeploymentPlan.Affinity.NodeAffinity, customResource.Spec.DeploymentPlan.Affinity.NodeAffinity)
-}
-
 //returns true if currentAddressSettings need update
 func compareAddressSettings(currentAddressSettings *brokerv1beta1.AddressSettingsType, newAddressSettings *brokerv1beta1.AddressSettingsType) bool {
 
@@ -913,31 +870,31 @@ func generateConsoleSSLFlags(fsm *ActiveMQArtemisFSM, client rtclient.Client, se
 		Name:      secretName,
 		Namespace: fsm.customResource.Namespace,
 	}
-	namespacedName := types.NamespacedName{
-		Name:      fsm.customResource.Name,
-		Namespace: fsm.customResource.Namespace,
-	}
-	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, fsm.namers.LabelBuilder.Labels())
+
+	userPasswordSecret := corev1.Secret{}
 
 	keyStorePassword := "password"
-	keyStorePath := "/etc/" + secretName + "-volume/broker.ks"
 	trustStorePassword := "password"
-	trustStorePath := "/etc/" + secretName + "-volume/client.ts"
-	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
+	keyStoreName := "broker.ks"
+	trustStoreName := "client.ts"
+
+	if err := resources.Retrieve(secretNamespacedName, client, &userPasswordSecret); err == nil {
 		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
 			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
-			keyStorePath = string(userPasswordSecret.Data["keyStorePath"])
+		if "" != string(userPasswordSecret.Data["keyStoreName"]) {
+			keyStoreName = string(userPasswordSecret.Data["keyStoreName"])
 		}
 		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
 			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
-			trustStorePath = string(userPasswordSecret.Data["trustStorePath"])
+		if "" != string(userPasswordSecret.Data["trustStoreName"]) {
+			trustStoreName = string(userPasswordSecret.Data["trustStoreName"])
 		}
 	}
+
+	keyStorePath := "/etc/" + secretName + "-volume/" + keyStoreName
+	trustStorePath := "/etc/" + secretName + "-volume/" + trustStoreName
 
 	sslFlags = sslFlags + " " + "--ssl-key" + " " + keyStorePath
 	sslFlags = sslFlags + " " + "--ssl-key-password" + " " + keyStorePassword
@@ -957,35 +914,32 @@ func generateAcceptorConnectorSSLArguments(fsm *ActiveMQArtemisFSM, client rtcli
 		Name:      secretName,
 		Namespace: fsm.customResource.Namespace,
 	}
-	namespacedName := types.NamespacedName{
-		Name:      fsm.customResource.Name,
-		Namespace: fsm.customResource.Namespace,
-	}
-	stringDataMap := map[string]string{}
-	userPasswordSecret := secrets.NewSecret(namespacedName, secretName, stringDataMap, fsm.namers.LabelBuilder.Labels())
+
+	userPasswordSecret := corev1.Secret{}
 
 	keyStorePassword := "password"
-	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/broker.ks"
 	trustStorePassword := "password"
-	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/client.ts"
-	if err := resources.Retrieve(secretNamespacedName, client, userPasswordSecret); err == nil {
+	keyStoreName := "broker.ks"
+	trustStoreName := "client.ts"
+
+	if err := resources.Retrieve(secretNamespacedName, client, &userPasswordSecret); err == nil {
 		if "" != string(userPasswordSecret.Data["keyStorePassword"]) {
-			//noinspection GoUnresolvedReference
-			keyStorePassword = strings.ReplaceAll(string(userPasswordSecret.Data["keyStorePassword"]), "/", "\\/")
+			keyStorePassword = string(userPasswordSecret.Data["keyStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["keyStorePath"]) {
-			//noinspection GoUnresolvedReference
-			keyStorePath = strings.ReplaceAll(string(userPasswordSecret.Data["keyStorePath"]), "/", "\\/")
+		if "" != string(userPasswordSecret.Data["keyStoreName"]) {
+			keyStoreName = string(userPasswordSecret.Data["keyStoreName"])
 		}
 		if "" != string(userPasswordSecret.Data["trustStorePassword"]) {
-			//noinspection GoUnresolvedReference
-			trustStorePassword = strings.ReplaceAll(string(userPasswordSecret.Data["trustStorePassword"]), "/", "\\/")
+			trustStorePassword = string(userPasswordSecret.Data["trustStorePassword"])
 		}
-		if "" != string(userPasswordSecret.Data["trustStorePath"]) {
-			//noinspection GoUnresolvedReference
-			trustStorePath = strings.ReplaceAll(string(userPasswordSecret.Data["trustStorePath"]), "/", "\\/")
+		if "" != string(userPasswordSecret.Data["trustStoreName"]) {
+			trustStoreName = string(userPasswordSecret.Data["trustStoreName"])
 		}
 	}
+
+	keyStorePath := "\\/etc\\/" + secretName + "-volume\\/" + keyStoreName
+	trustStorePath := "\\/etc\\/" + secretName + "-volume\\/" + trustStoreName
+
 	sslArguments = sslArguments + ";" + "keyStorePath=" + keyStorePath
 	sslArguments = sslArguments + ";" + "keyStorePassword=" + keyStorePassword
 	sslArguments = sslArguments + ";" + "trustStorePath=" + trustStorePath
@@ -1019,17 +973,17 @@ func generateAcceptorSSLOptionalArguments(acceptor brokerv1beta1.AcceptorType) s
 	if "" != acceptor.SNIHost {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + acceptor.SNIHost
 	}
-
 	if "" != acceptor.KeyStoreProvider {
 		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + acceptor.KeyStoreProvider
 	}
-
 	if "" != acceptor.TrustStoreType {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + acceptor.TrustStoreType
 	}
-
 	if "" != acceptor.TrustStoreProvider {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + acceptor.TrustStoreProvider
+	}
+	if strings.HasPrefix(sslOptionalArguments, ";") {
+		sslOptionalArguments = strings.TrimPrefix(sslOptionalArguments, ";")
 	}
 
 	return sslOptionalArguments
@@ -1060,17 +1014,17 @@ func generateConnectorSSLOptionalArguments(connector brokerv1beta1.ConnectorType
 	if "" != connector.SNIHost {
 		sslOptionalArguments = sslOptionalArguments + ";" + "sniHost=" + connector.SNIHost
 	}
-
 	if "" != connector.KeyStoreProvider {
 		sslOptionalArguments = sslOptionalArguments + ";" + "keyStoreProvider=" + connector.KeyStoreProvider
 	}
-
 	if "" != connector.TrustStoreType {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreType=" + connector.TrustStoreType
 	}
-
 	if "" != connector.TrustStoreProvider {
 		sslOptionalArguments = sslOptionalArguments + ";" + "trustStoreProvider=" + connector.TrustStoreProvider
+	}
+	if strings.HasPrefix(sslOptionalArguments, ";") {
+		sslOptionalArguments = strings.TrimPrefix(sslOptionalArguments, ";")
 	}
 
 	return sslOptionalArguments
