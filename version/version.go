@@ -1,5 +1,7 @@
 package version
 
+import "strings"
+
 var (
 	Version = "1.0.3"
 	// PriorVersion - prior version
@@ -14,7 +16,18 @@ const (
 	LastMicroVersion = "1.0.2"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "2.15.0"
+
+	LatestKubeImage = "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:" + LatestVersion
+	LatestInitImage = "quay.io/artemiscloud/activemq-artemis-broker-init:" + LatestVersion
 )
+
+func DefaultImageName(archSpecificRelatedImageEnvVarName string) string {
+	if strings.Contains(archSpecificRelatedImageEnvVarName, "_Init_") {
+		return LatestInitImage
+	} else {
+		return LatestKubeImage
+	}
+}
 
 // SupportedVersions - product versions this operator supports
 var SupportedVersions = []string{LatestVersion, LastMicroVersion, LastMinorVersion}

@@ -166,19 +166,13 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("Versions Test", func() {
-		latestKubeImage := "quay.io/artemiscloud/activemq-artemis-broker-kubernetes:" + version.LatestVersion
-		latestInitImage := "quay.io/artemiscloud/activemq-artemis-broker-init: " + version.LatestVersion
-
-		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_"+version.CompactLatestVersion, latestInitImage)
-		os.Setenv("RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"+version.CompactLatestVersion, latestKubeImage)
-
 		It("default image to use latest", func() {
 			crd := generateArtemisSpec(namespace)
 			imageToUse := determineImageToUse(&crd, "Kubernetes")
-			Expect(imageToUse).To(Equal(latestKubeImage), "actual", imageToUse)
+			Expect(imageToUse).To(Equal(version.LatestKubeImage), "actual", imageToUse)
 
 			imageToUse = determineImageToUse(&crd, "Init")
-			Expect(imageToUse).To(Equal(latestInitImage), "actual", imageToUse)
+			Expect(imageToUse).To(Equal(version.LatestInitImage), "actual", imageToUse)
 			brokerCr := generateArtemisSpec(namespace)
 			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
 			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
