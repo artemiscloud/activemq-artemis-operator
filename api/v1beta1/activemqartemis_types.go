@@ -211,6 +211,8 @@ type DeploymentPlanType struct {
 	Storage          StorageType                 `json:"storage,omitempty"`
 	// If true enable the Jolokia JVM Agent
 	JolokiaAgentEnabled bool `json:"jolokiaAgentEnabled,omitempty"`
+	// The Jolokia JVM Agent options
+	JolokiaAgentOptions string `json:"jolokiaAgentOptions,omitempty"`
 	// If true enable the management role based access control
 	ManagementRBACEnabled bool            `json:"managementRBACEnabled,omitempty"`
 	ExtraMounts           ExtraMountsType `json:"extraMounts,omitempty"`

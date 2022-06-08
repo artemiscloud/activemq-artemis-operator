@@ -3016,6 +3016,58 @@ var _ = Describe("artemis controller", func() {
 		}
 
 	})
+
+	Context("With deployed controller", func() {
+		It("Checking jolokiaAgentOptions is configured", func() {
+			By("By creating a new crd")
+			ctx := context.Background()
+			crd := generateArtemisSpec(namespace)
+
+			jolokiaAgentOptions := "realm:test"
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size:                1,
+				PersistenceEnabled:  true,
+				JolokiaAgentEnabled: true,
+				JolokiaAgentOptions: jolokiaAgentOptions,
+			}
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: crd.Name, Namespace: namespace}
+				err := k8sClient.Get(ctx, key, &crd)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func() bool {
+				key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: namespace}
+				err := k8sClient.Get(ctx, key, createdSs)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("By checking the container stateful set for jolokia agent opts")
+			Eventually(func() bool {
+				found := false
+				for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+					for _, env := range container.Env {
+						if env.Name == "AMQ_JOLOKIA_AGENT_OPTS" {
+							if strings.Contains(env.Value, jolokiaAgentOptions) {
+								found = true
+							}
+						}
+					}
+				}
+				return found
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, namespace, &crd), timeout, interval).Should(BeTrue())
+		})
+	})
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {

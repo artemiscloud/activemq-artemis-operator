@@ -1444,6 +1444,9 @@ spec:
                   jolokiaAgentEnabled:
                     description: If true enable the Jolokia JVM Agent
                     type: boolean
+                  jolokiaAgentOptions:
+                    description: The Jolokia JVM Agent options
+                    type: string
                   journalType:
                     description: If aio use ASYNCIO, if nio use NIO for journal IO
                     type: string

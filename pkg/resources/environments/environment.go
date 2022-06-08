@@ -187,12 +187,17 @@ func AddEnvVarForCluster() []corev1.EnvVar {
 	return envVarArray
 }
 
-func AddEnvVarForJolokia(jolokiaAgentEnabled string) []corev1.EnvVar {
+func AddEnvVarForJolokia(jolokiaAgentEnabled string, jolokiaAgentOptions string) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
 			"AMQ_ENABLE_JOLOKIA_AGENT",
 			jolokiaAgentEnabled,
+			nil,
+		},
+		{
+			"AMQ_JOLOKIA_AGENT_OPTS",
+			jolokiaAgentOptions,
 			nil,
 		},
 	}

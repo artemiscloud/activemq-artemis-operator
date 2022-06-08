@@ -2451,7 +2451,7 @@ func MakeEnvVarArrayForCR(fsm *ActiveMQArtemisFSM) []corev1.EnvVar {
 	envVarArrayForCluster := environments.AddEnvVarForCluster()
 	envVar = append(envVar, envVarArrayForCluster...)
 
-	envVarArrayForJolokia := environments.AddEnvVarForJolokia(jolokiaAgentEnabled)
+	envVarArrayForJolokia := environments.AddEnvVarForJolokia(jolokiaAgentEnabled, fsm.customResource.Spec.DeploymentPlan.JolokiaAgentOptions)
 	envVar = append(envVar, envVarArrayForJolokia...)
 
 	envVarArrayForManagement := environments.AddEnvVarForManagement(managementRBACEnabled)
