@@ -10,7 +10,7 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "1.0.3"
+	LatestVersion        = "1.0.5"
 	CompactLatestVersion = "103"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "1.0.2"
