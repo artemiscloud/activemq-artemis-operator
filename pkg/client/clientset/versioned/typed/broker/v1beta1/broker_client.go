@@ -36,6 +36,10 @@ func (c *BrokerV1beta1Client) ActiveMQArtemises(namespace string) ActiveMQArtemi
 	return newActiveMQArtemises(c, namespace)
 }
 
+func (c *BrokerV1beta1Client) ActiveMQArtemisSecurities(namespace string) ActiveMQArtemisSecurityInterface {
+	return newActiveMQArtemisSecurities(c, namespace)
+}
+
 // NewForConfig creates a new BrokerV1beta1Client for the given config.
 func NewForConfig(c *rest.Config) (*BrokerV1beta1Client, error) {
 	config := *c

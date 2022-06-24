@@ -187,16 +187,16 @@ func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *
 	return result, specials
 }
 
-func MakeBrokerCfgOverridesForV2alpha5(customResource *v2alpha5.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {
-	var addressSettings *[]v2alpha5.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
-
-	processAddressSettingsV2alpha5(sb, addressSettings, specials)
-}
-
 func MakeBrokerCfgOverridesForV1beta1(customResource *v1beta1.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {
 	var addressSettings *[]v1beta1.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
 
 	processAddressSettingsV1beta1(sb, addressSettings, specials)
+}
+
+func MakeBrokerCfgOverridesForV2alpha5(customResource *v2alpha5.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {
+	var addressSettings *[]v2alpha5.AddressSettingType = &customResource.Spec.AddressSettings.AddressSetting
+
+	processAddressSettingsV2alpha5(sb, addressSettings, specials)
 }
 
 func MakeBrokerCfgOverridesForV2alpha4(customResource *v2alpha4.ActiveMQArtemis, envVar *string, output *string, sb *strings.Builder, specials map[string]string) {

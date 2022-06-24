@@ -38,6 +38,7 @@ type Interface interface {
 	BrokerV2alpha3() brokerv2alpha3.BrokerV2alpha3Interface
 	BrokerV2alpha4() brokerv2alpha4.BrokerV2alpha4Interface
 	BrokerV2alpha5() brokerv2alpha5.BrokerV2alpha5Interface
+	BrokerV1beta1() brokerv1beta1.BrokerV1beta1Interface
 	// Deprecated: please explicitly pick a version if possible.
 	Broker() brokerv1beta1.BrokerV1beta1Interface
 }
@@ -52,6 +53,7 @@ type Clientset struct {
 	brokerV2alpha3 *brokerv2alpha3.BrokerV2alpha3Client
 	brokerV2alpha4 *brokerv2alpha4.BrokerV2alpha4Client
 	brokerV2alpha5 *brokerv2alpha5.BrokerV2alpha5Client
+	brokerV1beta1  *brokerv1beta1.BrokerV1beta1Client
 }
 
 // BrokerV1alpha1 retrieves the BrokerV1alpha1Client
@@ -84,10 +86,15 @@ func (c *Clientset) BrokerV2alpha5() brokerv2alpha5.BrokerV2alpha5Interface {
 	return c.brokerV2alpha5
 }
 
+// BrokerV1beta1 retrieves the BrokerV1beta1Client
+func (c *Clientset) BrokerV1beta1() brokerv1beta1.BrokerV1beta1Interface {
+	return c.brokerV1beta1
+}
+
 // Deprecated: Broker retrieves the default version of BrokerClient.
 // Please explicitly pick a version.
-func (c *Clientset) Broker() brokerv2alpha5.BrokerV2alpha5Interface {
-	return c.brokerV2alpha5
+func (c *Clientset) Broker() brokerv1beta1.BrokerV1beta1Interface {
+	return c.brokerV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -131,6 +138,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.brokerV1beta1, err = brokerv1beta1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -150,6 +161,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.brokerV2alpha3 = brokerv2alpha3.NewForConfigOrDie(c)
 	cs.brokerV2alpha4 = brokerv2alpha4.NewForConfigOrDie(c)
 	cs.brokerV2alpha5 = brokerv2alpha5.NewForConfigOrDie(c)
+	cs.brokerV1beta1 = brokerv1beta1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -164,6 +176,7 @@ func New(c rest.Interface) *Clientset {
 	cs.brokerV2alpha3 = brokerv2alpha3.New(c)
 	cs.brokerV2alpha4 = brokerv2alpha4.New(c)
 	cs.brokerV2alpha5 = brokerv2alpha5.New(c)
+	cs.brokerV1beta1 = brokerv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

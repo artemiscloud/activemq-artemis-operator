@@ -17,6 +17,7 @@ limitations under the License.
 package fake
 
 import (
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1"
 	brokerv2alpha2 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha2"
 	brokerv2alpha3 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
@@ -57,4 +58,5 @@ func AddToScheme(scheme *runtime.Scheme) {
 	brokerv2alpha3.SchemeBuilder.AddToScheme(scheme)
 	brokerv2alpha4.SchemeBuilder.AddToScheme(scheme)
 	brokerv2alpha5.SchemeBuilder.AddToScheme(scheme)
+	brokerv1beta1.SchemeBuilder.AddToScheme(scheme)
 }

@@ -47,9 +47,10 @@ import (
 
 	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 
+	routev1 "github.com/openshift/api/route/v1"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
-	routev1 "github.com/openshift/api/route/v1"
 
 	brokerv1alpha1 "github.com/artemiscloud/activemq-artemis-operator/api/v1alpha1"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
