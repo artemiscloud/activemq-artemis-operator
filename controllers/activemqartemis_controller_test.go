@@ -53,7 +53,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-	nsoptions "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/namespaces"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 
 	"github.com/Azure/go-amqp"
@@ -1464,6 +1463,7 @@ var _ = Describe("artemis controller", func() {
 			if err != nil {
 				Expect(errors.IsConflict(err))
 			}
+
 			crd := generateArtemisSpec(nonDefaultNamespace)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
@@ -1483,15 +1483,8 @@ var _ = Describe("artemis controller", func() {
 
 			By("By starting reconciler for this namespace")
 
-			nsoptions := nsoptions.WatchOptions{}
-			nsoptions.SetWatchList([]string{"non-default"})
-
-			nonDefaultNsReconciler := &ActiveMQArtemisReconciler{
-				Client:       k8Manager.GetClient(),
-				Scheme:       k8Manager.GetScheme(),
-				WatchOptions: nsoptions,
-			}
-			Expect(nonDefaultNsReconciler.SetupWithManager(k8Manager)).Should(Succeed())
+			shutdownControllerManager()
+			createControllerManager(true, nonDefaultNamespace)
 
 			By("Checking stopped status of CR because we expect it to fail to deploy")
 			Eventually(func() (int, error) {
@@ -1512,6 +1505,10 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func() bool {
 				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
+
+			By("restoring default manager")
+			shutdownControllerManager()
+			createControllerManager(true, defaultNamespace)
 		})
 	})
 
@@ -2645,6 +2642,7 @@ var _ = Describe("artemis controller", func() {
 
 		})
 	})
+
 	Context("With delopyed controller - acceptor", func() {
 		It("Checking acceptor service while expose is false", func() {
 			By("By creating a new crd")
@@ -3615,7 +3613,9 @@ func DeployCustomBroker(crName string, targetNamespace string, customFunc func(c
 
 	brokerCrd.Spec.DeploymentPlan.Size = 1
 
-	customFunc(&brokerCrd)
+	if customFunc != nil {
+		customFunc(&brokerCrd)
+	}
 
 	Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 
@@ -3624,7 +3624,8 @@ func DeployCustomBroker(crName string, targetNamespace string, customFunc func(c
 	Eventually(func() bool {
 		return getPersistedVersionedCrd(brokerCrd.Name, targetNamespace, &createdBrokerCrd)
 	}, timeout, interval).Should(BeTrue())
-	Expect(createdBrokerCrd.Name).Should(Equal(createdBrokerCrd.ObjectMeta.Name))
+	Expect(createdBrokerCrd.Name).Should(Equal(brokerCrd.ObjectMeta.Name))
+	Expect(createdBrokerCrd.Namespace).Should(Equal(targetNamespace))
 
 	return &brokerCrd, &createdBrokerCrd
 }
