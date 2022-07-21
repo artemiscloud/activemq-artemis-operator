@@ -10,8 +10,8 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "1.0.6"
-	CompactLatestVersion = "104"
+	LatestVersion        = "1.0.7"
+	CompactLatestVersion = "107"
 	// LastMicroVersion product version supported
 	LastMicroVersion = "1.0.3"
 	// LastMinorVersion product version supported
@@ -41,7 +41,7 @@ var OperandVersionFromOperatorVersion map[string]string = map[string]string{
 	"1.0.1":  "1.0.1",
 	"1.0.2":  "1.0.2",
 	"1.0.3":  "1.0.5",
-	"1.0.4":  "1.0.6",
+	"1.0.4":  "1.0.7",
 }
 var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"150": "2.15.0",
@@ -53,6 +53,7 @@ var FullVersionFromMinorVersion map[string]string = map[string]string{
 	"102": "1.0.2",
 	"103": "1.0.3",
 	"104": "1.0.4",
+	"107": "1.0.7",
 }
 
 var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
@@ -65,6 +66,7 @@ var CompactFullVersionFromMinorVersion map[string]string = map[string]string{
 	"102": "102",
 	"103": "103",
 	"104": "104",
+	"107": "107",
 }
 
 var CompactVersionFromVersion map[string]string = map[string]string{
@@ -77,6 +79,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"1.0.2":  "102",
 	"1.0.3":  "103",
 	"1.0.4":  "104",
+	"1.0.7":  "107",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -88,6 +91,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"102":  "1.0.2",
 	"103":  "1.0.3",
 	"104":  "1.0.4",
+	"107":  "1.0.7",
 }
 
 var MinorVersionFromFullVersion map[string]string = map[string]string{
@@ -100,6 +104,7 @@ var MinorVersionFromFullVersion map[string]string = map[string]string{
 	"1.0.2":  "02",
 	"1.0.3":  "03",
 	"1.0.4":  "04",
+	"1.0.7":  "07",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -112,6 +117,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"1.0.2":  "2.21.0",
 	"1.0.3":  "2.21.0",
 	"1.0.4":  "2.21.0",
+	"1.0.7":  "2.21.0",
 }
 
 var YacfgProfileName string = "artemis"
