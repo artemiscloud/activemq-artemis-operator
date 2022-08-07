@@ -27,13 +27,13 @@ kubectl create -f ./crds
 
 You need to deploy all the yamls from this dir except *cluster_role.yaml* and *cluster_role_binding.yaml*:
 ```
-kubectl create -f ./deploy/service_account.yaml
-kubectl create -f ./deploy/role.yaml
-kubectl create -f ./deploy/role_binding.yaml
-kubectl create -f ./deploy/election_role.yaml
-kubectl create -f ./deploy/election_role_binding.yaml
-kubectl create -f ./deploy/operator_config.yaml
-kubectl create -f ./deploy/operator.yaml
+kubectl create -f ./service_account.yaml
+kubectl create -f ./role.yaml
+kubectl create -f ./role_binding.yaml
+kubectl create -f ./election_role.yaml
+kubectl create -f ./election_role_binding.yaml
+kubectl create -f ./operator_config.yaml
+kubectl create -f ./operator.yaml
 ```
 
 ## To deploy an operator watching all namespace
@@ -64,12 +64,12 @@ After making the above changes deploy the operator as follows
 (Assuming the target namespace is current namespace. You can use kubectl's -n option to specify otherwise)
 
 ```
-kubectl create -f ./deploy/crds
-kubectl create -f ./deploy/service_account.yaml
-kubectl create -f ./deploy/cluster_role.yaml
-kubectl create -f ./deploy/cluster_role_binding.yaml
-kubectl create -f ./deploy/election_role.yaml
-kubectl create -f ./deploy/election_role_binding.yaml
-kubectl create -f ./deploy/operator_config.yaml
-kubectl create -f ./deploy/operator.yaml
+kubectl create -f ./crds
+kubectl create -f ./service_account.yaml
+kubectl create -f ./cluster_role.yaml
+kubectl create -f ./cluster_role_binding.yaml
+kubectl create -f ./election_role.yaml
+kubectl create -f ./election_role_binding.yaml
+kubectl create -f ./operator_config.yaml
+kubectl create -f ./operator.yaml
 ```
