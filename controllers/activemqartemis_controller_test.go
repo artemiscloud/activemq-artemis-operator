@@ -224,6 +224,127 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Image update test", func() {
+
+		It("deploy, ImagePullBackOff, update, delete, ok", func() {
+
+			crd := generateArtemisSpec(defaultNamespace)
+			crd.Spec.DeploymentPlan.Size = 1
+
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 1,
+				PeriodSeconds:       1,
+				TimeoutSeconds:      5,
+			}
+
+			By("Deploying Cr to find valid image " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			ssKey := types.NamespacedName{
+				Name:      namer.CrToSS(crd.Name),
+				Namespace: defaultNamespace,
+			}
+			currentSS := &appsv1.StatefulSet{}
+			var ssVersion string
+			var imageUrl string
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+				ssVersion = currentSS.ResourceVersion
+				g.Expect(ssVersion).ShouldNot(BeEmpty())
+				imageUrl = currentSS.Spec.Template.Spec.Containers[0].Image
+				g.Expect(imageUrl).ShouldNot(BeEmpty())
+			}, timeout, interval).Should(Succeed())
+
+			// update CR with dud image, keeping it lower case to avoid InvalidImageName
+			// "couldn't parse image reference "quay.io/Blacloud/activemq-Bla-broker-kubernetes:1.0.7": invalid reference format: repository name must be lowercase"
+			dudImage := strings.ReplaceAll(imageUrl, "artemis", "bla")
+			By("Replacing image " + imageUrl + ", with dud: " + dudImage)
+			Expect(dudImage).ShouldNot(Equal(imageUrl))
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+				deployedCrd.Spec.DeploymentPlan.Image = dudImage
+				g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verify dud image in ss")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+					g.Expect(currentSS.Spec.Template.Spec.Containers[0].Image).Should(Equal(dudImage))
+				}, timeout, interval).Should(Succeed())
+
+				By("verify Waiting error status of pod")
+				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+					By("verify error status of pod")
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Waiting).Should(Not(BeNil()))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Waiting.Reason).Should(ContainSubstring("ImagePullBackOff"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("Replacing dud image " + dudImage + ", with original: " + imageUrl)
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					deployedCrd.Spec.DeploymentPlan.Image = imageUrl
+					g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+					By("updating cr with correct image: " + imageUrl)
+				}, timeout, interval).Should(Succeed())
+
+				By("verify good image in ss")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+					g.Expect(currentSS.Spec.Template.Spec.Containers[0].Image).Should(Equal(imageUrl))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				// we must force a rollback of the old ss rollout as it won't complete
+				// due to the failure to become ready
+				// https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
+
+				By("verify no roll out yet")
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+
+					By("verify error status of pod still pending")
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Waiting).Should(Not(BeNil()))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Waiting.Reason).Should(ContainSubstring("ImagePullBackOff"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("deleting pending pod")
+
+				Eventually(func(g Gomega) {
+					By("deleting existing pod that is stuck on rollout..")
+					pod := &corev1.Pod{}
+					zeroGracePeriodSeconds := int64(0) // immediate delete
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+					By("Deleting pod: " + podKey.Name)
+					g.Expect(k8sClient.Delete(ctx, pod, &client.DeleteOptions{GracePeriodSeconds: &zeroGracePeriodSeconds})).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verify ready status of pod with correct image")
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+
+					By("verify running status of pod")
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+		})
+	})
+
 	Context("ClientId autoshard Test", func() {
 
 		produceMessage := func(url string, clientId string, linkAddress string, messageId int, g Gomega) {
