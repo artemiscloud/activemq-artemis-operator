@@ -417,8 +417,21 @@ var _ = BeforeSuite(func() {
 	}
 })
 
+func cleanUpPVC() {
+	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		pvcs := &corev1.PersistentVolumeClaimList{}
+		opts := []client.ListOption{}
+		k8sClient.List(context.TODO(), pvcs, opts...)
+		for _, pvc := range pvcs.Items {
+			logf.Log.Info("Deleting/GC PVC: " + pvc.Name)
+			k8sClient.Delete(context.TODO(), &pvc, &client.DeleteOptions{})
+		}
+	}
+}
+
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
+	cleanUpPVC()
 
 	os.Unsetenv("OPERATOR_WATCH_NAMESPACE")
 
