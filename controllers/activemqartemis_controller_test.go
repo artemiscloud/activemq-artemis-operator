@@ -30,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -67,6 +66,8 @@ import (
 //}
 
 var _ = Describe("artemis controller", func() {
+
+	brokerPropertiesMatchString := "broker.properties"
 
 	// see what has changed from the controllers perspective, what we watch
 	toWatch := []client.ObjectList{&brokerv1beta1.ActiveMQArtemisList{}, &appsv1.StatefulSetList{}, &corev1.PodList{}}
@@ -676,7 +677,7 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
 				Eventually(func(g Gomega) {
-					By("again finding PVC b/c it has been gc'ed - " + pvcKey.Name)
+					By("again finding PVC b/c it has not been gc'ed - " + pvcKey.Name)
 					g.Expect(k8sClient.Get(ctx, pvcKey, &corev1.PersistentVolumeClaim{})).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
@@ -713,7 +714,7 @@ var _ = Describe("artemis controller", func() {
 
 				// added back owner reference
 				pvc.OwnerReferences = []metav1.OwnerReference{{
-					APIVersion: v1beta1.GroupVersion.String(),
+					APIVersion: brokerv1beta1.GroupVersion.String(),
 					Kind:       "ActiveMQArtemis",
 					Name:       createdCrd.Name,
 					UID:        createdCrd.GetUID()}}
@@ -2240,7 +2241,7 @@ var _ = Describe("artemis controller", func() {
 				for _, container := range createdSs.Spec.Template.Spec.InitContainers {
 					for _, env := range container.Env {
 						if env.Name == "JAVA_OPTS" {
-							if strings.Contains(env.Value, "broker.properties") {
+							if strings.Contains(env.Value, brokerPropertiesMatchString) {
 								found = true
 							}
 						}
@@ -3625,6 +3626,119 @@ var _ = Describe("artemis controller", func() {
 			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 		}, timeout, interval).Should(BeTrue())
 	})
+
+	It("env Var", func() {
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+		javaOptsValue := "-verbose:class"
+		crd.Spec.Env = []corev1.EnvVar{
+			{Name: "TZ", Value: "en_IE"},
+			{Name: "JAVA_OPTS", Value: javaOptsValue},
+			{Name: "JDK_JAVA_OPTIONS", Value: "-XshowSettings:system"},
+		}
+		crd.Spec.BrokerProperties = []string{"globalMaxSize=512m"}
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+		createdSs := &appsv1.StatefulSet{}
+
+		By("Making sure that the CRD gets deployed " + crd.ObjectMeta.Name)
+		Eventually(func() bool {
+			return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+		Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
+
+		ssKey := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
+		By("Checking that Stateful Set is Created " + ssKey.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			By("Checking ss resource version" + createdSs.ResourceVersion)
+			g.Expect(createdSs.ResourceVersion).ShouldNot(BeNil())
+		}, timeout, interval).Should(Succeed())
+
+		By("By checking the init container stateful set for env var TZ")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			found := false
+			for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+				for _, env := range container.Env {
+					By("Checking init container env: " + env.Name + "::" + env.Value)
+					if env.Name == "TZ" {
+						if strings.Contains(env.Value, "en_IE") {
+							found = true
+						}
+					}
+				}
+			}
+			g.Expect(found).Should(Equal(true))
+		}, duration, interval*4).Should(Succeed())
+
+		By("By checking the init container stateful set for env var JAVA_OPTS append")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			found := 0
+			for _, container := range createdSs.Spec.Template.Spec.InitContainers {
+				for _, env := range container.Env {
+					By("Checking init container env: " + env.Name + "::" + env.Value)
+					if env.Name == "JAVA_OPTS" {
+						if strings.Contains(env.Value, brokerPropertiesMatchString) {
+							found++
+						}
+						if strings.Contains(env.Value, javaOptsValue) {
+							found++
+						}
+					}
+				}
+			}
+			g.Expect(found).Should(Equal(2))
+		}, duration, interval*4).Should(Succeed())
+
+		By("By checking the container stateful set for env var TZ")
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			found := false
+			for _, container := range createdSs.Spec.Template.Spec.Containers {
+				for _, env := range container.Env {
+					By("Checking container env: " + env.Name + "::" + env.Value)
+					if env.Name == "TZ" {
+						if strings.Contains(env.Value, "en_IE") {
+							found = true
+						}
+					}
+				}
+			}
+			g.Expect(found).Should(Equal(true))
+		}, duration, interval).Should(Succeed())
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+			By("verifying verbose:gc via logs")
+
+			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+			Eventually(func(g Gomega) {
+				stdOutContent := logsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
+				// from JDK_JAVA_OPTIONS
+				g.Expect(stdOutContent).Should(ContainSubstring("Operating System Metrics"))
+				// from JAVA_OPTS munged via artemis create
+				g.Expect(stdOutContent).Should(ContainSubstring("class,load"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		}
+
+		By("By checking it has gone")
+		Expect(k8sClient.Delete(ctx, createdCrd)).To(Succeed())
+		Eventually(func() bool {
+			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+		}, timeout, interval).Should(BeTrue())
+	})
+
 })
 
 func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {

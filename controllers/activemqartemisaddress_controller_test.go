@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
@@ -669,6 +670,35 @@ var _ = Describe("Address controller", Label("do"), func() {
 		})
 	})
 })
+
+func logsOfPod(podWithOrdinal string, brokerName string, namespace string, g Gomega) string {
+
+	gvk := schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	}
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	g.Expect(err).To(BeNil())
+
+	readCloser, err := restClient.
+		Get().
+		Namespace(namespace).
+		Resource("pods").
+		Name(podWithOrdinal).
+		SubResource("log").
+		VersionedParams(&corev1.PodLogOptions{
+			Container: brokerName + "-container",
+		}, runtime.NewParameterCodec(scheme.Scheme)).Stream(context.TODO())
+	g.Expect(err).To(BeNil())
+
+	defer readCloser.Close()
+
+	result, err := io.ReadAll(readCloser)
+	g.Expect(err).To(BeNil())
+
+	return string(result)
+}
 
 func execOnPod(podWithOrdinal string, brokerName string, namespace string, command []string, g Gomega) string {
 

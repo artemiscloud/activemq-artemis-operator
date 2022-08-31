@@ -47,6 +47,8 @@ type ActiveMQArtemisSpec struct {
 
 	// Optional list of key=value properties that are applied to the broker configuration bean.
 	BrokerProperties []string `json:"brokerProperties,omitempty"`
+	// Optional list of environment variables to apply to the container(s), not exclusive
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 type AddressSettingsType struct {

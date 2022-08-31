@@ -71,7 +71,7 @@ func DetectOpenshift() (bool, error) {
 	return false, errors.New("environment not yet determined")
 }
 
-func AddEnvVarForBasic2(requireLogin string, journalType string, svcPingName string) []corev1.EnvVar {
+func AddEnvVarForBasic(requireLogin string, journalType string, svcPingName string) []corev1.EnvVar {
 
 	envVarArray := []corev1.EnvVar{
 		{
@@ -306,6 +306,18 @@ func Create(containers []corev1.Container, envVar *corev1.EnvVar) {
 	}
 }
 
+func CreateOrAppend(containers []corev1.Container, envVar *corev1.EnvVar) {
+
+	for i, container := range containers {
+		existing := RetrieveFrom(containers[i], envVar.Name)
+		if existing == nil {
+			containers[i].Env = append(container.Env, *envVar)
+		} else {
+			existing.Value += " " + envVar.Value
+		}
+	}
+}
+
 func Retrieve(containers []corev1.Container, envVarName string) *corev1.EnvVar {
 
 	var retEnvVar *corev1.EnvVar = nil
@@ -318,6 +330,18 @@ func Retrieve(containers []corev1.Container, envVarName string) *corev1.EnvVar {
 		}
 	}
 
+	return retEnvVar
+}
+
+func RetrieveFrom(container corev1.Container, envVarName string) *corev1.EnvVar {
+
+	var retEnvVar *corev1.EnvVar = nil
+	for i, envVar := range container.Env {
+		if envVarName == envVar.Name {
+			retEnvVar = &container.Env[i]
+			break
+		}
+	}
 	return retEnvVar
 }
 
