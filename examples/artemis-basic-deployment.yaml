@@ -6,3 +6,6 @@ spec:
   deploymentPlan:
     size: 1
     image: placeholder
+  env:
+    - name: JDK_JAVA_OPTIONS
+      value: -XshowSettings:system

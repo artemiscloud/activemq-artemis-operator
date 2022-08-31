@@ -218,7 +218,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 	}
 	// TODO: Remove singular admin level user and password in favour of at least guest and admin access
 	secretName := namer.SecretsCredentialsNameBuilder.Name()
-	envVarName1 := "AMQ_USER"
 	for {
 		adminUser.Value = customResource.Spec.AdminUser
 		if "" != adminUser.Value {
@@ -237,9 +236,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 		// do once
 		break
 	}
-	envVars[envVarName1] = adminUser
+	envVars["AMQ_USER"] = adminUser
 
-	envVarName2 := "AMQ_PASSWORD"
 	for {
 		adminPassword.Value = customResource.Spec.AdminPassword
 		if "" != adminPassword.Value {
@@ -256,8 +254,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 		adminPassword.Value = environments.Defaults.AMQ_PASSWORD
 		adminPassword.AutoGen = true
 		break
-	} // do once
-	envVars[envVarName2] = adminPassword
+	}
+	envVars["AMQ_PASSWORD"] = adminPassword
 
 	envVars["AMQ_CLUSTER_USER"] = ValueInfo{
 		Value:   environments.GLOBAL_AMQ_CLUSTER_USER,
@@ -428,7 +426,7 @@ func isLocalOnly() bool {
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
 
-	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
+	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis").WithName("sourceEnvVarFromSecret")
 
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
@@ -454,11 +452,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomR
 		}
 	} else {
 
-		// update
+		log.V(1).Info("updating from " + secretName)
 		for k := range *envVars {
-			elem, ok := secretDefinition.Data[k]
-			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !ok {
-				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", ok)
+			elem, exists := secretDefinition.Data[k]
+			if 0 != strings.Compare(string(elem), (*envVars)[k].Value) || !exists {
+				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", exists)
 				if !(*envVars)[k].AutoGen || string(elem) == "" {
 					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
 				}
@@ -476,11 +474,19 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomR
 		reconciler.trackDesired(internalSecretDefinition)
 	}
 
-	log.Info("Populating env vars references from secret " + secretName)
+	log.Info("Populating env vars references, in order, from secret " + secretName)
 
-	for envVarName, envVarValue := range *envVars {
+	// sort the keys for consistency of reconcilitation as iteration source is a map
+	sortedKeys := make([]string, 0, len(*envVars))
+	for k := range *envVars {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+
+	for _, envVarName := range sortedKeys {
+		envVarInfo := (*envVars)[envVarName]
 		secretNameToUse := secretName
-		if envVarValue.Internal {
+		if envVarInfo.Internal {
 			secretNameToUse = internalSecretName
 		}
 		envVarSource := &corev1.EnvVarSource{
@@ -499,25 +505,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomR
 			ValueFrom: envVarSource,
 		}
 		if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.Containers, envVarName); nil == retrievedEnvVar {
-			log.V(1).Info("sourceEnvVarFromSecret failed to retrieve " + envVarName + " creating")
+			log.V(1).Info("containers: failed to retrieve " + envVarName + " creating")
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
 		}
 
 		//custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
-			//	log.Info("we have custom init-containers")
 			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
+				log.V(1).Info("init_containers: failed to retrieve " + envVarName + " creating")
 				environments.Create(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarDefinition)
 			}
 		}
-	}
-
-	for _, container := range currentStatefulSet.Spec.Template.Spec.Containers {
-		sortEnvVars(container.Env)
-	}
-
-	for _, container := range currentStatefulSet.Spec.Template.Spec.InitContainers {
-		sortEnvVars(container.Env)
 	}
 
 }
@@ -1633,13 +1631,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	clog.Info("Total volumes ", "volumes", podSpec.Volumes)
 
 	// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
-	// not getting munged on the way.
-	// REVISIT: should an existing value be respected here, only when we expose JAVA_OPTS in the CR?
+	// not getting munged on the way. We CreateOrAppend to any value from spec.Env
 	javaOpts := corev1.EnvVar{
 		Name:  "JAVA_OPTS",
 		Value: "-Dbroker.properties=/amq/extra/configmaps/" + brokerPropertiesConfigMapName + "/broker.properties",
 	}
-	environments.Create(podSpec.InitContainers, &javaOpts)
+	environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 
 	var initArgs []string = []string{"-c"}
 
@@ -1845,7 +1842,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForBrokerProperties
 
 func HexShaHashOfMap(props []string) string {
 
-	// sort the keys for consistency
 	digest := adler32.New()
 	for _, k := range props {
 		digest.Write([]byte(k))
@@ -1859,7 +1855,6 @@ func brokerPropertiesData(props []string) map[string]string {
 	fmt.Fprintln(buf, "# generated by crd")
 	fmt.Fprintln(buf, "#")
 
-	// sort the keys for consistency
 	for _, k := range props {
 		fmt.Fprintf(buf, "%s\n", k)
 	}
@@ -2181,9 +2176,6 @@ func getSingleStatefulSetStatus(ss *appsv1.StatefulSet) olm.DeploymentStatus {
 
 func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.EnvVar {
 
-	reqLogger := clog.WithName(customResource.Name)
-	reqLogger.V(1).Info("Adding Env variable ")
-
 	requireLogin := "false"
 	if customResource.Spec.DeploymentPlan.RequireLogin {
 		requireLogin = "true"
@@ -2218,7 +2210,7 @@ func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 	}
 
 	envVar := []corev1.EnvVar{}
-	envVarArrayForBasic := environments.AddEnvVarForBasic2(requireLogin, journalType, namer.SvcPingNameBuilder.Name())
+	envVarArrayForBasic := environments.AddEnvVarForBasic(requireLogin, journalType, namer.SvcPingNameBuilder.Name())
 	envVar = append(envVar, envVarArrayForBasic...)
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
 		envVarArrayForPresistent := environments.AddEnvVarForPersistent(customResource.Name)
@@ -2237,12 +2229,8 @@ func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 	envVarArrayForMetricsPlugin := environments.AddEnvVarForMetricsPlugin(metricsPluginEnabled)
 	envVar = append(envVar, envVarArrayForMetricsPlugin...)
 
-	sortEnvVars(envVar)
+	// appending any Env from CR, to allow potential override
+	envVar = append(envVar, customResource.Spec.Env...)
 
 	return envVar
-}
-
-func sortEnvVars(envVar []corev1.EnvVar) {
-	// sort for easy reconcile
-	sort.SliceStable(envVar, func(i, j int) bool { return envVar[i].Name < envVar[j].Name })
 }
