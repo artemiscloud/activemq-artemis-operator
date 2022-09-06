@@ -59,6 +59,7 @@ import (
 )
 
 const (
+	ImageNamePrefix        = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
 	livenessProbeGraceTime = 30
 	TCPLivenessPort        = 8161
 )
@@ -1934,7 +1935,7 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 	imageName := ""
 	compactVersionToUse := determineCompactVersionToUse(customResource)
 
-	genericRelatedImageEnvVarName := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_" + imageTypeName + "_" + compactVersionToUse
+	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeName + "_" + compactVersionToUse
 	// Default case of x86_64/amd64 covered here
 	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
 	if "s390x" == osruntime.GOARCH || "ppc64le" == osruntime.GOARCH {
@@ -1944,6 +1945,7 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 	clog.V(1).Info("DetermineImageToUse", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
 	if !found {
 		imageName = version.DefaultImageName(archSpecificRelatedImageEnvVarName)
+		clog.V(1).Info("DetermineImageToUse - from default", "env", archSpecificRelatedImageEnvVarName, "imageName", imageName)
 	}
 
 	return imageName
