@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -2868,6 +2869,118 @@ var _ = Describe("artemis controller", func() {
 				}
 				return err == nil
 			}, timeout, interval).Should(Equal(true))
+
+			// cleanup
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+			By("check it has gone")
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+	})
+
+	Context("Toggle spec.Version", func() {
+		It("Expect ok update and new SS generation", func() {
+
+			// the default/latest is applied when there is no env, which is normally the case
+			// for these tests.
+			// To verify upgrade, we want to deploy the previous version and provide the
+			// matching image via the env vars
+
+			// lets order and get LatestVersion - 1
+			versions := make([]string, len(version.CompactVersionFromVersion))
+			for k := range version.CompactVersionFromVersion {
+				versions = append(versions, k)
+			}
+			sort.Strings(versions)
+			Expect(versions[len(versions)-1]).Should(Equal(version.LatestVersion))
+
+			previousVersion := versions[len(versions)-2]
+			Expect(previousVersion).ShouldNot(Equal(version.LatestVersion))
+
+			previousCompactVersion := version.CompactVersionFromVersion[previousVersion]
+			Expect(previousCompactVersion).ShouldNot(Equal(version.CompactLatestVersion))
+
+			previousImageEnvVar := ImageNamePrefix + "Kubernetes_" + previousCompactVersion
+			os.Setenv(previousImageEnvVar, strings.Replace(version.LatestKubeImage, version.LatestVersion, previousVersion, 1))
+			defer os.Unsetenv(previousImageEnvVar)
+
+			perviousInitImageEnvVar := ImageNamePrefix + "Init_" + previousCompactVersion
+			os.Setenv(perviousInitImageEnvVar, strings.Replace(version.LatestInitImage, version.LatestVersion, previousVersion, 1))
+			defer os.Unsetenv(perviousInitImageEnvVar)
+
+			By("By creating a crd without persistence")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+				InitialDelaySeconds: 2,
+				PeriodSeconds:       5,
+			}
+			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+				InitialDelaySeconds: 2,
+				PeriodSeconds:       5,
+			}
+			crd.Spec.DeploymentPlan.Size = 2
+			crd.Spec.Upgrades.Enabled = true
+			crd.Spec.Version = previousVersion
+
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By eventualy finding a matching config map with broker props")
+			createdSs := &appsv1.StatefulSet{}
+
+			key := types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+
+			By("Making sure that the ss gets deployed")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+				g.Expect(createdSs.ResourceVersion).ShouldNot(BeNil())
+				g.Expect(createdSs.Generation).Should(BeEquivalentTo(1))
+
+			}, timeout, interval).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("Checking ready on SS")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+					g.Expect(createdSs.Status.ReadyReplicas).Should(BeEquivalentTo(2))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			initialGeneration := createdSs.ObjectMeta.Generation
+
+			By("updating the crd spec.version")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)).Should(Succeed())
+
+				createdCrd.Spec.Version = version.LatestVersion
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("Making sure that the ss does not get redeployed " + crd.ObjectMeta.Name)
+
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+					g.Expect(createdSs.Status.ReadyReplicas).Should(BeEquivalentTo(2))
+					g.Expect(createdSs.Status.CurrentReplicas).Should(BeEquivalentTo(2))
+					g.Expect(createdSs.Status.UpdatedReplicas).Should(BeEquivalentTo(2))
+				}
+
+				By("verify new generation: " + string(rune(createdSs.ObjectMeta.Generation)))
+				g.Expect(createdSs.ObjectMeta.Generation).ShouldNot(BeEquivalentTo(initialGeneration))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
