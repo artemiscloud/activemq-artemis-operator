@@ -2,18 +2,7 @@ package controllers
 
 import (
 	"strings"
-
-	"github.com/artemiscloud/activemq-artemis-operator/version"
 )
-
-func isVersionSupported(specifiedVersion string) bool {
-	for _, thisSupportedVersion := range version.SupportedVersions {
-		if thisSupportedVersion == specifiedVersion {
-			return true
-		}
-	}
-	return false
-}
 
 func getMinorImageVersion(productVersion string) string {
 	major, minor, _ := MajorMinorMicro(productVersion)
