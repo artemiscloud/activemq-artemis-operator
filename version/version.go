@@ -3,9 +3,9 @@ package version
 import "strings"
 
 var (
-	Version = "1.0.5"
+	Version = "1.0.6"
 	// PriorVersion - prior version
-	PriorVersion = "1.0.4"
+	PriorVersion = "1.0.5"
 )
 
 const (
