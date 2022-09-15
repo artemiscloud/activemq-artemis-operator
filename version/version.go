@@ -10,8 +10,8 @@ var (
 
 const (
 	// LatestVersion product version supported
-	LatestVersion        = "2.23.0"
-	CompactLatestVersion = "2230"
+	LatestVersion        = "2.25.0"
+	CompactLatestVersion = "2250"
 	// LastMinorVersion product version supported
 	LastMinorVersion = "2.20.0"
 
@@ -35,6 +35,7 @@ var CompactVersionFromVersion map[string]string = map[string]string{
 	"2.21.0": "2210",
 	"2.22.0": "2220",
 	"2.23.0": "2230",
+	"2.25.0": "2250",
 }
 
 var FullVersionFromCompactVersion map[string]string = map[string]string{
@@ -45,6 +46,7 @@ var FullVersionFromCompactVersion map[string]string = map[string]string{
 	"2210": "2.21.0",
 	"2220": "2.22.0",
 	"2230": "2.23.0",
+	"2250": "2.25.0",
 }
 
 //The yacfg profile to use for a given full version of broker
@@ -56,6 +58,7 @@ var YacfgProfileVersionFromFullVersion map[string]string = map[string]string{
 	"2.21.0": "2.21.0",
 	"2.22.0": "2.21.0",
 	"2.23.0": "2.21.0",
+	"2.25.0": "2.21.0",
 }
 
 var YacfgProfileName string = "artemis"
