@@ -67,7 +67,7 @@ const (
 	interval                = time.Millisecond * 500
 	existingClusterTimeout  = time.Second * 180
 	existingClusterInterval = time.Second * 2
-	verobse                 = false
+	verbose                 = false
 	namespace1              = "namespace1"
 	namespace2              = "namespace2"
 	namespace3              = "namespace3"
@@ -394,7 +394,7 @@ func setUpK8sClient() {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	if verobse {
+	if verbose {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
 

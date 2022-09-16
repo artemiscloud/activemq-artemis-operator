@@ -74,7 +74,7 @@ var _ = Describe("artemis controller", func() {
 	wis := list.New()
 	BeforeEach(func() {
 
-		if verobse {
+		if verbose {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
 		}
 
@@ -97,12 +97,12 @@ var _ = Describe("artemis controller", func() {
 				for event := range wi.ResultChan() {
 					switch co := event.Object.(type) {
 					case client.Object:
-						if verobse {
+						if verbose {
 							fmt.Printf("%v : ResourceVersion: %v Generation: %v, OR: %v\n", event.Type, co.GetResourceVersion(), co.GetGeneration(), co.GetOwnerReferences())
 							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
 						}
 					default:
-						if verobse {
+						if verbose {
 							fmt.Printf("%v : type: %v\n", event.Type, co)
 							fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
 						}
@@ -3913,6 +3913,180 @@ var _ = Describe("artemis controller", func() {
 		Eventually(func() bool {
 			return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 		}, timeout, interval).Should(BeTrue())
+	})
+
+	It("extraMount.configMap projection update", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 2,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+
+		configMap := &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "k8s.io.api.core.v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:         "jaas-bits",
+				GenerateName: "",
+				Namespace:    crd.ObjectMeta.Namespace,
+			},
+			// mutable
+		}
+
+		configMap.Data = map[string]string{"a.props": "a=a1"}
+
+		crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{configMap.Name}
+
+		By("Deploying the configMap " + configMap.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, configMap)).Should(Succeed())
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("verifying started")
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifying content of configmap props")
+			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+			command := []string{"cat", "/amq/extra/configmaps/jaas-bits/a.props"}
+			statCommand := []string{"stat", "/amq/extra/configmaps/jaas-bits/"}
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("a1"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, Default)
+			if verbose {
+				fmt.Printf("\na1 - Stat:\n" + stdOutContent)
+			}
+
+			By("updating config map")
+			createdConfigMap := &corev1.ConfigMap{}
+			configMapKey := types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, configMapKey, createdConfigMap)).Should(Succeed())
+				createdConfigMap.Data = map[string]string{"a.props": "a=a2"}
+
+				g.Expect(k8sClient.Update(ctx, createdConfigMap)).Should(Succeed())
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifying updated content of configmap props")
+
+			Eventually(func(g Gomega) {
+				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				g.Expect(stdOutContent).Should(ContainSubstring("a2"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, Default)
+			if verbose {
+				fmt.Printf("\na2 - Stat:\n" + stdOutContent)
+			}
+		}
+
+		By("By checking it has gone")
+		Expect(k8sClient.Delete(ctx, configMap)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
+	})
+
+	It("extraMount.configMap logging config", func() {
+
+		ctx := context.Background()
+		crd := generateArtemisSpec(defaultNamespace)
+		crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 2,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       5,
+		}
+		crd.Spec.DeploymentPlan.Size = 1
+
+		configMap := &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "k8s.io.api.core.v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:         crd.Name + "-logging-confg",
+				GenerateName: "",
+				Namespace:    crd.ObjectMeta.Namespace,
+			},
+			// mutable
+		}
+
+		customLogFilePropertiesFileName := "customLogging.properties"
+		configMap.Data = map[string]string{
+			customLogFilePropertiesFileName: "logger.level=WARN\n" +
+				"logger.handlers=CONSOLE\n" +
+				"handler.CONSOLE=org.jboss.logmanager.handlers.ConsoleHandler\n" +
+				"handler.CONSOLE.level=WARN",
+		}
+
+		crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{configMap.Name}
+		crd.Spec.Env = []corev1.EnvVar{
+			// JDK_JAVA_OPTS are prepend, so those cannot override, DEBUG_ARGS env is in the
+			// right place in the artemis script.
+			// maybe we need to pop in a JAVA_ARGS_APPEND? or own the java command line
+			// The other option would be to use $ARTEMIS_LOGGING_CONF and have the artemis script only
+			// set when empty. Currently it overrides the env
+			// This is more natural
+			//{Name: "ARTEMIS_LOGGING_CONF", Value: "file:/amq/extra/configmaps/" + configMap.Name + "/" + customLogFilePropertiesFileName},
+
+			// this works!
+			{Name: "DEBUG_ARGS", Value: "-Dlogging.configuration=file:/amq/extra/configmaps/" + configMap.Name + "/" + customLogFilePropertiesFileName},
+		}
+
+		By("Deploying the configMap " + configMap.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, configMap)).Should(Succeed())
+
+		By("Deploying the CRD " + crd.ObjectMeta.Name)
+		Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+			By("verifying started")
+			brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifying logging via custom map")
+			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+
+			Eventually(func(g Gomega) {
+				stdOutContent := logsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
+				if verbose {
+					fmt.Printf("\nLOG of Pod:\n" + stdOutContent)
+				}
+				g.Expect(stdOutContent).ShouldNot(ContainSubstring("INFO"))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		}
+
+		By("By checking it has gone")
+		Expect(k8sClient.Delete(ctx, configMap)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 	})
 
 })

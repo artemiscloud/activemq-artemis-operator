@@ -54,7 +54,7 @@ var boolTrue = true
 var _ = Describe("security controller", func() {
 
 	BeforeEach(func() {
-		if verobse {
+		if verbose {
 			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
 		}
 	})
