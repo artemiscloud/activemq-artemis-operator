@@ -2880,6 +2880,75 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("With delopyed controller - acceptor", func() {
+
+		It("Add acceptor via update", func() {
+			By("By creating a new crd with no acceptor")
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			crd.Spec.DeploymentPlan = brokerv1beta1.DeploymentPlanType{
+				Size: 1,
+			}
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			acceptorName := "added-acceptor"
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				By("verifying started")
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					By("Updating .... add acceptor")
+
+					g.Expect(getPersistedVersionedCrd(brokerKey.Name, brokerKey.Namespace, createdCrd)).Should(BeTrue())
+
+					createdCrd.Spec.Acceptors = []brokerv1beta1.AcceptorType{
+						{
+							Name: acceptorName,
+							Port: 61666,
+						},
+					}
+
+					By("Redeploying the CRD")
+					g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+					g.Expect(createdCrd.Generation).Should(BeNumerically("==", 2))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verifying content of broker.xml props")
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"cat", "amq-broker/etc/broker.xml"}
+
+				Eventually(func(g Gomega) {
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					if verbose {
+						fmt.Printf("\na1 - cat:\n" + stdOutContent)
+					}
+					g.Expect(stdOutContent).Should(ContainSubstring(acceptorName))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			}
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+
+			By("check it has gone")
+			Eventually(checkCrdDeleted(crd.Name, defaultNamespace, &crd), timeout, interval).Should(BeTrue())
+		})
+
 		It("Checking acceptor service while expose is false", func() {
 			By("By creating a new crd")
 			ctx := context.Background()
