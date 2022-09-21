@@ -77,7 +77,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", goruntime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", goruntime.GOOS, goruntime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion))
-	log.Info(fmt.Sprintf("Version of the operator: %s", version.Version))
+	log.Info(fmt.Sprintf("Version of the operator: %s %s %s", version.Version, version.CommitHash, version.BuildTimestamp))
 	log.Info(fmt.Sprintf("Supported ActiveMQArtemis Kubernetes Image Versions: %s", getSupportedBrokerVersions()))
 }
 
@@ -112,6 +112,8 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	printVersion()
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -119,7 +121,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	printVersion()
 	oprNamespace, err := sdkk8sutil.GetOperatorNamespace()
 	if err != nil {
 		log.Error(err, "failed to get operator namespace")
