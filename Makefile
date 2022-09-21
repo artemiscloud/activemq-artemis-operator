@@ -11,6 +11,8 @@ OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
 OPERATOR_CLUSTER_ROLE_NAME := activemq-artemis-operator
 OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator
 OPERATOR_NAMESPACE := activemq-artemis-operator
+GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
+
 # directory to hold static resources for deploying operator
 DEPLOY := ./deploy
 
@@ -66,6 +68,10 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+COMMIT_HASH := $(shell git rev-parse --short HEAD)
+BUILD_TIMESTAMP := $(shell date '+%Y-%m-%dT%H:%M:%S')
+LDFLAGS = "-X '$(GO_MODULE)/version.CommitHash=$(COMMIT_HASH)' -X '$(GO_MODULE)/version.BuildTimestamp=$(BUILD_TIMESTAMP)'"
+
 all: build
 
 ##@ General
@@ -118,10 +124,10 @@ test-mk-do: manifests generate fmt vet envtest ## Run tests against minikube wit
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -ldflags=$(LDFLAGS) -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run -ldflags=$(LDFLAGS) ./main.go
 
 docker-build: test generate-deploy ## Build docker image with the manager.
 	docker build -t ${IMG} .
