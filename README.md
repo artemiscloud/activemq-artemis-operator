@@ -20,3 +20,9 @@ The [building.md](docs/help/building.md) describes how to build operator and how
 
 The [bundle.md](docs/help/bundle.md) contains instructions for how to build operator bundle images and integrate it into [Operator Liftcycle Manager](https://olm.operatorframework.io/) framework.
 
+## Debugging operator inside a container
+
+Install delve in the `builder` container, i.e. `RUN go install github.com/go-delve/delve/cmd/dlv@latest`
+Disable build optimization, i.e. `go build -gcflags="all=-N -l"`
+Copy delve to the `base-env` container, i.e. `COPY --from=builder /go/bin/dlv /bin`
+Execute operator using delve, i.e. `/bin/dlv exec --listen=0.0.0.0:40000 --headless=true --api-version=2 --accept-multiclient ${OPERATOR} $@`
