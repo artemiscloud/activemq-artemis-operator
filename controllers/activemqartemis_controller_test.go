@@ -1597,7 +1597,7 @@ var _ = Describe("artemis controller", func() {
 
 	Context("Labels Test", func() {
 		It("passing in 2 labels", func() {
-			By("Creating a crd with 2 labels")
+			By("Creating a crd with 2 labels, verifying only on pod template")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 			crd.Spec.DeploymentPlan.Labels = make(map[string]string)
@@ -1616,20 +1616,21 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 			By("Checking that Stateful Set is Created with the labels " + namer.CrToSS(createdCrd.Name))
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
 
-				err := k8sClient.Get(ctx, key, createdSs)
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
 
-				if err != nil {
-					return false
-				}
-				return len(createdSs.ObjectMeta.Labels) == 4
-			}, timeout, interval).Should(Equal(true))
+				g.Expect(len(createdSs.ObjectMeta.Labels)).Should(BeNumerically("==", 2))
+				g.Expect(len(createdSs.Spec.Selector.MatchLabels)).Should(BeNumerically("==", 2))
+
+				g.Expect(len(createdSs.Spec.Template.Labels)).Should(BeNumerically("==", 4))
+
+			}, timeout, interval).Should(Succeed())
 
 			By("Making sure the labels are correct")
-			Expect(createdSs.ObjectMeta.Labels["key1"] == "val1").Should(BeTrue())
-			Expect(createdSs.ObjectMeta.Labels["key2"] == "val2").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Labels["key1"]).Should(Equal("val1"))
+			Expect(createdSs.Spec.Template.Labels["key2"]).Should(Equal("val2"))
 
 			By("check it has gone")
 			Expect(k8sClient.Delete(ctx, createdCrd))

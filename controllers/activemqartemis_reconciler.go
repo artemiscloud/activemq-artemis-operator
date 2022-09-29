@@ -1419,12 +1419,16 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	terminationGracePeriodSeconds := int64(60)
 
-	labels := namer.LabelBuilder.Labels()
-	//add any custom labels provided in CR before creating the pod template spec
+	// custom labels provided in CR applied only to the pod template spec
+	// note: work with a clone of the default labels to not modify defaults
+	labels := make(map[string]string)
+	for key, value := range namer.LabelBuilder.Labels() {
+		labels[key] = value
+	}
 	if customResource.Spec.DeploymentPlan.Labels != nil {
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
 			labels[key] = value
-			reqLogger.V(1).Info("Adding Label", "key", key, "value", value)
+			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
 		}
 	}
 
