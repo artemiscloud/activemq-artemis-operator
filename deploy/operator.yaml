@@ -23,6 +23,7 @@ spec:
       - args:
         - --zap-log-level=debug
         - --zap-encoder=console
+        - --zap-time-encoding=iso8601
         - --leader-elect
         command:
         - /home/activemq-artemis-operator/bin/entrypoint
