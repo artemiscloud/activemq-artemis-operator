@@ -67,7 +67,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 				PeriodSeconds:       5,
 			}
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 				createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
@@ -222,7 +222,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 
 			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker pair")
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -315,7 +315,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 			addressCrd.Spec.QueueName = &queueName
 			addressCrd.Spec.RoutingType = &routingType
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker without auto-create")
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -394,7 +394,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 
 			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker")
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -452,7 +452,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 
 			Expect(k8sClient.Create(ctx, &addressCrd)).Should(Succeed())
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker")
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -497,7 +497,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 			crd.Spec.DeploymentPlan.Size = 1
 			crd.Spec.DeploymentPlan.JolokiaAgentEnabled = true
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker")
 				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -572,7 +572,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 			crd2.Spec.DeploymentPlan.Size = 1
 			crd2.Spec.DeploymentPlan.JolokiaAgentEnabled = true
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" && os.Getenv("DEPLOY_OPERATOR") == "true" {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				By("Deploying a broker 0")
 				Expect(k8sClient.Create(ctx, crd0)).Should(Succeed())
