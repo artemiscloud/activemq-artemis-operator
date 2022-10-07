@@ -25,9 +25,9 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -64,7 +64,11 @@ var _ = Describe("Address controller", Label("do"), func() {
 			brokerCrd.Spec.DeploymentPlan.Size = 5
 
 			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-				InitialDelaySeconds: 1,
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       5,
+			}
+			brokerCrd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+				InitialDelaySeconds: 5,
 				PeriodSeconds:       5,
 			}
 
@@ -245,7 +249,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -259,7 +263,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).ShouldNot(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -336,7 +340,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 				command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring(addressName))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -348,14 +352,14 @@ var _ = Describe("Address controller", Label("do"), func() {
 				command = []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				command = []string{"amq-broker/bin/artemis", "queue", "stat", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					g.Expect(stdOutContent).Should(ContainSubstring(queueName))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -417,7 +421,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -475,7 +479,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -534,7 +538,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -621,7 +625,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -645,16 +649,19 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, otherCrd.Name, otherNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, otherCrd.Name, otherNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(otherAddressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
 
 				k8sClient.Delete(ctx, &addressCrd)
+				k8sClient.Delete(ctx, &otherAddressCrd)
 			}
 
 			// cleanup
 			k8sClient.Delete(ctx, &crd)
+			k8sClient.Delete(ctx, &otherCrd)
+			k8sClient.Delete(ctx, otherNS)
 		})
 
 		It("address creation with multiple ApplyToCrNames", func() {
@@ -744,7 +751,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd0.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd0.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -755,7 +762,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd1.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd1.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -767,7 +774,7 @@ var _ = Describe("Address controller", Label("do"), func() {
 					command := []string{"amq-broker/bin/artemis", "address", "show", "--url", "tcp://" + podWithOrdinal + ":61616"}
 
 					Eventually(func(g Gomega) {
-						stdOutContent := execOnPod(podWithOrdinal, crd2.Name, defaultNamespace, command, gomega.Default)
+						stdOutContent := execOnPod(podWithOrdinal, crd2.Name, defaultNamespace, command, g)
 						g.Expect(stdOutContent).ShouldNot(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 				}
@@ -850,9 +857,12 @@ func execOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 	g.Expect(err).To(BeNil())
 
 	g.Eventually(func(g Gomega) {
-		By("Checking for output from exec")
+		By("Checking for output from " + fmt.Sprintf(" command: %v", command))
 		g.Expect(outPutbuffer.Len() > 0)
-	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+		if verbose {
+			fmt.Printf("\n%v %v resulted in %s\n", time.Now(), command, outPutbuffer.String())
+		}
+	}, timeout, interval*5).Should(Succeed())
 
 	return outPutbuffer.String()
 }

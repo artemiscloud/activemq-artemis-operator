@@ -35,6 +35,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 
 	"time"
@@ -76,7 +77,7 @@ var _ = Describe("artemis controller", func() {
 	BeforeEach(func() {
 
 		if verbose {
-			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
+			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
 		}
 
 		for _, li := range toWatch {
@@ -227,7 +228,7 @@ var _ = Describe("artemis controller", func() {
 
 	Context("Image update test", func() {
 
-		It("deploy, ImagePullBackOff, update, delete, ok", func() {
+		It("deploy ImagePullBackOff update delete ok", func() {
 
 			crd := generateArtemisSpec(defaultNamespace)
 			crd.Spec.DeploymentPlan.Size = 1
@@ -978,7 +979,7 @@ var _ = Describe("artemis controller", func() {
 			crd := generateArtemisSpec(defaultNamespace)
 			crd.Spec.DeploymentPlan.Size = 1
 			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-				InitialDelaySeconds: 1,
+				InitialDelaySeconds: 2,
 				PeriodSeconds:       5,
 			}
 
@@ -1070,7 +1071,7 @@ var _ = Describe("artemis controller", func() {
 
 			}
 
-			Expect(k8sClient.Delete(ctx, createdCrd))
+			Expect(k8sClient.Delete(ctx, &crd))
 
 		})
 
@@ -1695,7 +1696,10 @@ var _ = Describe("artemis controller", func() {
 
 			By("restoring default manager")
 			shutdownControllerManager()
-			createControllerManager(true, defaultNamespace)
+			createControllerManagerForSuite()
+
+			By("Deleting non-default ns")
+			k8sClient.Delete(ctx, ns)
 		})
 	})
 
@@ -1984,7 +1988,7 @@ var _ = Describe("artemis controller", func() {
 		It("Override Liveness Probe Default TCPSocket", func() {
 			By("By creating a crd with Liveness Probe")
 			ctx := context.Background()
-			crd, createdCrd := DeployCustomBroker("", defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
 				tcpSocketAction := corev1.TCPSocketAction{
 					Port: intstr.FromInt(8161),
 				}
@@ -2334,21 +2338,21 @@ var _ = Describe("artemis controller", func() {
 
 			crd.Spec.BrokerProperties = []string{"globalMaxSize=512m"}
 
+			crd.Spec.DeploymentPlan.Labels = make(map[string]string)
+			crd.Spec.DeploymentPlan.Labels["bla"] = "bla"
+
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd) }, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
-			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
-
 			By("By finding a new config map with broker props")
 			configMap := &corev1.ConfigMap{}
-			key := types.NamespacedName{Name: crd.ObjectMeta.Name + "-props-" + hexShaOriginal, Namespace: crd.ObjectMeta.Namespace}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, key, configMap)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			key := types.NamespacedName{Name: crd.ObjectMeta.Name + "-props", Namespace: crd.ObjectMeta.Namespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, configMap)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 
 			By("By checking the container stateful set for java opts")
 			Eventually(func() (bool, error) {
@@ -2388,7 +2392,7 @@ var _ = Describe("artemis controller", func() {
 				for _, container := range createdSs.Spec.Template.Spec.Containers {
 					for _, vm := range container.VolumeMounts {
 						// mount path can't have a .
-						if strings.Contains(vm.MountPath, "-props-") {
+						if strings.Contains(vm.MountPath, "-props") {
 							found = true
 						}
 					}
@@ -2428,69 +2432,56 @@ var _ = Describe("artemis controller", func() {
 
 		})
 
-		It("Expect new config map on update to BrokerProperties", func() {
+		It("Expect updated config map on update to BrokerProperties", func() {
 			By("By creating a crd with BrokerProperties in the spec")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
 			crd.Spec.BrokerProperties = []string{"globalMaxSize=64g"}
-			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
+
+			configMapName := crd.Name + "-props"
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
 			By("By eventualy finding a matching config map with broker props")
-			configMapList := &corev1.ConfigMapList{}
-			opts := &client.ListOptions{
-				Namespace: defaultNamespace,
-			}
-			Eventually(func() bool {
-				err := k8sClient.List(ctx, configMapList, opts)
-				if err != nil {
-					fmt.Printf("error getting list of configopts map! %v", err)
-				}
-				for _, cm := range configMapList.Items {
-					if strings.Contains(cm.ObjectMeta.Name, hexShaOriginal) {
-						return true
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
+			cmResourceVersion := ""
 
-			By("updating the crd, expect new ConfigMap name")
+			createdConfigMap := &corev1.ConfigMap{}
+			configMapKey := types.NamespacedName{Name: configMapName, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, configMapKey, createdConfigMap)).Should(Succeed())
+				g.Expect(createdConfigMap.ResourceVersion).ShouldNot(BeNil())
+				cmResourceVersion = createdConfigMap.ResourceVersion
+			}, timeout, interval).Should(Succeed())
+
+			By("updating the crd, expect new ConfigMap generation")
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 			By("pushing the update on the current version...")
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
-				if err == nil {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)).Should(Succeed())
 
-					// add a new property
-					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
+				// add a new property
+				createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
-					err = k8sClient.Update(ctx, createdCrd)
-					if err != nil {
-						fmt.Printf("error on update! %v\n", err)
-					}
-				}
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 
 			hexShaModified := HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
 
-			By("finding the updated config map using the sha")
-			Eventually(func() bool {
-				err := k8sClient.List(ctx, configMapList, opts)
+			By("finding the updated config map")
+			Eventually(func(g Gomega) {
 
-				if err == nil && len(configMapList.Items) > 0 {
+				g.Expect(k8sClient.Get(ctx, configMapKey, createdConfigMap)).Should(Succeed())
+				g.Expect(createdConfigMap.ResourceVersion).ShouldNot(BeNil())
+				g.Expect(createdConfigMap.Data["a_status.properties"]).ShouldNot(BeEmpty())
+				g.Expect(createdConfigMap.Data["a_status.properties"]).Should(ContainSubstring(hexShaModified))
 
-					for _, cm := range configMapList.Items {
-						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
-							return true
-						}
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
+				// verify update
+				g.Expect(createdConfigMap.ResourceVersion).ShouldNot(Equal(cmResourceVersion))
+
+			}, timeout, interval).Should(Succeed())
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
@@ -2499,42 +2490,93 @@ var _ = Describe("artemis controller", func() {
 				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
 			}, timeout, interval).Should(BeTrue())
 
-			// cannot verify no leaks b/c gc is not enabled on envTest
-			// and on delete we don't have any state to determine the owner reference
 		})
 
-		It("Expect two crs to coexist", func() {
-			By("By creating two crds with BrokerProperties in the spec")
+		It("Upgrade brokerProps respect existing immutable config map", func() {
+			By("By creating a crd with BrokerProperties in the spec")
 			ctx := context.Background()
-			crd1 := generateArtemisSpec(defaultNamespace)
-			crd2 := generateArtemisSpec(defaultNamespace)
+			crd := generateArtemisSpec(defaultNamespace)
 
-			Expect(k8sClient.Create(ctx, &crd1)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, &crd2)).Should(Succeed())
+			crd.Spec.BrokerProperties = []string{"globalMaxSize=64g"}
 
-			By("By eventualy finding two config maps with broker props")
-			configMapList := &corev1.ConfigMapList{}
-			opts := &client.ListOptions{
-				Namespace: defaultNamespace,
+			configMapName := crd.Name + "-props"
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			By("By eventualy finding a matching config map with broker props")
+
+			createdConfigMap := &corev1.ConfigMap{}
+			configMapKey := types.NamespacedName{Name: configMapName, Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, configMapKey, createdConfigMap)).Should(Succeed())
+				g.Expect(createdConfigMap.ResourceVersion).ShouldNot(BeNil())
+			}, timeout, interval).Should(Succeed())
+
+			By("inserting immutable config map with OwnerReference to mimic deploy upgrade")
+			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
+			immutableConfigMapKey := types.NamespacedName{Name: crd.ObjectMeta.Name + "-props-" + hexShaOriginal, Namespace: crd.ObjectMeta.Namespace}
+
+			immutableConfigMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ConfigMap",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:         immutableConfigMapKey.Name,
+					GenerateName: "",
+					Namespace:    immutableConfigMapKey.Namespace,
+				},
+				Immutable: common.NewTrue(),
+				Data:      map[string]string{},
 			}
-			Eventually(func() int {
-				err := k8sClient.List(ctx, configMapList, opts)
-				if err != nil {
-					fmt.Printf("error getting list of config opts map! %v", err)
-				}
 
-				ret := 0
-				for _, cm := range configMapList.Items {
-					if strings.Contains(cm.ObjectMeta.Name, crd1.Name) || strings.Contains(cm.ObjectMeta.Name, crd2.Name) {
-						ret++
-					}
-				}
-				return ret
-			}, timeout, interval).Should(BeEquivalentTo(2))
+			By("getting owner!")
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			crdKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}
+			Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
+
+			By("setting owner!")
+			immutableConfigMap.OwnerReferences = []metav1.OwnerReference{{
+				APIVersion: brokerv1beta1.GroupVersion.String(),
+				Kind:       "ActiveMQArtemis",
+				Name:       createdCrd.Name,
+				UID:        createdCrd.GetUID()}}
+
+			By("Setting matching data")
+			immutableConfigMap.Data["broker.properties"] = createdConfigMap.Data["broker.properties"]
+
+			By("creating immutable config map")
+			Expect(k8sClient.Create(ctx, immutableConfigMap)).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				By("verifying it is present before artemis reconcile")
+				createdImmutableCm := &corev1.ConfigMap{}
+				g.Expect(k8sClient.Get(ctx, immutableConfigMapKey, createdImmutableCm)).Should(Succeed())
+				g.Expect(createdImmutableCm.ResourceVersion).ShouldNot(BeNil())
+			}, timeout, interval).Should(Succeed())
+
+			By("pushing an update to force reconcile")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
+
+				// no material change, just a reconcile loop
+				createdCrd.Spec.Upgrades.Enabled = true
+
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("not finding the mutable config map, reverted back to immutable")
+			Eventually(func(g Gomega) {
+				By("waiting till mutable config map is gone!")
+				g.Expect(k8sClient.Get(ctx, configMapKey, createdConfigMap)).Error().ShouldNot(BeNil())
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			By("verifing immutable still present")
+			Expect(k8sClient.Get(ctx, immutableConfigMapKey, createdConfigMap)).Should(Succeed())
 
 			// cleanup
-			Expect(k8sClient.Delete(ctx, &crd1)).Should(Succeed())
-			Expect(k8sClient.Delete(ctx, &crd2)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 		})
 
 		It("Expect two crs to coexist", func() {
@@ -2579,87 +2621,55 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
-			crd.Spec.BrokerProperties = []string{"globalMaxSize=65g"}
-
-			hexShaOriginal := HexShaHashOfMap(crd.Spec.BrokerProperties)
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
-
-			By("By eventualy finding a matching config map with broker props")
-			configMapList := &corev1.ConfigMapList{}
-			opts := &client.ListOptions{
-				Namespace: defaultNamespace,
-			}
-			Eventually(func() bool {
-				err := k8sClient.List(ctx, configMapList, opts)
-				if err != nil {
-					fmt.Printf("error getting list of configopts map! %v", err)
-				}
-				for _, cm := range configMapList.Items {
-					if strings.Contains(cm.ObjectMeta.Name, hexShaOriginal) {
-						return true
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
 
 			By("updating the crd with address settings")
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			crdKey := types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}
+			Eventually(func(g Gomega) {
+				By("Verifying generation")
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
+				g.Expect(createdCrd.Generation).Should(BeNumerically("==", 1))
+			}, timeout, interval).Should(Succeed())
 
 			By("pushing the update on the current version...")
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
-				if err == nil {
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
 
-					// add a new property
-					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
+				// add a new property
+				createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
-					// add address settings, to an existing crd
-					ma := "merge_all"
-					dlq := "dlq"
-					dlqabc := "dlqabc"
-					maxSize := "10m"
+				// add address settings, to an existing crd
+				ma := "merge_all"
+				dlq := "dlq"
+				dlqabc := "dlqabc"
+				maxSize := "10m"
 
-					createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
-						ApplyRule: &ma,
-						AddressSetting: []brokerv1beta1.AddressSettingType{
-							{
-								Match:             "#",
-								DeadLetterAddress: &dlq,
-							},
-							{
-								Match:             "abc#",
-								DeadLetterAddress: &dlqabc,
-								MaxSizeBytes:      &maxSize,
-							},
+				createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+					ApplyRule: &ma,
+					AddressSetting: []brokerv1beta1.AddressSettingType{
+						{
+							Match:             "#",
+							DeadLetterAddress: &dlq,
 						},
-					}
-
-					err = k8sClient.Update(ctx, createdCrd)
-					if err != nil {
-						fmt.Printf("error on update! %v\n", err)
-					}
+						{
+							Match:             "abc#",
+							DeadLetterAddress: &dlqabc,
+							MaxSizeBytes:      &maxSize,
+						},
+					},
 				}
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
 
-			hexShaModified := HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
 
-			By("finding the updated config map using the sha")
+			}, timeout, interval).Should(Succeed())
 
-			Eventually(func() bool {
-				err := k8sClient.List(ctx, configMapList, opts)
-
-				if err == nil && len(configMapList.Items) > 0 {
-
-					for _, cm := range configMapList.Items {
-						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
-							return true
-						}
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func(g Gomega) {
+				By("Verifying generation")
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
+				g.Expect(createdCrd.Generation).Should(BeNumerically("==", 2))
+			}, timeout, interval).Should(Succeed())
 
 			By("tracking the yaconfig init command with user_address_settings and verifying no change on further update")
 			key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
@@ -2669,7 +2679,7 @@ var _ = Describe("artemis controller", func() {
 
 				createdSs := &appsv1.StatefulSet{}
 
-				g.Expect(k8sClient.Get(ctx, key, createdSs))
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
 
 				initArgsString = strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
 				g.Expect(initArgsString).Should(ContainSubstring("user_address_settings"))
@@ -2677,69 +2687,47 @@ var _ = Describe("artemis controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			By("pushing another update on the current version...")
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)
-				if err == nil {
+				g.Expect(k8sClient.Get(ctx, crdKey, createdCrd)).Should(Succeed())
 
-					createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen2="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
+				createdCrd.Spec.BrokerProperties = append(createdCrd.Spec.BrokerProperties, "gen2="+strconv.FormatInt(createdCrd.ObjectMeta.Generation, 10))
 
-					// add address settings, to an existing crd
-					ma := "merge_all"
-					dlq := "dlq"
-					dlqabc := "dlqabc"
-					maxSize := "10m"
+				// add address settings, to an existing crd
+				ma := "merge_all"
+				dlq := "dlq"
+				dlqabc := "dlqabc"
+				maxSize := "10m"
 
-					createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
-						ApplyRule: &ma,
-						AddressSetting: []brokerv1beta1.AddressSettingType{
-							{
-								Match:             "#",
-								DeadLetterAddress: &dlq,
-							},
-							{
-								Match:             "abc#",
-								DeadLetterAddress: &dlqabc,
-								MaxSizeBytes:      &maxSize,
-							},
+				createdCrd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+					ApplyRule: &ma,
+					AddressSetting: []brokerv1beta1.AddressSettingType{
+						{
+							Match:             "#",
+							DeadLetterAddress: &dlq,
 						},
-					}
-
-					err = k8sClient.Update(ctx, createdCrd)
-					if err != nil {
-						fmt.Printf("error on update! %v\n", err)
-					}
+						{
+							Match:             "abc#",
+							DeadLetterAddress: &dlqabc,
+							MaxSizeBytes:      &maxSize,
+						},
+					},
 				}
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
 
-			hexShaModified = HexShaHashOfMap(createdCrd.Spec.BrokerProperties)
+				g.Expect(k8sClient.Update(ctx, createdCrd)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 
-			By("again finding the updated config map using the sha")
-
-			Eventually(func() bool {
-				err := k8sClient.List(ctx, configMapList, opts)
-
-				if err == nil && len(configMapList.Items) > 0 {
-
-					for _, cm := range configMapList.Items {
-						if strings.Contains(cm.ObjectMeta.Name, hexShaModified) {
-							return true
-						}
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func(g Gomega) {
+				By("Verifying generation")
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: crd.ObjectMeta.Name, Namespace: crd.ObjectMeta.Namespace}, createdCrd)).Should(Succeed())
+				g.Expect(createdCrd.Generation).Should(BeNumerically("==", 3))
+			}, timeout, interval).Should(Succeed())
 
 			By("verifying init command args did not change")
-			Eventually(func() bool {
-				if err := k8sClient.Get(ctx, key, createdSs); err != nil {
-					return false
-				}
-
-				updatedInitArgs := strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")
-				return initArgsString == updatedInitArgs
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+				g.Expect(strings.Join(createdSs.Spec.Template.Spec.InitContainers[0].Args, ",")).Should(Equal(initArgsString))
+			}, timeout, interval).Should(Succeed())
 
 			// cleanup
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
@@ -2993,7 +2981,7 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
-	Context("With delopyed controller - acceptor", func() {
+	Context("With deployed controller - acceptor", func() {
 
 		It("Add acceptor via update", func() {
 			By("By creating a new crd with no acceptor")
@@ -3546,7 +3534,7 @@ var _ = Describe("artemis controller", func() {
 					APIVersion: brokerv2alpha4.GroupVersion.Identifier(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      randString(),
+					Name:      nameFromTest(),
 					Namespace: defaultNamespace,
 				},
 				Spec: spec,
@@ -3781,8 +3769,8 @@ var _ = Describe("artemis controller", func() {
 
 		By("Creating broker with custom probe that relies on security")
 		ctx := context.Background()
-		randString := randStringWithPrefix("")
-		crd := generateOriginalArtemisSpec(defaultNamespace, "broker-"+randString)
+		randString := nameFromTest()
+		crd := generateOriginalArtemisSpec(defaultNamespace, "br-"+randString)
 
 		crd.Spec.AdminUser = "admin"
 		crd.Spec.AdminPassword = "secret"
@@ -4153,12 +4141,13 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("a1"))
-			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, Default)
-			if verbose {
-				fmt.Printf("\na1 - Stat:\n" + stdOutContent)
-			}
+				stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
+				if verbose {
+					fmt.Printf("\na1 - Stat:\n" + stdOutContent)
+				}
+
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			By("updating config map")
 			createdConfigMap := &corev1.ConfigMap{}
@@ -4177,12 +4166,13 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("a2"))
+
+				stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
+				if verbose {
+					fmt.Printf("\na2 - Stat:\n" + stdOutContent)
+				}
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, Default)
-			if verbose {
-				fmt.Printf("\na2 - Stat:\n" + stdOutContent)
-			}
 		}
 
 		By("By checking it has gone")
@@ -4284,7 +4274,7 @@ func generateArtemisSpec(namespace string) brokerv1beta1.ActiveMQArtemis {
 			APIVersion: brokerv1beta1.GroupVersion.Identifier(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      randString(),
+			Name:      nameFromTest(),
 			Namespace: namespace,
 		},
 		Spec: spec,
@@ -4329,9 +4319,10 @@ func DeployBroker(brokerName string, targetNamespace string) (*brokerv1beta1.Act
 
 }
 
+var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
+
 func randStringWithPrefix(prefix string) string {
 	rand.Seed(time.Now().UnixNano())
-	chars := []rune("abcdefghijklmnopqrstuvwxyz")
 	length := 6
 	var b strings.Builder
 	b.WriteString(prefix)
@@ -4341,8 +4332,34 @@ func randStringWithPrefix(prefix string) string {
 	return b.String()
 }
 
+func nameFromTest() string {
+	name := strings.ToLower(strings.ReplaceAll(CurrentSpecReport().LeafNodeText, " ", ""))
+	name = strings.ReplaceAll(name, ",", "")
+	name = strings.ReplaceAll(name, ".", "")
+	name = strings.ReplaceAll(name, "(", "")
+	name = strings.ReplaceAll(name, ")", "")
+	name = strings.ReplaceAll(name, "/", "")
+	name = strings.ReplaceAll(name, "_", "")
+
+	// track the test count as there may be many crs per test
+	testCount++
+	name += "-" + strconv.FormatInt(testCount, 10)
+
+	// 63 char limit on service names in kube - reduce to 30 by dropping chars
+	limit := 25
+	if len(name) > limit {
+		for _, letter := range chars {
+			name = strings.ReplaceAll(name, string(letter), "")
+			if len(name) <= limit {
+				break
+			}
+		}
+	}
+	return name
+}
+
 func randString() string {
-	return randStringWithPrefix("broker-")
+	return randStringWithPrefix("br-")
 }
 
 func getPersistedVersionedCrd(name string, nameSpace string, object client.Object) bool {
@@ -4365,12 +4382,9 @@ func checkSecretHasCorrectKeyValue(g Gomega, secName string, ns types.Namespaced
 	}, timeout, interval).Should(Succeed())
 }
 
-func DeployCustomBroker(crName string, targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemis)) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
+func DeployCustomBroker(targetNamespace string, customFunc func(candidate *brokerv1beta1.ActiveMQArtemis)) (*brokerv1beta1.ActiveMQArtemis, *brokerv1beta1.ActiveMQArtemis) {
 	ctx := context.Background()
 	brokerCrd := generateArtemisSpec(targetNamespace)
-	if crName != "" {
-		brokerCrd.Name = crName
-	}
 
 	brokerCrd.Spec.DeploymentPlan.Size = 1
 

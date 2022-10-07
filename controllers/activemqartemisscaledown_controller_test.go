@@ -51,7 +51,7 @@ var _ = Describe("Scale down controller", func() {
 			// 	see suite_test.go: os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
-				brokerName := randString()
+				brokerName := nameFromTest()
 				ctx := context.Background()
 
 				brokerCrd := generateOriginalArtemisSpec(defaultNamespace, brokerName)
