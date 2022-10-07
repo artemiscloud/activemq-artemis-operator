@@ -1,0 +1,541 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemis",
+          "metadata": {
+            "application": "ex-aao-app",
+            "name": "ex-aao"
+          },
+          "spec": {
+            "deploymentPlan": {
+              "image": "placeholder",
+              "journalType": "nio",
+              "managementRBACEnabled": true,
+              "messageMigration": false,
+              "persistenceEnabled": false,
+              "requireLogin": false,
+              "size": 2
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisAddress",
+          "metadata": {
+            "name": "ex-aaoaddress"
+          },
+          "spec": {
+            "addressName": "myAddress0",
+            "queueName": "myQueue0",
+            "routingType": "anycast"
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v1beta1",
+          "kind": "ActiveMQArtemisSecurity",
+          "metadata": {
+            "name": "ex-prop"
+          },
+          "spec": {
+            "loginModules": {
+              "propertiesLoginModules": [
+                {
+                  "name": "prop-module",
+                  "users": [
+                    {
+                      "name": "bob",
+                      "roles": [
+                        "root"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "securityDomains": {
+              "brokerDomain": {
+                "loginModules": [
+                  {
+                    "flag": "sufficient",
+                    "name": "prop-module"
+                  }
+                ],
+                "name": "activemq"
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "broker.amq.io/v2alpha1",
+          "kind": "ActiveMQArtemisScaledown",
+          "metadata": {
+            "name": "ex-aaoscaledown"
+          },
+          "spec": {
+            "localOnly": true
+          }
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+  name: activemq-artemis-operator.v1.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
+        API
+      displayName: Active MQArtemis Address
+      kind: ActiveMQArtemisAddress
+      name: activemqartemisaddresses.broker.amq.io
+      version: v1beta1
+    - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
+        API
+      displayName: Active MQArtemis Address
+      kind: ActiveMQArtemisAddress
+      name: activemqartemisaddresses.broker.amq.io
+      version: v2alpha1
+    - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
+        API
+      displayName: Active MQArtemis Address
+      kind: ActiveMQArtemisAddress
+      name: activemqartemisaddresses.broker.amq.io
+      version: v2alpha2
+    - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
+        API
+      displayName: Active MQArtemis Address
+      kind: ActiveMQArtemisAddress
+      name: activemqartemisaddresses.broker.amq.io
+      version: v2alpha3
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      resources:
+      - kind: ConfigMap
+        name: ""
+        version: v1
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      - kind: StatefulSet
+        name: ""
+        version: apps/v1
+      version: v1beta1
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha1
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha2
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha3
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha4
+    - description: ActiveMQArtemis is the Schema for the activemqartemises API
+      displayName: Active MQArtemis
+      kind: ActiveMQArtemis
+      name: activemqartemises.broker.amq.io
+      version: v2alpha5
+    - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
+        API
+      displayName: Active MQArtemis Scaledown
+      kind: ActiveMQArtemisScaledown
+      name: activemqartemisscaledowns.broker.amq.io
+      version: v1beta1
+    - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
+        API
+      displayName: Active MQArtemis Scaledown
+      kind: ActiveMQArtemisScaledown
+      name: activemqartemisscaledowns.broker.amq.io
+      version: v2alpha1
+    - description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities
+        API
+      displayName: Active MQArtemis Security
+      kind: ActiveMQArtemisSecurity
+      name: activemqartemissecurities.broker.amq.io
+      version: v1alpha1
+    - description: ActiveMQArtemisSecurity is the Schema for the activemqartemissecurities
+        API
+      displayName: Active MQArtemis Security
+      kind: ActiveMQArtemisSecurity
+      name: activemqartemissecurities.broker.amq.io
+      version: v1beta1
+  description: ArtemisCloud Operator manages ActiveMQ Artemis messaging broker in
+    the cloud
+  displayName: ArtemisCloud Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - routes
+          - secrets
+          - serviceaccounts
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - networking.k8s.io
+          resources:
+          - ingresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          - routes/custom-host
+          - routes/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        serviceAccountName: activemq-artemis-controller-manager
+      deployments:
+      - name: activemq-artemis-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy:
+            rollingUpdate:
+              maxSurge: 1
+              maxUnavailable: 1
+            type: RollingUpdate
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --zap-log-level=debug
+                - --zap-encoder=console
+                - --zap-time-encoding=iso8601
+                - --leader-elect
+                command:
+                - /home/activemq-artemis-operator/bin/entrypoint
+                env:
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['name']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.4
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2180
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.10
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2200
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.0
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2210
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.2
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2220
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.5
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2230
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2250
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.8
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2260
+                  value: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.9
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2150
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2160
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2180
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2200
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.0
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2210
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.2
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2220
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.5
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2230
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.7
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2250
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.8
+                - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2260
+                  value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.9
+                - name: ENABLE_WEBHOOKS
+                  value: "false"
+                image: quay.io/artemiscloud/activemq-artemis-operator:1.0.6
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources: {}
+                securityContext:
+                  allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: activemq-artemis-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: activemq-artemis-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - messaging
+  - cloud
+  - kubernetes
+  - artemis
+  - integration
+  links:
+  - name: Activemq Artemis Operator
+    url: https://activemq-artemis-operator.domain
+  maintainers:
+  - email: rkieley@redhat.com
+    name: '''Roderick Kieley'
+  - email: hgao@redhat.com
+    name: Howard Gao
+  - email: dbruscin@redhat.com'
+    name: Domenico Francesco
+  maturity: alpha
+  provider:
+    name: ArtemisCloud
+    url: https://github.com/artemiscloud/activemq-artemis-operator
+  version: 1.0.0
