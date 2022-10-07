@@ -55,7 +55,7 @@ var _ = Describe("security controller", func() {
 
 	BeforeEach(func() {
 		if verbose {
-			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentGinkgoTestDescription())
+			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
 		}
 	})
 
@@ -65,7 +65,7 @@ var _ = Describe("security controller", func() {
 	Context("Reconcile Test", func() {
 		It("testing security applied after broker", Label("security-apply-restart"), func() {
 			By("deploying the broker cr")
-			crd, createdCrd := DeployCustomBroker("", defaultNamespace, func(brokerCrdToDeploy *brokerv1beta1.ActiveMQArtemis) {
+			crd, createdCrd := DeployCustomBroker(defaultNamespace, func(brokerCrdToDeploy *brokerv1beta1.ActiveMQArtemis) {
 
 				brokerCrdToDeploy.Spec.Acceptors = []brokerv1beta1.AcceptorType{
 					{
@@ -673,7 +673,7 @@ var _ = Describe("security controller", func() {
 		It("Reconcile security on broker with non shell safe annotations", func() {
 
 			By("Deploying broker")
-			brokerCrd := generateOriginalArtemisSpec(defaultNamespace, randString())
+			brokerCrd := generateArtemisSpec(defaultNamespace)
 			brokerCrd.Spec.DeploymentPlan.Size = 1
 			// make is speedy for real cluster checks
 			brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &v1.Probe{
@@ -681,7 +681,7 @@ var _ = Describe("security controller", func() {
 				PeriodSeconds:       1,
 				TimeoutSeconds:      5,
 			}
-			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 
 			createdBrokerCr := &brokerv1beta1.ActiveMQArtemis{}
 
@@ -749,9 +749,9 @@ var _ = Describe("security controller", func() {
 			}
 
 			By("Deploying broker")
-			brokerCrd := generateOriginalArtemisSpec(defaultNamespace, randString())
+			brokerCrd := generateArtemisSpec(defaultNamespace)
 			brokerCrd.Spec.DeploymentPlan.Size = 1
-			Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, &brokerCrd)).Should(Succeed())
 
 			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
 

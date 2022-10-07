@@ -23,7 +23,6 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
@@ -59,9 +58,9 @@ import (
 )
 
 const (
-	ImageNamePrefix        = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
-	livenessProbeGraceTime = 30
-	TCPLivenessPort        = 8161
+	ImageNamePrefix                  = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
+	defaultLivenessProbeInitialDelay = 5
+	TCPLivenessPort                  = 8161
 )
 
 var defaultMessageMigration bool = true
@@ -1118,6 +1117,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 	reconciler.deployed, err = getDeployedResources(customResource, client)
 	if err != nil {
 		reqLogger.Error(err, "error getting deployed resources")
+		return
 	}
 
 	// track persisted cr secret
@@ -1164,7 +1164,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 	})
 
 	deltas := comparator.Compare(reconciler.deployed, requested)
-	for resourceType, delta := range deltas {
+	for _, resourceType := range getOrderedTypeList() {
+		delta, ok := deltas[resourceType]
+		if !ok {
+			// not all types will have deltas
+			continue
+		}
 		reqLogger.Info("", "instances of ", resourceType, "Will create ", len(delta.Added), "update ", len(delta.Updated), "and delete", len(delta.Removed))
 
 		for index := range delta.Added {
@@ -1266,6 +1271,34 @@ func checkExistingPersistentVolumes(instance *brokerv1beta1.ActiveMQArtemis, cli
 			}
 		}
 	}
+}
+
+var orderedTypes *([]reflect.Type)
+
+func getOrderedTypeList() []reflect.Type {
+	return genOrderedTypesLists()
+}
+
+func genOrderedTypesLists() []reflect.Type {
+
+	if orderedTypes == nil {
+		isOpenshift, _ := environments.DetectOpenshift()
+		types := make([]reflect.Type, 5)
+
+		// we want to create/update in this order
+		types[0] = reflect.TypeOf(corev1.Secret{})
+		types[1] = reflect.TypeOf(corev1.ConfigMap{})
+		types[2] = reflect.TypeOf(appsv1.StatefulSet{})
+		types[3] = reflect.TypeOf(corev1.Service{})
+
+		if isOpenshift {
+			types[4] = reflect.TypeOf(routev1.Route{})
+		} else {
+			types[4] = reflect.TypeOf(netv1.Ingress{})
+		}
+		orderedTypes = &types
+	}
+	return *orderedTypes
 }
 
 func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (map[reflect.Type][]rtclient.Object, error) {
@@ -1639,7 +1672,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	// not getting munged on the way. We CreateOrAppend to any value from spec.Env
 	javaOpts := corev1.EnvVar{
 		Name:  "JAVA_OPTS",
-		Value: "-Dbroker.properties=/amq/extra/configmaps/" + brokerPropertiesConfigMapName + "/broker.properties",
+		Value: "-Dbroker.properties=/amq/extra/configmaps/" + brokerPropertiesConfigMapName + "/",
 	}
 	environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 
@@ -1746,7 +1779,7 @@ func configureLivenessProbe(container *corev1.Container, probeFromCR *corev1.Pro
 	} else {
 		clog.V(1).Info("Creating Default Liveness Probe")
 
-		livenessProbe.InitialDelaySeconds = livenessProbeGraceTime
+		livenessProbe.InitialDelaySeconds = defaultLivenessProbeInitialDelay
 		livenessProbe.TimeoutSeconds = 5
 		livenessProbe.ProbeHandler = corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
@@ -1790,7 +1823,7 @@ func configureReadinessProbe(container *corev1.Container, probe *corev1.Probe) *
 		}
 	} else {
 		clog.V(1).Info("Creating Default readiness Probe")
-		readinessProbe.InitialDelaySeconds = livenessProbeGraceTime
+		readinessProbe.InitialDelaySeconds = defaultLivenessProbeInitialDelay
 		readinessProbe.TimeoutSeconds = 5
 		readinessProbe.ProbeHandler = corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
@@ -1809,15 +1842,30 @@ func configureReadinessProbe(container *corev1.Container, probe *corev1.Probe) *
 func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis) string {
 
 	// fetch and do idempotent transform based on CR
+
+	// deal with upgrade to immutable, only upgrade to mutable on not found
+	immmutable := false
+	shaOfMap := HexShaHashOfMap(customResource.Spec.BrokerProperties)
 	configMapName := types.NamespacedName{
 		Namespace: customResource.Namespace,
-		Name:      customResource.Name + "-props-" + HexShaHashOfMap(customResource.Spec.BrokerProperties),
+		Name:      customResource.Name + "-props-" + shaOfMap,
 	}
 
 	var desired *corev1.ConfigMap
 	obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.ConfigMap{}), configMapName.Name)
 	if obj != nil {
 		desired = obj.(*corev1.ConfigMap)
+		// found existing (immuable) map with sha in the name
+		immmutable = true
+	}
+
+	if !immmutable {
+		configMapName.Name = customResource.Name + "-props"
+
+		obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.ConfigMap{}), configMapName.Name)
+		if obj != nil {
+			desired = obj.(*corev1.ConfigMap)
+		}
 	}
 
 	if desired == nil {
@@ -1832,17 +1880,36 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForBrokerProperties
 				GenerateName: "",
 				Namespace:    configMapName.Namespace,
 			},
-			Immutable: common.NewTrue(),
+			Immutable: &immmutable,
 		}
 	}
 
 	desired.Data = brokerPropertiesData(customResource.Spec.BrokerProperties)
+
+	if !immmutable {
+		desired.Data = AppendStatus(desired.Data, shaOfMap)
+	}
 
 	clog.V(1).Info("Requesting configMap for broker properties", "name", configMapName.Name)
 	reconciler.trackDesired(desired)
 
 	clog.V(1).Info("Requesting mount for broker properties config map")
 	return configMapName.Name
+}
+
+const statusPropertiesName = "a_status.properties"
+
+func AppendStatus(data map[string]string, shaOfMap string) map[string]string {
+	buf := &bytes.Buffer{}
+	fmt.Fprintln(buf, "# generated by crd")
+	fmt.Fprintln(buf, "#")
+
+	// populating the sha key of the config::properties broker status object with JSON
+	fmt.Fprintf(buf, "status={\"properties\":{\"%s\": { \"cr:alder32\": \"%s\"}}}\n", statusPropertiesName, shaOfMap)
+
+	// a is alphanumericlaly first to be applied
+	data[statusPropertiesName] = buf.String()
+	return data
 }
 
 func HexShaHashOfMap(props []string) string {

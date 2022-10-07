@@ -175,8 +175,8 @@ func createNameBuilders(instance *brokerv1beta1.ActiveMQArtemisAddress) []SSInfo
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	go setupAddressObserver(mgr, channels.AddressListeningCh)
+func (r *ActiveMQArtemisAddressReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
+	go setupAddressObserver(mgr, channels.AddressListeningCh, ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&brokerv1beta1.ActiveMQArtemisAddress{}).
 		Owns(&corev1.Pod{}).
@@ -200,7 +200,7 @@ func createQueue(instance *AddressDeployment, request ctrl.Request, client clien
 			err = createAddressResource(a, &instance.AddressResource)
 			if err != nil {
 				reqLogger.V(1).Info("Failed to create address resource", "failed broker", a)
-				break
+				continue
 			}
 		}
 	}
@@ -633,7 +633,7 @@ func GetStatefulSetNameForPod(client client.Client, pod *types.NamespacedName) (
 	return "", -1, nil
 }
 
-func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
+func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName, ctx context.Context) {
 	glog.Info("Setting up address observer")
 
 	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
@@ -643,10 +643,9 @@ func setupAddressObserver(mgr manager.Manager, c chan types.NamespacedName) {
 
 	observer := NewAddressObserver(kubeClient, mgr.GetClient(), mgr.GetScheme())
 
-	if err = observer.Run(channels.AddressListeningCh); err != nil {
+	if err = observer.Run(channels.AddressListeningCh, ctx); err != nil {
 		glog.Error(err, "Error running controller")
 	}
 
-	glog.Info("Finish setup address observer")
-	return
+	glog.Info("Finish address observer")
 }

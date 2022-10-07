@@ -82,6 +82,7 @@ const (
 )
 
 var (
+	testCount  int64
 	currentDir string
 	k8sClient  client.Client
 	restConfig *rest.Config
@@ -107,14 +108,16 @@ var (
 		"../deploy/operator_config.yaml",
 		"../deploy/operator.yaml",
 	}
-	managerChannel = make(chan struct{}, 1)
+	managerChannel chan struct{}
 )
 
 func TestAPIs(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	suiteConfig, _ := GinkgoConfiguration()
+	suiteConfig.Timeout = time.Duration(duration.Minutes()) * 20
+	RunSpecs(t, "Controller Suite", suiteConfig)
 }
 
 func setUpEnvTest() {
@@ -138,7 +141,7 @@ func setUpEnvTest() {
 
 	stateManager = common.GetStateManager()
 
-	createControllerManager(false, "")
+	createControllerManagerForSuite()
 }
 
 //Set up test-proxy for external http requests
@@ -239,6 +242,10 @@ func cleanUpTestProxy() {
 	Expect(err != nil || errors.IsNotFound(err))
 }
 
+func createControllerManagerForSuite() {
+	createControllerManager(false, "")
+}
+
 func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	managerCtx, managerCancel = context.WithCancel(ctx)
@@ -265,6 +272,10 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 		// if we can shutdown metrics port, we don't need disable it.
 		mgrOptions.MetricsBindAddress = "0"
 	}
+
+	waitforever := time.Duration(-1)
+	mgrOptions.GracefulShutdownTimeout = &waitforever
+	mgrOptions.LeaderElectionReleaseOnCancel = true
 
 	// start our controler
 	k8Manager, err := ctrl.NewManager(restConfig, mgrOptions)
@@ -301,7 +312,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 		Scheme: k8Manager.GetScheme(),
 	}
 
-	err = addressReconciler.SetupWithManager(k8Manager)
+	err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 
 	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
@@ -313,6 +324,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	err = scaleDownRconciler.SetupWithManager(k8Manager)
 	Expect(err).ShouldNot(HaveOccurred(), "failed to create scale down reconciler")
 
+	managerChannel = make(chan struct{}, 1)
 	go func() {
 		defer GinkgoRecover()
 		err = k8Manager.Start(managerCtx)

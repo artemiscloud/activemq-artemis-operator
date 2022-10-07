@@ -47,7 +47,7 @@ func NewAddressObserver(
 	return observer
 }
 
-func (c *AddressObserver) Run(C chan types.NamespacedName) error {
+func (c *AddressObserver) Run(C chan types.NamespacedName, ctx context.Context) error {
 
 	olog.Info("#### Started workers")
 
@@ -56,6 +56,10 @@ func (c *AddressObserver) Run(C chan types.NamespacedName) error {
 		case ready := <-C:
 			olog.Info("address_observer received", "pod", ready)
 			go c.newPodReady(&ready)
+		case <-ctx.Done():
+			olog.Info("address_observer received done on ctx, exiting event loop")
+			return nil
+
 		default:
 			//log.Info("address_observer selected default, waiting a second")
 			// NOTE: Sender will be blocked if this select is sleeping, might need decreased time here

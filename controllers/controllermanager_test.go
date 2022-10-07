@@ -16,6 +16,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
@@ -32,15 +34,9 @@ import (
 
 var _ = Describe("tests regarding controller manager", func() {
 
-	BeforeEach(func() {
-	})
-
-	AfterEach(func() {
-	})
-
 	Context("operator namespaces test", func() {
 
-		It("test resolving watching namespace", Label("test-resolving-namespace"), func() {
+		It("test resolving watching namespace", func() {
 
 			operatorNamespace := "default"
 			isLocal, watchList := common.ResolveWatchNamespaceForManager(operatorNamespace, operatorNamespace)
@@ -60,10 +56,10 @@ var _ = Describe("tests regarding controller manager", func() {
 			Expect(watchList[1]).To(Equal("namespace2"))
 		})
 
-		It("test watching single(local) namespace", Label("test-watching-namespace"), func() {
-			testWatchNamespace("single", false, func() {
+		It("test watching single default namespace", func() {
+			testWatchNamespace("single", Default, func(g Gomega) {
 				By("deploying broker in to target namespace")
-				cr, createdCr := DeployCustomBroker("", defaultNamespace, nil)
+				cr, createdCr := DeployCustomBroker(defaultNamespace, nil)
 
 				By("check statefulset get created")
 				createdSs := &appsv1.StatefulSet{}
@@ -73,8 +69,22 @@ var _ = Describe("tests regarding controller manager", func() {
 					g.Expect(err).To(Succeed(), "expect to get ss for cr "+cr.Name)
 				}, timeout, interval).Should(Succeed())
 
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+					// with kube, deleting while initialising leads to long delays on terminating the namespace..
+
+					By("verifying started")
+					deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+					key := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
+
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, key, &deployedCrd)).Should(Succeed())
+						g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
 				By("deploying broker in " + namespace1)
-				cr1, createdCr1 := DeployCustomBroker("", namespace1, nil)
+				cr1, createdCr1 := DeployCustomBroker(namespace1, nil)
 
 				By("check statefulset should not be created")
 				createdSs1 := &appsv1.StatefulSet{}
@@ -90,17 +100,17 @@ var _ = Describe("tests regarding controller manager", func() {
 					g.Expect(err).NotTo(Succeed(), "no ss should be created for cr "+cr1.Name+" in namespace "+defaultNamespace)
 				}, timeout, interval).Should(Succeed())
 
-				DeleteCr(createdCr, cr.Name, defaultNamespace)
-				DeleteCr(createdCr1, cr1.Name, namespace1)
+				DeleteCr(createdCr, cr.Name, defaultNamespace, g)
+				DeleteCr(createdCr1, cr1.Name, namespace1, g)
 			})
 		})
 
-		It("test watching all namespaces", Label("test-watching-namespace"), func() {
-			testWatchNamespace("all", false, func() {
+		It("test watching all namespaces", func() {
+			testWatchNamespace("all", Default, func(g Gomega) {
 				By("deploying broker in to all namespaces")
 				var createdCrs []*brokerv1beta1.ActiveMQArtemis
 				for _, ns := range []string{defaultNamespace, namespace1, namespace2, namespace3} {
-					_, createdCr := DeployCustomBroker("", ns, nil)
+					_, createdCr := DeployCustomBroker(ns, nil)
 					createdCrs = append(createdCrs, createdCr)
 				}
 
@@ -108,26 +118,43 @@ var _ = Describe("tests regarding controller manager", func() {
 				for _, createdCr := range createdCrs {
 					createdSs := &appsv1.StatefulSet{}
 					key := types.NamespacedName{Name: namer.CrToSS(createdCr.Name), Namespace: createdCr.Namespace}
-					Eventually(func(g Gomega) {
+					g.Eventually(func(g Gomega) {
 						err := k8sClient.Get(ctx, key, createdSs)
 						g.Expect(err).To(Succeed(), "expect to get ss "+key.Name+" in namespace "+key.Namespace)
 					}, timeout, interval).Should(Succeed())
 				}
 
+				if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+					// with kube, deleting while initialising leads to long delays on terminating the namespace..
+
+					By("verifying started")
+					deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+					for _, createdCr := range createdCrs {
+
+						key := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
+
+						Eventually(func(g Gomega) {
+							g.Expect(k8sClient.Get(ctx, key, &deployedCrd)).Should(Succeed())
+							g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+						}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+					}
+				}
+
 				By("clean up")
 				for _, createdCr := range createdCrs {
-					DeleteCr(createdCr, createdCr.Name, createdCr.Namespace)
+					DeleteCr(createdCr, createdCr.Name, createdCr.Namespace, g)
 				}
 			})
 		})
 
 		It("test watching multiple namespaces", Label("test-watching-namespace"), func() {
-			testWatchNamespace("multiple", true, func() {
+			testWatchNamespace("multiple", Default, func(g Gomega) {
 				//only namespace2 and namespace3 is watched
 				By("deploying broker in to all namespaces")
 				var createdCrs []*brokerv1beta1.ActiveMQArtemis
 				for _, ns := range []string{defaultNamespace, namespace1, namespace2, namespace3} {
-					_, createdCr := DeployCustomBroker("", ns, nil)
+					_, createdCr := DeployCustomBroker(ns, nil)
 					createdCrs = append(createdCrs, createdCr)
 				}
 
@@ -140,6 +167,22 @@ var _ = Describe("tests regarding controller manager", func() {
 							err := k8sClient.Get(ctx, key, createdSs)
 							g.Expect(err).To(Succeed(), "expect to get ss "+key.Name+" in namespace "+key.Namespace)
 						}, timeout, interval).Should(Succeed())
+
+						if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+							// with kube, deleting while initialising leads to long delays on terminating the namespace..
+
+							By("verifying started")
+							deployedCrd := brokerv1beta1.ActiveMQArtemis{}
+
+							crKey := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
+
+							Eventually(func(g Gomega) {
+								g.Expect(k8sClient.Get(ctx, crKey, &deployedCrd)).Should(Succeed())
+								g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+							}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+						}
+
 					} else {
 						Eventually(func() bool {
 							err := k8sClient.Get(ctx, key, createdSs)
@@ -150,24 +193,25 @@ var _ = Describe("tests regarding controller manager", func() {
 
 				By("clean up")
 				for _, createdCr := range createdCrs {
-					DeleteCr(createdCr, createdCr.Name, createdCr.Namespace)
+					DeleteCr(createdCr, createdCr.Name, createdCr.Namespace, g)
 				}
 			})
 		})
 	})
 })
 
-func DeleteCr(cr client.Object, name string, targetNs string) {
+func DeleteCr(cr client.Object, name string, targetNs string, g Gomega) {
 	ctx := context.Background()
-	Expect(k8sClient.Delete(ctx, cr)).Should(Succeed())
+	g.Expect(k8sClient.Delete(ctx, cr)).Should(Succeed())
 
-	Eventually(func() bool {
+	g.Eventually(func() bool {
+		By("deleting: " + name + ", ns: " + targetNs)
 		return checkCrdDeleted(name, targetNs, cr)
 	}, timeout, interval).Should(BeTrue())
 
 }
 
-func createNamespace(namespace string) {
+func createNamespace(namespace string) error {
 	ns := corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
@@ -178,15 +222,65 @@ func createNamespace(namespace string) {
 		},
 	}
 
-	Eventually(func() bool {
-		err := k8sClient.Create(ctx, &ns, &client.CreateOptions{})
-		return err == nil || errors.IsAlreadyExists(err)
-	}, timeout, interval).Should(BeTrue())
+	err := k8sClient.Create(ctx, &ns, &client.CreateOptions{})
+
+	// envTest won't delete, get stuck in Terminating state
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/880
+	if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+		if errors.IsAlreadyExists(err) {
+			// hense the ns may exist as we will only delete for USE_EXISTING_CLUSTER
+			err = nil
+		}
+	}
+	return err
 }
 
-func testWatchNamespace(kind string, last bool, testFunc func()) {
+func deleteNamespace(namespace string, g Gomega) {
+
+	// envTest won't delete, get stuck in Terminating state
+	// https://github.com/kubernetes-sigs/controller-runtime/issues/880
+	if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+		return
+	}
+	ns := corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Namespace",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+
+	By("Deleting namespace: " + namespace)
+	key := types.NamespacedName{Name: namespace}
+
+	g.Expect(k8sClient.Get(ctx, key, &ns)).Should(Succeed())
+
+	zeroGracePeriodSeconds := int64(0) // immediate delete
+	g.Expect(k8sClient.Delete(ctx, &ns, &client.DeleteOptions{GracePeriodSeconds: &zeroGracePeriodSeconds})).To(Succeed())
+
+	By("verifying gone: " + namespace)
+	g.Eventually(func(g Gomega) {
+		// verify gone
+		err := k8sClient.Get(ctx, key, &ns)
+		if err == nil && verbose {
+			fmt.Printf("\nNamespace %s Status: %v\n", namespace, ns.Status)
+			fmt.Printf("\nNamespace %s Spec: %v\n", namespace, ns)
+
+		}
+		g.Expect(err).ShouldNot(BeNil())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+}
+
+func testWatchNamespace(kind string, g Gomega, testFunc func(g Gomega)) {
 
 	shutdownControllerManager()
+
+	g.Expect(createNamespace(namespace1)).To(Succeed())
+	g.Expect(createNamespace(namespace2)).To(Succeed())
+	g.Expect(createNamespace(namespace3)).To(Succeed())
 
 	if kind == "single" {
 		createControllerManager(true, defaultNamespace)
@@ -196,14 +290,13 @@ func testWatchNamespace(kind string, last bool, testFunc func()) {
 		createControllerManager(true, namespace2+","+namespace3)
 	}
 
-	createNamespace(namespace1)
-	createNamespace(namespace2)
-	createNamespace(namespace3)
+	testFunc(g)
 
-	testFunc()
+	shutdownControllerManager()
 
-	if last {
-		shutdownControllerManager()
-		createControllerManager(true, defaultNamespace)
-	}
+	deleteNamespace(namespace1, g)
+	deleteNamespace(namespace2, g)
+	deleteNamespace(namespace3, g)
+
+	createControllerManagerForSuite()
 }
