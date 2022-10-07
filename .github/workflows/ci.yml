@@ -57,3 +57,16 @@ jobs:
           docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:$IMAGE_TAG &&
           docker tag $IMAGE_NAME:dev.latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:dev.latest &&
           docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME:dev.latest
+
+      - name: Build the bundle image
+        run: export BUNDLE_IMG=$IMAGE_NAME-bundle:dev.latest && make bundle-build
+
+      - name: Push the bundle image
+        if: ${{ github.event_name == 'push' }}
+        run: >
+          export IMAGE_TAG=dev.$(date +%Y%m%d).$(git rev-parse --short "$GITHUB_SHA") &&
+          docker login quay.io --username=${{ secrets.QUAY_USERNAME }} --password-stdin <<< ${{ secrets.QUAY_PASSWORD }} &&
+          docker tag $IMAGE_NAME-bundle:dev.latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:$IMAGE_TAG &&
+          docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:$IMAGE_TAG &&
+          docker tag $IMAGE_NAME-bundle:dev.latest quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:dev.latest &&
+          docker push quay.io/${{ secrets.QUAY_NAMESPACE }}/$IMAGE_NAME-bundle:dev.latest
