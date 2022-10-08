@@ -26,6 +26,7 @@ import (
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
+	"go.uber.org/zap/zapcore"
 
 	"path/filepath"
 	"testing"
@@ -513,7 +514,14 @@ func setUpK8sClient() {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	opts := zap.Options{
+		Development: true,
+		DestWriter:  GinkgoWriter,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
+	}
+
+	logf.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	if verbose {
 		GinkgoWriter.TeeTo(os.Stderr)
 	}
