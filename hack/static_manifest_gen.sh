@@ -22,62 +22,73 @@ function writeFile() {
 
     CustomResourceDefinition)
       if [[ ${resource_name} =~ (activemqartemises) ]]; then
-        file_path="$crdsdir/broker_activemqartemis_crd.yaml"
+        createFile "$crdsdir/broker_activemqartemis_crd.yaml"
       elif [[ ${resource_name} =~ (activemqartemissecurities) ]]; then
-        file_path="$crdsdir/broker_activemqartemissecurity_crd.yaml"
+        createFile "$crdsdir/broker_activemqartemissecurity_crd.yaml"
       elif [[ ${resource_name} =~ (activemqartemisaddresses) ]]; then
-        file_path="$crdsdir/broker_activemqartemisaddress_crd.yaml"
+        createFile "$crdsdir/broker_activemqartemisaddress_crd.yaml"
       elif [[ ${resource_name} =~ (activemqartemisscaledowns) ]]; then
-        file_path="$crdsdir/broker_activemqartemisscaledown_crd.yaml"
+        createFile "$crdsdir/broker_activemqartemisscaledown_crd.yaml"
       else
-        file_path="$crdsdir/${resource_name}.yaml"
+        createFile "$crdsdir/${resource_name}.yaml"
       fi
       ;;
 
     Deployment)
-      file_path="$destdir/operator.yaml"
-      ;;
-
-    ClusterRoleBinding)
-      file_path="$destdir/cluster_role_binding.yaml"
-      ;;
-
-    ClusterRole)
-      file_path="$destdir/cluster_role.yaml"
-      ;;
-
-    ServiceAccount)
-      file_path="$destdir/service_account.yaml"
-      ;;
-
-    ConfigMap)
-      file_path="$destdir/operator_config.yaml"
+      createFile "$destdir/operator.yaml"
       ;;
 
     Role)
-      file_path="$destdir/election_role.yaml"
+      if [[ ${resource_name} =~ (operator) ]]; then
+        createFile "$destdir/role.yaml"
+        createFile "$destdir/cluster_role.yaml"
+        sed -i 's/kind: Role/kind: ClusterRole/' \
+          "$destdir/cluster_role.yaml"
+      elif [[ ${resource_name} =~ (leader-election) ]]; then
+        createFile "$destdir/election_role.yaml"
+      else
+        createFile "$crdsdir/${resource_name}.yaml"
+      fi
       ;;
 
     RoleBinding)
-      file_path="$destdir/election_role_binding.yaml"
+      if [[ ${resource_name} =~ (operator) ]]; then
+        createFile "$destdir/role_binding.yaml"
+        createFile "$destdir/cluster_role_binding.yaml"
+        sed -i -e 's/kind: Role/kind: ClusterRole/' \
+          -e 's/kind: RoleBinding/kind: ClusterRoleBinding/' \
+          "$destdir/cluster_role_binding.yaml"
+      elif [[ ${resource_name} =~ (leader-election) ]]; then
+        createFile "$destdir/election_role_binding.yaml"
+      else
+        createFile "$crdsdir/${resource_name}.yaml"
+      fi
+      ;;
+
+    ServiceAccount)
+      createFile "$destdir/service_account.yaml"
+      ;;
+
+    ConfigMap)
+      createFile "$destdir/operator_config.yaml"
       ;;
 
     Namespace)
-      file_path="skip_this_file"
+      echo "Skipping ${resource_kind}:${resource_name}"
       ;;
     
     *)
-      file_path="$destdir/${resource_kind}_${resource_name}.yaml"
+      createFile "$destdir/${resource_kind}_${resource_name}.yaml"
       ;;
     esac
+}
 
-  if [[ ${file_path} != "skip_this_file" ]]; then
-    rm -rf ${file_path}
-    for value in "${file[@]}"
-      do
-        printf "%s\n" "${value}" >> ${file_path}
-      done
-  fi
+function createFile() {
+  echo "Writing $1"
+  rm -rf $1
+  for value in "${file[@]}"; do
+    printf "%s\n" "${value}" >> $1
+  done
 }
 
 function beginFile() {
