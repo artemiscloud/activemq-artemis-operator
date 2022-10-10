@@ -29,7 +29,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
   name: activemqartemises.broker.amq.io
 spec:
   group: broker.amq.io
@@ -705,7 +704,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
   name: activemqartemisaddresses.broker.amq.io
 spec:
   group: broker.amq.io
@@ -886,7 +884,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
   name: activemqartemissecurities.broker.amq.io
 spec:
   group: broker.amq.io
@@ -1247,7 +1244,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
   name: activemqartemisscaledowns.broker.amq.io
 spec:
   group: broker.amq.io
