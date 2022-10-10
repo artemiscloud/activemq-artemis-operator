@@ -61,9 +61,9 @@ type ActiveMQArtemisAddressReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisaddresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisaddresses/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=broker.amq.io,resources=activemqartemisaddresses/finalizers,verbs=update
+//+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisaddresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisaddresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisaddresses/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -1,9 +1,10 @@
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: activemq-artemis-operator
+  name: operator-role
+  namespace: activemq-artemis-operator
 rules:
 - apiGroups:
   - ""
