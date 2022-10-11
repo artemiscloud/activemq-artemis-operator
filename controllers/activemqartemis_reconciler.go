@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -2168,18 +2169,41 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 	reqLogger.V(1).Info("Stopped Count......................", "info:", len(podStatus.Stopped))
 	reqLogger.V(1).Info("Starting Count.....................", "info:", len(podStatus.Starting))
 
+	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus))
+
 	var err error
 	if !reflect.DeepEqual(podStatus, cr.Status.PodStatus) {
+		reqLogger.Info("Pods status updated")
 		cr.Status.PodStatus = podStatus
-		if err = resources.UpdateStatus(client, cr); err == nil {
-			reqLogger.Info("Pods status updated")
-		}
-
 	} else {
 		// could leave this to kube, it will do a []byte comparison
 		reqLogger.Info("Pods status unchanged")
 	}
 	return err
+}
+
+func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus) metav1.Condition {
+	if cr.Spec.DeploymentPlan.Size == 0 {
+		return metav1.Condition{
+			Type:    brokerv1beta1.DeployedConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.DeployedConditionZeroSizeReason,
+			Message: brokerv1beta1.DeployedConditionZeroSizeMessage,
+		}
+	}
+	if len(podStatus.Ready) != int(cr.Spec.DeploymentPlan.Size) {
+		return metav1.Condition{
+			Type:    brokerv1beta1.DeployedConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
+			Message: fmt.Sprintf("%d/%d pods ready", len(podStatus.Ready), cr.Spec.DeploymentPlan.Size),
+		}
+	}
+	return metav1.Condition{
+		Type:   brokerv1beta1.DeployedConditionType,
+		Reason: brokerv1beta1.DeployedConditionReadyReason,
+		Status: metav1.ConditionTrue,
+	}
 }
 
 func GetPodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) olm.DeploymentStatus {
