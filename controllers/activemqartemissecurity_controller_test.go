@@ -102,7 +102,7 @@ var _ = Describe("security controller", func() {
 				command := []string{"ls", "amq-broker/etc"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					g.Expect(stdOutContent).ShouldNot(ContainSubstring("keycloak"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
@@ -336,7 +336,7 @@ var _ = Describe("security controller", func() {
 				command := []string{"ls", "amq-broker/etc"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					g.Expect(stdOutContent).Should(ContainSubstring("keycloak"))
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
