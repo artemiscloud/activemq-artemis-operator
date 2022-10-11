@@ -29,6 +29,6 @@ func TestCommon(t *testing.T) {
 
 var _ = Describe("Common Resync Test", func() {
 	Context("Default Resync Period", func() {
-		Expect(GetReconcileResyncPeriod()).To(Equal(10 * time.Hour))
+		Expect(GetReconcileResyncPeriod()).To(Equal(30 * time.Second))
 	})
 })
