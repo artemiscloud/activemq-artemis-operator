@@ -22,7 +22,7 @@ var clog = ctrl.Log.WithName("common")
 
 var theManager manager.Manager
 
-const DEFAULT_RESYNC_PERIOD = 10 * time.Hour
+const DEFAULT_RESYNC_PERIOD = 30 * time.Second
 
 var resyncPeriod time.Duration = DEFAULT_RESYNC_PERIOD
 
