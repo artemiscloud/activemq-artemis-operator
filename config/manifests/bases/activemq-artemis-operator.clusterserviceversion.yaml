@@ -44,6 +44,19 @@ spec:
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: ConfigMap
+        name: ""
+        version: v1
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      - kind: StatefulSet
+        name: ""
+        version: apps/v1
       version: v1beta1
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis

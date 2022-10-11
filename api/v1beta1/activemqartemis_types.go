@@ -373,6 +373,10 @@ type ActiveMQArtemisStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:resource:path=activemqartemises
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Service", "v1"}}
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
+//+operator-sdk:csv:customresourcedefinitions:resources={{"ConfigMap", "v1"}}
+//+operator-sdk:csv:customresourcedefinitions:resources={{"StatefulSet", "apps/v1"}}
 
 // ActiveMQArtemis is the Schema for the activemqartemises API
 type ActiveMQArtemis struct {
