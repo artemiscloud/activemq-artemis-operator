@@ -118,8 +118,8 @@ test: manifests generate fmt vet envtest ## Run tests.
 test-mk: manifests generate fmt vet envtest ## Run tests against minikube with local operator.
 	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS) -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
 
-test-mk-do: manifests generate fmt vet envtest ## Run tests against minikube with deployed operator(do)
-	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -ginkgo.v -ginkgo.label-filter="do"
+test-mk-do: manifests generate fmt vet envtest generate-deploy ## Run tests against minikube with deployed operator(do)
+	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -ginkgo.v -ginkgo.label-filter="do"
 
 ##@ Build
 

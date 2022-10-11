@@ -636,7 +636,7 @@ spec:
                         type: string
                     type: object
                 type: object
-              upgrades:
+              upgrades: This is deprecated in v1beta1, specifying the Version is sufficient.
                 description: ActiveMQArtemis App product upgrade flags
                 properties:
                   enabled:

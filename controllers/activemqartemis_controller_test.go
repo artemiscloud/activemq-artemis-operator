@@ -2912,7 +2912,6 @@ var _ = Describe("artemis controller", func() {
 				PeriodSeconds:       5,
 			}
 			crd.Spec.DeploymentPlan.Size = 2
-			crd.Spec.Upgrades.Enabled = true
 			crd.Spec.Version = previousVersion
 
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
@@ -3037,7 +3036,7 @@ var _ = Describe("artemis controller", func() {
 				command := []string{"cat", "amq-broker/etc/broker.xml"}
 
 				Eventually(func(g Gomega) {
-					stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 					if verbose {
 						fmt.Printf("\na1 - cat:\n" + stdOutContent)
 					}
@@ -3685,7 +3684,7 @@ var _ = Describe("artemis controller", func() {
 			command := []string{"amq-broker/bin/artemis", "producer", "--user", user, "--password", pwd, "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -3694,7 +3693,7 @@ var _ = Describe("artemis controller", func() {
 			command = []string{"amq-broker/bin/artemis", "browser", "--user", user, "--password", pwd, "--url", "tcp://" + podWithOrdinal + ":61616", "--destination", "queue://DLQ", "--verbose"}
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 
 				Expect(stdOutContent).Should(ContainSubstring("messageID="))
 				Expect(stdOutContent).Should(ContainSubstring("_AMQ_VALIDATED_USER=" + user))
@@ -3743,7 +3742,7 @@ var _ = Describe("artemis controller", func() {
 			command := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -3752,7 +3751,7 @@ var _ = Describe("artemis controller", func() {
 			command = []string{"amq-broker/bin/artemis", "browser", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--destination", "queue://DLQ", "--verbose"}
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 
 				// ...ActiveMQMessage[ID:3a356c2a-e7e1-11ec-ae1c-5ec4168c91b2]:PERSISTENT/ClientMessageImpl[messageID=19, durable=true, address=DLQ,userID=3a356c2a-e7e1-11ec-ae1c-5ec4168c91b2,properties=TypedProperties[__AMQ_CID=3a2f9fc7-e7e1-11ec-ae1c-5ec4168c91b2,_AMQ_ROUTING_TYPE=1,_AMQ_VALIDATED_USER=73ykuMrb,count=0,ThreadSent=Producer ActiveMQQueue[DLQ], thread=0]]
 				Expect(stdOutContent).Should(ContainSubstring("messageID="))
@@ -4071,7 +4070,7 @@ var _ = Describe("artemis controller", func() {
 
 			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
 			Eventually(func(g Gomega) {
-				stdOutContent := logsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
+				stdOutContent := LogsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
 				// from JDK_JAVA_OPTIONS
 				g.Expect(stdOutContent).Should(ContainSubstring("Operating System Metrics"))
 				// from JAVA_OPTS munged via artemis create
@@ -4139,10 +4138,10 @@ var _ = Describe("artemis controller", func() {
 			statCommand := []string{"stat", "/amq/extra/configmaps/jaas-bits/"}
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("a1"))
 
-				stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
+				stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 				if verbose {
 					fmt.Printf("\na1 - Stat:\n" + stdOutContent)
 				}
@@ -4164,10 +4163,10 @@ var _ = Describe("artemis controller", func() {
 			By("verifying updated content of configmap props")
 
 			Eventually(func(g Gomega) {
-				stdOutContent := execOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+				stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
 				g.Expect(stdOutContent).Should(ContainSubstring("a2"))
 
-				stdOutContent = execOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
+				stdOutContent = ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, statCommand, g)
 				if verbose {
 					fmt.Printf("\na2 - Stat:\n" + stdOutContent)
 				}
@@ -4249,7 +4248,7 @@ var _ = Describe("artemis controller", func() {
 			podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
 
 			Eventually(func(g Gomega) {
-				stdOutContent := logsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
+				stdOutContent := LogsOfPod(podWithOrdinal, crd.Name, defaultNamespace, g)
 				if verbose {
 					fmt.Printf("\nLOG of Pod:\n" + stdOutContent)
 				}

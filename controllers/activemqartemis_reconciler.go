@@ -2038,12 +2038,22 @@ func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis)
 		clog.V(1).Info("DetermineImageToUse specifiedVersion was " + specifiedVersion)
 
 		// There is a version specified by the user...
-		// Are upgrades enabled?
-		if false == customResource.Spec.Upgrades.Enabled {
-			clog.V(1).Info("DetermineImageToUse upgrades are disabled")
+		if !customResource.Spec.Upgrades.Enabled {
+			clog.V(1).Info("DetermineImageToUse upgrades are disabled, using version as specified")
+
+			// Upgrades deprecated, we just respect the specified version when (by default) false
+			compactSpecifiedVersion := version.CompactVersionFromVersion[specifiedVersion]
+			if len(compactSpecifiedVersion) == 0 {
+				clog.V(1).Info("DetermineImageToUse failed to find the compact form of", "specified version ", specifiedVersion, "defaulting to", compactVersionToUse)
+				break
+			}
+			compactVersionToUse = compactSpecifiedVersion
+			clog.V(1).Info("DetermineImageToUse found the compact form of ", "specified version ", specifiedVersion, "using version", compactSpecifiedVersion)
 			break
+
+		} else {
+			clog.V(1).Info("DetermineImageToUse upgrades are enabled")
 		}
-		clog.V(1).Info("DetermineImageToUse upgrades are enabled")
 
 		// We have a specified version and upgrades are enabled in general
 		// Is the version specified on "the list"

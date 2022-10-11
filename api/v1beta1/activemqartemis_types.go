@@ -349,7 +349,7 @@ type ConsoleType struct {
 	UseClientAuth bool `json:"useClientAuth,omitempty"`
 }
 
-// ActiveMQArtemis App product upgrade flags
+// ActiveMQArtemis App product upgrade flags, this is deprecated in v1beta1, specifying the Version is sufficient
 type ActiveMQArtemisUpgrades struct {
 	// Set to true to enable automatic micro version product upgrades, disabled by default.
 	Enabled bool `json:"enabled"`

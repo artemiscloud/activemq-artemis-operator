@@ -1387,7 +1387,7 @@ spec:
                   type: object
                 type: array
               upgrades:
-                description: ActiveMQArtemis App product upgrade flags
+                description: ActiveMQArtemis App product upgrade flags, this is deprecated in v1beta1, specifying the Version is sufficient
                 properties:
                   enabled:
                     description: Set to true to enable automatic micro version product upgrades, disabled by default.
