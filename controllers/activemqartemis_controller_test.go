@@ -59,6 +59,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
 
 	"github.com/Azure/go-amqp"
+	routev1 "github.com/openshift/api/route/v1"
 	netv1 "k8s.io/api/networking/v1"
 )
 
@@ -225,6 +226,286 @@ var _ = Describe("artemis controller", func() {
 			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
 			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 			Expect(yacfgProfileVersion).To(Equal("2.21.0"))
+		})
+	})
+
+	Context("Console config test", func() {
+		It("Exposing secured console", Label("console-expose-ssl"), func() {
+			//we need to use existing cluster to differentiate testing
+			//between openshift and k8s, also need it to check pod status
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				crd := generateArtemisSpec(defaultNamespace)
+				crd.Spec.DeploymentPlan.Size = 1
+
+				crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 1,
+					PeriodSeconds:       1,
+					TimeoutSeconds:      5,
+				}
+
+				crd.Spec.Console.Expose = true
+				crd.Spec.Console.SSLEnabled = true
+
+				isOpenshift, err := environments.DetectOpenshift()
+				Expect(err).To(BeNil())
+
+				var consoleSecret corev1.Secret
+
+				if isOpenshift {
+
+					By("deploying well known secret name that the operator will look for")
+					certData := make(map[string][]byte)
+					stringData := make(map[string]string)
+
+					brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
+					Expect(ferr).To(BeNil())
+					clientTs, ferr := os.ReadFile("../test/resources/client.ts")
+					Expect(ferr).To(BeNil())
+
+					certData["broker.ks"] = brokerKs
+					certData["client.ts"] = clientTs
+					stringData["keyStorePassword"] = "password"
+					stringData["trustStorePassword"] = "password"
+
+					consoleSecretName := crd.Name + "-console-secret"
+					consoleSecret = corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      consoleSecretName,
+							Namespace: defaultNamespace,
+						},
+						Data:       certData,
+						StringData: stringData,
+					}
+					Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
+
+					createdSecret := corev1.Secret{}
+					secretKey := types.NamespacedName{
+						Name:      consoleSecretName,
+						Namespace: defaultNamespace,
+					}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				By("Deploying broker" + crd.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				ssKey := types.NamespacedName{
+					Name:      namer.CrToSS(crd.Name),
+					Namespace: defaultNamespace,
+				}
+				currentSS := &appsv1.StatefulSet{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verify pod is up")
+				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				if isOpenshift {
+					By("check route is created")
+					routeKey := types.NamespacedName{
+						Name:      crd.Name + "-wconsj-0-svc-rte",
+						Namespace: defaultNamespace,
+					}
+					route := routev1.Route{}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+						g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
+						g.Expect(route.Spec.To.Kind).To(Equal("Service"))
+						g.Expect(route.Spec.To.Name).To(Equal(crd.Name + "-wconsj-0-svc"))
+						g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
+						g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+					}).Should(Succeed())
+
+				} else {
+					By("check ingress is created")
+					ingKey := types.NamespacedName{
+						Name:      crd.Name + "-wconsj-0-svc-ing",
+						Namespace: defaultNamespace,
+					}
+					ingress := netv1.Ingress{}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+						g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+						//host hard coded www.mgmtconsole.com
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal("www.mgmtconsole.com"))
+						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(crd.Name + "-wconsj-0-svc"))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+						g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
+						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal("www.mgmtconsole.com"))
+
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+				if isOpenshift {
+					Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
+				}
+			}
+		})
+
+		It("Exposing secured console with user specified secret", Label("console-expose-ssl-no-default-secret"), func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				crd := generateArtemisSpec(defaultNamespace)
+				crd.Spec.DeploymentPlan.Size = 1
+
+				crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
+					InitialDelaySeconds: 1,
+					PeriodSeconds:       1,
+					TimeoutSeconds:      5,
+				}
+
+				crd.Spec.Console.Expose = true
+				crd.Spec.Console.SSLEnabled = true
+				crd.Spec.Console.SSLSecret = "my-secret"
+
+				isOpenshift, err := environments.DetectOpenshift()
+				Expect(err).To(BeNil())
+
+				var consoleSecret corev1.Secret
+
+				if isOpenshift {
+					By("deploying user specified secret")
+					certData := make(map[string][]byte)
+					stringData := make(map[string]string)
+
+					brokerKs, ferr := os.ReadFile("../test/resources/broker.ks")
+					Expect(ferr).To(BeNil())
+					clientTs, ferr := os.ReadFile("../test/resources/client.ts")
+					Expect(ferr).To(BeNil())
+
+					certData["broker.ks"] = brokerKs
+					certData["client.ts"] = clientTs
+					stringData["keyStorePassword"] = "password"
+					stringData["trustStorePassword"] = "password"
+
+					consoleSecretName := "my-secret"
+					consoleSecret = corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      consoleSecretName,
+							Namespace: defaultNamespace,
+						},
+						Data:       certData,
+						StringData: stringData,
+					}
+					Expect(k8sClient.Create(ctx, &consoleSecret)).Should(Succeed())
+
+					createdSecret := corev1.Secret{}
+					secretKey := types.NamespacedName{
+						Name:      consoleSecretName,
+						Namespace: defaultNamespace,
+					}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, secretKey, &createdSecret)).To(Succeed())
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				By("Deploying broker" + crd.Name)
+				Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				ssKey := types.NamespacedName{
+					Name:      namer.CrToSS(crd.Name),
+					Namespace: defaultNamespace,
+				}
+				currentSS := &appsv1.StatefulSet{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("verify pod is up")
+				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
+				Eventually(func(g Gomega) {
+					pod := &corev1.Pod{}
+					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
+					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
+					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				if isOpenshift {
+					By("check route is created")
+					routeKey := types.NamespacedName{
+						Name:      crd.Name + "-wconsj-0-svc-rte",
+						Namespace: defaultNamespace,
+					}
+					route := routev1.Route{}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, routeKey, &route)).To(Succeed())
+						g.Expect(route.Spec.Port.TargetPort).To(Equal(intstr.FromString("wconsj-0")))
+						g.Expect(route.Spec.To.Kind).To(Equal("Service"))
+						g.Expect(route.Spec.To.Name).To(Equal(crd.Name + "-wconsj-0-svc"))
+						g.Expect(route.Spec.TLS.Termination).To(BeEquivalentTo(routev1.TLSTerminationPassthrough))
+						g.Expect(route.Spec.TLS.InsecureEdgeTerminationPolicy).To(BeEquivalentTo(routev1.InsecureEdgeTerminationPolicyNone))
+					}).Should(Succeed())
+
+				} else {
+					By("check ingress is created")
+					ingKey := types.NamespacedName{
+						Name:      crd.Name + "-wconsj-0-svc-ing",
+						Namespace: defaultNamespace,
+					}
+					ingress := netv1.Ingress{}
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, ingKey, &ingress)).To(Succeed())
+
+						g.Expect(len(ingress.Spec.Rules)).To(Equal(1))
+						//host hard coded www.mgmtconsole.com
+						g.Expect(ingress.Spec.Rules[0].Host).To(Equal("www.mgmtconsole.com"))
+						g.Expect(len(ingress.Spec.Rules[0].HTTP.Paths)).To(BeEquivalentTo(1))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).To(BeEquivalentTo(crd.Name + "-wconsj-0-svc"))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name).To(BeEquivalentTo("wconsj-0"))
+						g.Expect(ingress.Spec.Rules[0].HTTP.Paths[0].Path).To(BeEquivalentTo("/"))
+						g.Expect(*ingress.Spec.Rules[0].HTTP.Paths[0].PathType).To(BeEquivalentTo(netv1.PathTypePrefix))
+
+						g.Expect(len(ingress.Spec.TLS)).To(BeEquivalentTo(1))
+						g.Expect(len(ingress.Spec.TLS[0].Hosts)).To(BeEquivalentTo(1))
+						g.Expect(ingress.Spec.TLS[0].Hosts[0]).To(Equal("www.mgmtconsole.com"))
+
+					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				}
+
+				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+				if isOpenshift {
+					Expect(k8sClient.Delete(ctx, &consoleSecret)).Should(Succeed())
+				}
+			}
 		})
 	})
 

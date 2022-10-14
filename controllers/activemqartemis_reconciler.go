@@ -1382,12 +1382,16 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		secretName := namer.SecretsConsoleNameBuilder.Name()
-		if "" != customResource.Spec.Console.SSLSecret {
-			secretName = customResource.Spec.Console.SSLSecret
+		isOpenshift, _ := environments.DetectOpenshift()
+		if !customResource.Spec.Console.Expose || isOpenshift {
+			clog.V(1).Info("Make volumes for ssl console exposure on k8s")
+			secretName := namer.SecretsConsoleNameBuilder.Name()
+			if "" != customResource.Spec.Console.SSLSecret {
+				secretName = customResource.Spec.Console.SSLSecret
+			}
+			volume := volumes.MakeVolume(secretName)
+			volumeDefinitions = append(volumeDefinitions, volume)
 		}
-		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
 	}
 
 	return volumeDefinitions
@@ -1428,12 +1432,16 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
-		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
-		if "" != customResource.Spec.Console.SSLSecret {
-			volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
+		isOpenshift, _ := environments.DetectOpenshift()
+		if !customResource.Spec.Console.Expose || isOpenshift {
+			clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
+			volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
+			if "" != customResource.Spec.Console.SSLSecret {
+				volumeMountName = customResource.Spec.Console.SSLSecret + "-volume"
+			}
+			volumeMount := volumes.MakeVolumeMount(volumeMountName)
+			volumeMounts = append(volumeMounts, volumeMount)
 		}
-		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
 	return volumeMounts

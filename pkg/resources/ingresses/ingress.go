@@ -12,11 +12,6 @@ import (
 
 var log = logf.Log.WithName("package ingresses")
 
-//leave this for backward compatibility
-func NewIngressForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string) *netv1.Ingress {
-	return NewIngressForCRWithSSL(namespacedName, labels, targetServiceName, targetPortName, false)
-}
-
 // Create newIngressForCR method to create exposed ingress
 //func NewIngressForCR(cr *v2alpha1.ActiveMQArtemis, target string) *extv1b1.Ingress {
 func NewIngressForCRWithSSL(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, sslEnabled bool) *netv1.Ingress {
@@ -71,16 +66,17 @@ func NewIngressForCRWithSSL(namespacedName types.NamespacedName, labels map[stri
 			Name: portName,
 		}
 	}
+	ingress.Spec.Rules[0].Host = "www.mgmtconsole.com"
 	if sslEnabled {
 		//ingress assumes TLS termination at the ingress point and uses default https port 443
 		//it requires a host name that matches the certificate's CN value
-		ingress.Spec.Rules[0].Host = "www.mgmtconsole.com"
+		//it also uses a self-signed cert if you don't provide one
+		//this is the default configuration in minikube
 		tls := []netv1.IngressTLS{
 			{
 				Hosts: []string{
 					"www.mgmtconsole.com",
 				},
-				SecretName: "console-secret",
 			},
 		}
 		ingress.Spec.TLS = tls
