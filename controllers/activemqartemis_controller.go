@@ -46,34 +46,99 @@ import (
 
 var clog = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
+//row seucrity handlers keyed by security cr's namespaced name
 var namespaceToConfigHandler = make(map[types.NamespacedName]common.ActiveMQArtemisConfigHandler)
 
-func GetBrokerConfigHandler(brokerNamespacedName types.NamespacedName) (handler common.ActiveMQArtemisConfigHandler) {
-	for _, handler := range namespaceToConfigHandler {
-		if handler.IsApplicableFor(brokerNamespacedName) {
-			return handler
-		}
+type SecurityCRMerger struct {
+	ForBrokerCR      types.NamespacedName
+	effectiveHandler *ActiveMQArtemisSecurityConfigHandler
+}
+
+func (m *SecurityCRMerger) Update(incoming common.ActiveMQArtemisConfigHandler) {
+	if m.effectiveHandler == nil {
+		m.effectiveHandler = incoming.Clone().(*ActiveMQArtemisSecurityConfigHandler)
+		m.effectiveHandler.SecurityCR.Spec.ApplyToCrNames = []string{m.ForBrokerCR.Name}
+	} else {
+		m.effectiveHandler.Merge(incoming)
+	}
+}
+
+func (m *SecurityCRMerger) GetEffectiveHandler() common.ActiveMQArtemisConfigHandler {
+	return m.effectiveHandler
+}
+
+func GetSecurityConfigHandler(secNamespacedName types.NamespacedName) (handler common.ActiveMQArtemisConfigHandler) {
+	if handler, ok := namespaceToConfigHandler[secNamespacedName]; ok {
+		return handler
 	}
 	return nil
 }
 
-func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
+func GetBrokerSecurityConfigHandler(brokerNamespacedName types.NamespacedName) (common.ActiveMQArtemisConfigHandler, map[string]string) {
+
+	merger := SecurityCRMerger{
+		ForBrokerCR:      brokerNamespacedName,
+		effectiveHandler: nil,
+	}
+	appliedSecurityMap := make(map[string]string)
+	for k, v := range namespaceToConfigHandler {
+		if v.IsApplicableFor(brokerNamespacedName) {
+			clog.V(1).Info("Got a security CR", "security", k, "for", brokerNamespacedName)
+			merger.Update(v)
+			secHandler := v.(*ActiveMQArtemisSecurityConfigHandler)
+			appliedSecurityMap[secHandler.SecurityCR.Name+"."+secHandler.SecurityCR.Namespace] = secHandler.SecurityCR.ResourceVersion
+		}
+	}
+	return merger.GetEffectiveHandler(), appliedSecurityMap
+}
+
+func (r *ActiveMQArtemisReconciler) UpdatePodForSecurity(securityHandlerNamespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, isRemove bool) error {
 
 	existingCrs := &brokerv1beta1.ActiveMQArtemisList{}
 	var err error
 	opts := &rtclient.ListOptions{}
 	if err = r.Client.List(context.TODO(), existingCrs, opts); err == nil {
 		var candidate types.NamespacedName
-		for index, artemis := range existingCrs.Items {
+		for _, artemis := range existingCrs.Items {
 			candidate.Name = artemis.Name
 			candidate.Namespace = artemis.Namespace
 			if handler.IsApplicableFor(candidate) {
-				clog.Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
-				r.events <- event.GenericEvent{Object: &existingCrs.Items[index]}
+				// here check if the handler is already applied
+				// if this security cr already applied, don't reconcile
+				if !r.IsSecurityApplied(&artemis, handler) || isRemove {
+					clog.Info("force reconcile for security", "handler", securityHandlerNamespacedName, "CR", candidate)
+					r.events <- event.GenericEvent{Object: &artemis}
+				}
 			}
 		}
 	}
 	return err
+}
+
+func (r *ActiveMQArtemisReconciler) IsSecurityApplied(artemis *brokerv1beta1.ActiveMQArtemis, handler common.ActiveMQArtemisConfigHandler) bool {
+	//looking for the secret <cr-name>-applied-security-secret (owned by broker CR)
+	secretKey := types.NamespacedName{
+		Name:      artemis.Name + "-applied-security",
+		Namespace: artemis.Namespace,
+	}
+	appliedSecSecret := corev1.Secret{}
+	err := r.Client.Get(context.TODO(), secretKey, &appliedSecSecret)
+	if err == nil {
+		secHandler := handler.(*ActiveMQArtemisSecurityConfigHandler)
+		//the secret data key is the security CR's name + "." + namespace, value is the resourceVersion
+		secCrKey := secHandler.SecurityCR.Name + "." + secHandler.SecurityCR.Namespace
+		if appliedSecResVer, ok := appliedSecSecret.Data[secCrKey]; ok {
+			return secHandler.SecurityCR.ResourceVersion == string(appliedSecResVer)
+		}
+	} else {
+		if apierrors.IsNotFound(err) {
+			clog.V(1).Info("The applied security secret is not found, could be the first security cr")
+		} else {
+			clog.V(1).Error(err, "got unexpected error", "secret", secretKey)
+		}
+		return false
+	}
+	return false
 }
 
 func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName types.NamespacedName) {
@@ -82,21 +147,17 @@ func (r *ActiveMQArtemisReconciler) RemoveBrokerConfigHandler(namespacedName typ
 	if ok {
 		delete(namespaceToConfigHandler, namespacedName)
 		clog.Info("Handler removed", "name", namespacedName)
-		r.UpdatePodForSecurity(namespacedName, oldHandler)
+		r.UpdatePodForSecurity(namespacedName, oldHandler, true)
 	}
 }
 
-func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler, toReconcile bool) error {
+func (r *ActiveMQArtemisReconciler) AddBrokerConfigHandler(namespacedName types.NamespacedName, handler common.ActiveMQArtemisConfigHandler) error {
 	if _, ok := namespaceToConfigHandler[namespacedName]; ok {
 		clog.V(1).Info("There is an old config handler, it'll be replaced")
 	}
 	namespaceToConfigHandler[namespacedName] = handler
 	clog.V(1).Info("A new config handler has been added", "handler", handler)
-	if toReconcile {
-		clog.V(1).Info("Updating broker security")
-		return r.UpdatePodForSecurity(namespacedName, handler)
-	}
-	return nil
+	return r.UpdatePodForSecurity(namespacedName, handler, false)
 }
 
 // ActiveMQArtemisReconciler reconciles a ActiveMQArtemis object

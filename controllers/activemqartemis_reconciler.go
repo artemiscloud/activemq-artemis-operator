@@ -1414,6 +1414,7 @@ func getDeployedResources(instance *brokerv1beta1.ActiveMQArtemis, client rtclie
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis")
 
 	reader := read.New(client).WithNamespace(instance.Namespace).WithOwnerObject(instance)
+
 	var resourceMap map[reflect.Type][]rtclient.Object
 	var err error
 	if isOpenshift, _ := environments.DetectOpenshift(); isOpenshift {
@@ -1834,7 +1835,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	//provide a way to configuration after launch.sh
 	var brokerHandlerCmds []string = []string{}
 	clog.Info("Checking if there are any config handlers", "main cr", namespacedName)
-	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
+	handler, appliedSec := GetBrokerSecurityConfigHandler(namespacedName)
+	brokerConfigHandler := handler.(*ActiveMQArtemisSecurityConfigHandler)
 	if brokerConfigHandler != nil {
 		clog.Info("there is a config handler")
 		handlerCmds := brokerConfigHandler.Config(podSpec.InitContainers, initCfgRootDir+"/security", yacfgProfileVersion, yacfgProfileName)
@@ -1843,6 +1845,21 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 			clog.Info("appending to initCmd array...")
 			brokerHandlerCmds = append(brokerHandlerCmds, handlerCmds...)
 		}
+		var appliedSecret *corev1.Secret
+		secretName := customResource.Name + "-applied-security"
+		obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Secret{}), secretName)
+		if obj != nil {
+			appliedSecret = obj.(*corev1.Secret)
+			appliedSecret.Data = nil
+			appliedSecret.StringData = appliedSec
+		} else {
+			ns := types.NamespacedName{
+				Name:      secretName,
+				Namespace: customResource.Namespace,
+			}
+			appliedSecret = secrets.NewSecret(ns, secretName, appliedSec, nil)
+		}
+		reconciler.trackDesired(appliedSecret)
 	}
 
 	var strBuilder strings.Builder

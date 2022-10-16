@@ -26,6 +26,7 @@ func Create(owner v1.Object, client client.Client, scheme *runtime.Scheme, clien
 	SetOwnerAndController(owner, clientObject)
 
 	var err error
+	reqLogger.Info("Just before create", "obj rev", clientObject.GetResourceVersion())
 	if err = client.Create(context.TODO(), clientObject); err != nil {
 		// Add error detail for use later
 		reqLogger.Error(err, "Failed to create new "+objectTypeString)

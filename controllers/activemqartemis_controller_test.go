@@ -1910,7 +1910,10 @@ var _ = Describe("artemis controller", func() {
 
 			}
 
-			Expect(k8sClient.Delete(ctx, createdCrd))
+			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
+			Eventually(func() bool {
+				return checkCrdDeleted(crd.ObjectMeta.Name, defaultNamespace, createdCrd)
+			}, timeout, interval).Should(BeTrue())
 
 		})
 
