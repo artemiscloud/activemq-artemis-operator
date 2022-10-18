@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	goerrors "errors"
 	"fmt"
 	"hash/adler32"
 	osruntime "runtime"
@@ -1484,12 +1483,25 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		for key, value := range customResource.Spec.DeploymentPlan.Labels {
 			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
 			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
-				return nil, goerrors.New("Label key not allowed: " + key)
+
+				meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
+					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Labels", key),
+				})
+				return nil, fmt.Errorf("label key '%s' not allowed because it is reserved", key)
 			} else {
 				labels[key] = value
 			}
 		}
 	}
+	// validation success
+	meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
+		Type:   brokerv1beta1.ValidConditionType,
+		Status: metav1.ConditionTrue,
+		Reason: brokerv1beta1.ValidConditionSuccessReason,
+	})
 
 	pts := pods.MakePodTemplateSpec(current, namespacedName, labels)
 	podSpec := &pts.Spec
@@ -2211,6 +2223,7 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 	reqLogger.V(1).Info("Stopped Count......................", "info:", len(podStatus.Stopped))
 	reqLogger.V(1).Info("Starting Count.....................", "info:", len(podStatus.Starting))
 
+	meta.SetStatusCondition(&cr.Status.Conditions, getValidCondition(cr))
 	meta.SetStatusCondition(&cr.Status.Conditions, getDeploymentCondition(cr, podStatus))
 
 	var err error
@@ -2222,6 +2235,20 @@ func UpdatePodStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, 
 		reqLogger.Info("Pods status unchanged")
 	}
 	return err
+}
+
+func getValidCondition(cr *brokerv1beta1.ActiveMQArtemis) metav1.Condition {
+	// add valid true if none exists
+	for _, c := range cr.Status.Conditions {
+		if c.Type == brokerv1beta1.ValidConditionType {
+			return c
+		}
+	}
+	return metav1.Condition{
+		Type:   brokerv1beta1.ValidConditionType,
+		Reason: brokerv1beta1.ValidConditionSuccessReason,
+		Status: metav1.ConditionTrue,
+	}
 }
 
 func getDeploymentCondition(cr *brokerv1beta1.ActiveMQArtemis, podStatus olm.DeploymentStatus) metav1.Condition {

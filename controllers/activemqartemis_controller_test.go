@@ -1319,6 +1319,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(len(createdCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 				}, timeout*2, interval).Should(Succeed())
 
 				By("applying taints to node")
@@ -2093,6 +2094,7 @@ var _ = Describe("artemis controller", func() {
 					Message: brokerv1beta1.DeployedConditionZeroSizeMessage,
 				})).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 
 			}, timeout, interval).Should(Succeed())
 
@@ -2654,7 +2656,7 @@ var _ = Describe("artemis controller", func() {
 	})
 
 	Context("Validation", func() {
-		It("Test labels", func() {
+		It("with test labels", func() {
 			ctx := context.Background()
 			var err error
 			var deployedCrdKey types.NamespacedName
@@ -2663,35 +2665,36 @@ var _ = Describe("artemis controller", func() {
 			var deployedResources map[reflect.Type][]client.Object
 			statefulSetType := reflect.TypeOf(appsv1.StatefulSet{})
 
-			By("By creating invalid crd")
+			By("creating invalid crd with reserved label")
 			invalidCrd := generateArtemisSpec(defaultNamespace)
 			invalidCrd.Spec.DeploymentPlan.Labels = map[string]string{"application": "test"}
 			Expect(k8sClient.Create(ctx, &invalidCrd)).Should(Succeed())
 
-			By("By creating valid crd")
+			By("creating valid crd")
 			validCrd := generateArtemisSpec(defaultNamespace)
 			validCrd.Spec.DeploymentPlan.Labels = map[string]string{"test": "test"}
 			Expect(k8sClient.Create(ctx, &validCrd)).Should(Succeed())
 
-			By("Checking valid CR")
+			By("checking valid CR")
 			deployedCrdKey = types.NamespacedName{Name: validCrd.ObjectMeta.Name, Namespace: defaultNamespace}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
 				g.Expect(deployedCrd.Name).Should(Equal(validCrd.ObjectMeta.Name))
 				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
 				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(validCrd.Name)))
+				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
-			By("Checking deployed resources of valid CR")
+			By("checking deployed resources of valid CR")
 			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
-			By("Checking template labels of valid CR")
+			By("checking template labels of valid CR")
 			deployedStatefulSet = deployedResources[statefulSetType][0].(*appsv1.StatefulSet)
 			Expect(deployedStatefulSet.Spec.Template.Labels["test"]).Should(Equal("test"))
 
-			By("Checking invalid CR")
+			By("checking invalid CR")
 			deployedCrdKey = types.NamespacedName{Name: invalidCrd.ObjectMeta.Name, Namespace: defaultNamespace}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
@@ -2702,7 +2705,16 @@ var _ = Describe("artemis controller", func() {
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).Should(BeEmpty())
 
-			By("By updating invalid crd")
+			By("verify status valid false")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Reason).Should(Equal(brokerv1beta1.ValidConditionFailedReservedLabelReason))
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Message).Should(ContainSubstring("application"))
+				g.Expect(meta.IsStatusConditionFalse(deployedCrd.Status.Conditions, common.ReadyConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			By("updating invalid crd")
 			invalidCrd.Spec.DeploymentPlan.Labels = map[string]string{"test": "test"}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
@@ -2711,21 +2723,24 @@ var _ = Describe("artemis controller", func() {
 				Expect(k8sClient.Update(ctx, &deployedCrd)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
-			By("Checking updated invalid CR")
+			By("checking updated invalid CR")
 			deployedCrdKey = types.NamespacedName{Name: invalidCrd.ObjectMeta.Name, Namespace: defaultNamespace}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, deployedCrdKey, &deployedCrd)).Should(Succeed())
 				g.Expect(deployedCrd.Name).Should(Equal(invalidCrd.ObjectMeta.Name))
 				g.Expect(len(deployedCrd.Status.PodStatus.Stopped)).Should(Equal(1))
 				g.Expect(deployedCrd.Status.PodStatus.Stopped[0]).Should(Equal(namer.CrToSS(invalidCrd.Name)))
+				By("verify status valid true")
+				g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
+				g.Expect(meta.FindStatusCondition(deployedCrd.Status.Conditions, brokerv1beta1.ValidConditionType).Reason).Should(Equal(brokerv1beta1.ValidConditionSuccessReason))
 			}, timeout, interval).Should(Succeed())
 
-			By("Checking deployed resources of updated invalid CR")
+			By("checking deployed resources of updated invalid CR")
 			deployedResources, err = getDeployedResources(&validCrd, k8sClient)
 			Expect(err).Should(Succeed())
 			Expect(deployedResources).ShouldNot(BeEmpty())
 
-			By("Checking template labels of updated invalid CR")
+			By("checking template labels of updated invalid CR")
 			deployedStatefulSet = deployedResources[statefulSetType][0].(*appsv1.StatefulSet)
 			Expect(deployedStatefulSet.Spec.Template.Labels["test"]).Should(Equal("test"))
 

@@ -549,7 +549,7 @@ func (c *Controller) getClaims(sts *appsv1.StatefulSet) (claimsGroupedByOrdinal 
 	return claimsMap, nil
 }
 
-// create service account, role and rolbe binding for drain pod
+// create service account, role and role binding for drain pod
 func (c *Controller) createDrainRBACResources(namespace string) {
 	dlog.Info("Creating drain pod rbac resources", "namespace", namespace)
 	rbacutil.CreateServiceAccount(DrainServiceAccountName, namespace, c.kubeclientset)

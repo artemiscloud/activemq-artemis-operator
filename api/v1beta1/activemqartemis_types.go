@@ -421,4 +421,8 @@ const (
 	DeployedConditionNotReadyReason  = "PodsNotReady"
 	DeployedConditionZeroSizeReason  = "ZeroSizeDeployment"
 	DeployedConditionZeroSizeMessage = "Pods not scheduled. Deployment size is 0"
+
+	ValidConditionType                      = "Valid"
+	ValidConditionSuccessReason             = "ValidationSucceeded"
+	ValidConditionFailedReservedLabelReason = "ReservedLabelReference"
 )
