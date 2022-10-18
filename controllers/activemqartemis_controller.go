@@ -156,7 +156,6 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	if err == nil {
 		return ctrl.Result{}, err
 	} else {
-		reqLogger.Error(err, "ActiveMQArtemis Controller Reconcile, requeuing request", "Request Namespace", request.Namespace, "Request Name", request.Name)
 		return ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}, err
 	}
 }
