@@ -32,6 +32,7 @@ import (
 	"strings"
 
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
+	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
@@ -226,6 +227,46 @@ var _ = Describe("artemis controller", func() {
 			compactVersionToUse := determineCompactVersionToUse(&brokerCr)
 			yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 			Expect(yacfgProfileVersion).To(Equal("2.21.0"))
+		})
+	})
+
+	Context("CrVersionConversionTest", func() {
+		It("can reconcile different version", func() {
+
+			var float32Var = float32(2.3)
+			var ma = "all"
+			toCreate := v2alpha5.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: v2alpha5.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nameFromTest(),
+					Namespace: defaultNamespace,
+				},
+				Spec: v2alpha5.ActiveMQArtemisSpec{
+					AddressSettings: v2alpha5.AddressSettingsType{
+						ApplyRule: &ma,
+						AddressSetting: []v2alpha5.AddressSettingType{
+							{
+								Match:                              "#",
+								RedeliveryCollisionAvoidanceFactor: &float32Var,
+							},
+						},
+					},
+				},
+			}
+
+			By("deploying v2lpha5 with float32")
+
+			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
+
+			key := types.NamespacedName{Name: namer.CrToSS(toCreate.Name), Namespace: defaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
 		})
 	})
 
