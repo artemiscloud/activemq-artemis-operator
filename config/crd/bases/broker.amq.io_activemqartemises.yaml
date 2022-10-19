@@ -2790,9 +2790,7 @@ spec:
                         pageSizeBytes:
                           type: string
                         redeliveryCollisionAvoidanceFactor:
-                          description: controller-gen currently doesn't support float
-                            types RedeliveryCollisionAvoidanceFactor *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
-                          type: string
+                          type: number
                         redeliveryDelay:
                           format: int32
                           type: integer
@@ -3157,9 +3155,7 @@ spec:
                         pageSizeBytes:
                           type: string
                         redeliveryCollisionAvoidanceFactor:
-                          description: currentl controller-gen doesn't support float
-                            type RedeliveryCollisionAvoidanceFactor *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
-                          type: string
+                          type: number
                         redeliveryDelay:
                           format: int32
                           type: integer
@@ -3539,15 +3535,12 @@ spec:
                         pageSizeBytes:
                           type: string
                         redeliveryCollisionAvoidanceFactor:
-                          type: string
+                          type: number
                         redeliveryDelay:
                           format: int32
                           type: integer
                         redeliveryDelayMultiplier:
-                          description: controller-gen currently doesn't support float
-                            types RedeliveryDelayMultiplier            *float32 `json:"redeliveryDelayMultiplier,omitempty"`
-                            RedeliveryCollisionAvoidanceFactor   *float32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
-                          type: string
+                          type: number
                         redistributionDelay:
                           format: int32
                           type: integer
