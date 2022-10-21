@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var elog = ctrl.Log.WithName("controller_v1alpha1activemqartemissecurity")
+var elog = ctrl.Log.WithName("controller_v1beta1activemqartemissecurity")
 
 // ActiveMQArtemisSecurityReconciler reconciles a ActiveMQArtemisSecurity object
 type ActiveMQArtemisSecurityReconciler struct {
@@ -202,6 +202,20 @@ func (r *ActiveMQArtemisSecurityConfigHandler) processCrPasswords() *brokerv1bet
 			}
 		}
 	}
+
+	if len(result.Spec.LoginModules.LdapLoginModules) > 0 {
+		for i, pm := range result.Spec.LoginModules.LdapLoginModules {
+			ldapSecretName := "security-ldap-" + pm.Name
+
+			if pm.ConnectionUsername == nil {
+				result.Spec.LoginModules.LdapLoginModules[i].ConnectionUsername = r.getPassword(ldapSecretName, "connection-username")
+			}
+			if pm.ConnectionPassword == nil {
+				result.Spec.LoginModules.LdapLoginModules[i].ConnectionPassword = r.getPassword(ldapSecretName, "connection-password")
+			}
+		}
+	}
+
 	return result
 }
 
@@ -230,13 +244,15 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 			resources.Create(r.SecurityCR, r.owner.Client, r.owner.Scheme, secretDefinition)
 		}
 	} else {
-		slog.Info("Found secret " + secretName)
+		slog.Info("Found secret " + secretName + ", looking up key " + key)
 
 		if elem, ok := secretDefinition.Data[key]; ok {
 			//the value exists
 			value := string(elem)
 			return &value
 		}
+
+		slog.Info("Missing key " + key + " in secret " + secretName)
 	}
 	//now need generate value
 	value := random.GenerateRandomString(8)

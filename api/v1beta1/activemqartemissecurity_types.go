@@ -39,6 +39,7 @@ type LoginModulesType struct {
 	PropertiesLoginModules []PropertiesLoginModuleType `json:"propertiesLoginModules,omitempty"`
 	GuestLoginModules      []GuestLoginModuleType      `json:"guestLoginModules,omitempty"`
 	KeycloakLoginModules   []KeycloakLoginModuleType   `json:"keycloakLoginModules,omitempty"`
+	LdapLoginModules       []LdapLoginModuleType       `json:"ldapLoginModules,omitempty"`
 }
 
 type PropertiesLoginModuleType struct {
@@ -156,6 +157,58 @@ type KeycloakModuleConfigurationType struct {
 	RedirectRewriteRules []KeyValueType `json:"redirectRewriteRules,omitempty"`
 	// The OAuth2 scope parameter for DirectAccessGrantsLoginModule
 	Scope *string `json:"scope,omitempty"`
+}
+
+// https://activemq.apache.org/components/artemis/documentation/latest/security.html
+type LdapLoginModuleType struct {
+	// Name for LdapLoginModule
+	Name string `json:"name,omitempty"`
+	// Must always be set to com.sun.jndi.ldap.LdapCtxFactory
+	InitialContextFactory *string `json:"initialContextFactory,omitempty"`
+	// Specify the location of the directory server using an ldap URL
+	ConnectionURL *string `json:"connectionURL,omitempty"`
+	// Specifies the authentication method used when binding to the LDAP server
+	Authentication *string `json:"authentication,omitempty"`
+	// Specifies the authentication method used when binding to the LDAP server
+	ConnectionUsername *string `json:"connectionUsername,omitempty"`
+	// The password that matches the DN from connectionUsername
+	ConnectionPassword *string `json:"connectionPassword,omitempty"`
+	// The scope in JAAS configuration (login.config) to use to obtain Kerberos initiator credentials when the authentication method is SASL GSSAPI
+	SaslLoginConfigScope *string `json:"saslLoginConfigScope,omitempty"`
+	// Currently, the only supported value is a blank string
+	ConnectionProtocol *string `json:"connectionProtocol,omitempty"`
+	// Enable the LDAP connection pool property 'com.sun.jndi.ldap.connect.pool'
+	ConnectionPool *bool `json:"connectionPool,omitempty"`
+	// Specifies the string representation of an integer representing the connection timeout in milliseconds
+	ConnectionTimeout *bool `json:"connectionTimeout,omitempty"`
+	// Specifies the string representation of an integer representing the read timeout in milliseconds for LDAP operations
+	ReadTimeout *bool `json:"readTimeout,omitempty"`
+	// Selects a particular subtree of the DIT to search for user entries
+	UserBase *string `json:"userBase,omitempty"`
+	// Specifies an LDAP search filter, which is applied to the subtree selected by userBase
+	UserSearchMatching *string `json:"userSearchMatching,omitempty"`
+	// Specify the search depth for user entries, relative to the node specified by userBase
+	UserSearchSubtree *bool `json:"userSearchSubtree,omitempty"`
+	// Specifies the name of the multi-valued attribute of the user entry that contains a list of role names for the user
+	UserRoleName *bool `json:"userRoleName,omitempty"`
+	// If you want to store role data directly in the directory server, you can use a combination of role options (roleBase, roleSearchMatching, roleSearchSubtree, and roleName) as an alternative to (or in addition to) specifying the userRoleName option
+	RoleBase *string `json:"roleBase,omitempty"`
+	// Specifies the attribute type of the role entry that contains the name of the role/group (e.g. C, O, OU, etc.)
+	RoleName *string `json:"roleName,omitempty"`
+	// Specifies an LDAP search filter, which is applied to the subtree selected by roleBase
+	RoleSearchMatching *string `json:"roleSearchMatching,omitempty"`
+	// Specify the search depth for role entries, relative to the node specified by roleBase
+	RoleSearchSubtree *bool `json:"roleSearchSubtree,omitempty"`
+	// Boolean flag to disable authentication
+	AuthenticateUser *bool `json:"authenticateUser,omitempty"`
+	// Specify how to handle referrals; valid values: ignore, follow, throw; default is ignore
+	Referral *string `json:"referral,omitempty"`
+	// Boolean flag for use when searching Active Directory (AD). AD servers don't handle referrals automatically, which causes a PartialResultException to be thrown when referrals are encountered by a search, even if referral is set to ignore
+	IgnorePartialResultException *bool `json:"ignorePartialResultException,omitempty"`
+	// Boolean indicating whether to enable the role expansion functionality or not; default false
+	ExpandRoles *bool `json:"expandRoles,omitempty"`
+	// Specifies an LDAP search filter which is applied to the subtree selected by roleBase
+	ExpandRolesMatching *string `json:"expandRolesMatching,omitempty"`
 }
 
 type KeyValueType struct {
