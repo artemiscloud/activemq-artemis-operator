@@ -1,6 +1,7 @@
 package cr2jinja2
 
 import (
+	"encoding/json"
 	"hash/fnv"
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
@@ -118,6 +119,14 @@ func checkFloat32(prop *float32) *string {
 		return nil
 	}
 	tmp := fmt.Sprint(*prop)
+	return &tmp
+}
+
+func checkFloat64AsJsonNumber(prop *json.Number) *string {
+	if nil == prop {
+		return nil
+	}
+	tmp := fmt.Sprint(prop.Float64())
 	return &tmp
 }
 
@@ -673,10 +682,10 @@ func processAddressSettingsV1beta1(sb *strings.Builder, addressSettings *[]v1bet
 		if value := checkInt32(s.RedeliveryDelay); value != nil {
 			sb.WriteString("  redelivery_delay: " + *value + "\n")
 		}
-		if value := checkFloat32AsString(s.RedeliveryDelayMultiplier); value != nil {
+		if value := checkFloat64AsJsonNumber(s.RedeliveryDelayMultiplier); value != nil {
 			sb.WriteString("  redelivery_delay_multiplier: " + *value + "\n")
 		}
-		if value := checkFloat32AsString(s.RedeliveryCollisionAvoidanceFactor); value != nil {
+		if value := checkFloat64AsJsonNumber(s.RedeliveryCollisionAvoidanceFactor); value != nil {
 			sb.WriteString("  redelivery_collision_avoidance_factor: " + *value + "\n")
 		}
 		if value := checkInt32(s.MaxRedeliveryDelay); value != nil {

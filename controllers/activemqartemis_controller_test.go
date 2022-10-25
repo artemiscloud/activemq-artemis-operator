@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
@@ -250,6 +251,7 @@ var _ = Describe("artemis controller", func() {
 						AddressSetting: []v2alpha5.AddressSettingType{
 							{
 								Match:                              "#",
+								RedeliveryDelayMultiplier:          &float32Var,
 								RedeliveryCollisionAvoidanceFactor: &float32Var,
 							},
 						},
@@ -267,6 +269,12 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
 
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrd := &v1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		})
 	})
 

@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"encoding/json"
+
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,9 +85,9 @@ type AddressSettingType struct {
 	// the time (in ms) to wait before redelivering a cancelled message.
 	RedeliveryDelay *int32 `json:"redeliveryDelay,omitempty"`
 	// multiplier to apply to the redelivery-delay
-	RedeliveryDelayMultiplier *string `json:"redeliveryDelayMultiplier,omitempty"`
+	RedeliveryDelayMultiplier *json.Number `json:"redeliveryDelayMultiplier,omitempty"`
 	// factor by which to modify the redelivery delay slightly to avoid collisions
-	RedeliveryCollisionAvoidanceFactor *string `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
+	RedeliveryCollisionAvoidanceFactor *json.Number `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
 	// Maximum value for the redelivery-delay
 	MaxRedeliveryDelay *int32 `json:"maxRedeliveryDelay,omitempty"`
 	// how many times to attempt to deliver a message before sending to dead letter address

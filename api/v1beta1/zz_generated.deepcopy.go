@@ -22,6 +22,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"encoding/json"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -568,12 +569,12 @@ func (in *AddressSettingType) DeepCopyInto(out *AddressSettingType) {
 	}
 	if in.RedeliveryDelayMultiplier != nil {
 		in, out := &in.RedeliveryDelayMultiplier, &out.RedeliveryDelayMultiplier
-		*out = new(string)
+		*out = new(json.Number)
 		**out = **in
 	}
 	if in.RedeliveryCollisionAvoidanceFactor != nil {
 		in, out := &in.RedeliveryCollisionAvoidanceFactor, &out.RedeliveryCollisionAvoidanceFactor
-		*out = new(string)
+		*out = new(json.Number)
 		**out = **in
 	}
 	if in.MaxRedeliveryDelay != nil {

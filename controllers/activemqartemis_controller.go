@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -139,6 +141,11 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	// When deleting before creation reconcile won't be called
 	if err = r.Get(context.TODO(), request.NamespacedName, customResource); err == nil {
 
+		if err := UpdateCR(customResource, r.Client, request.NamespacedName); err != nil {
+			reqLogger.Error(err, "Error updating the CR", "ActiveMQArtemis", request.NamespacedName)
+			return ctrl.Result{}, err
+		}
+
 		namer := MakeNamers(customResource)
 		reconciler := ActiveMQArtemisReconcilerImpl{}
 
@@ -236,6 +243,58 @@ func (r *ActiveMQArtemisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 	}
 	return err
+}
+
+func UpdateCR(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
+
+	// The redeliveryDelayMultiplier and RedeliveryCollisionAvoidanceFactor fields are *float32
+	// in v2alpha5/v0.20.1 and they are *string in v2alpha5/v1.0.0.
+	// Those fields has been reverted to the original type to fix this backward compatibility issue
+	// but this reversion has caused a conversion issue from v2alpha5 to v1beta1.
+	// To fix this conversion issue the type of v1beta1 fields have been changed to json.Number.
+	// The json.Number allows to unmarshal float and string values but it only allows to marshal string values.
+	// The following code block patches CR that contain float values and uses the string lenght to check
+	// if those values has been already patched.
+	patchPayload := []map[string]string{}
+	addressSettings := cr.Spec.AddressSettings.AddressSetting
+	for i := 0; i < len(addressSettings); i++ {
+		if addressSettings[i].RedeliveryDelayMultiplier != nil && len(addressSettings[i].RedeliveryDelayMultiplier.String()) < 9 {
+			redeliveryDelayMultiplier, err := addressSettings[i].RedeliveryDelayMultiplier.Float64()
+			if err != nil {
+				clog.Error(err, "Error parsing RedeliveryDelayMultiplier", "ActiveMQArtemis", namespacedName)
+				return err
+			}
+			patchPayload = append(patchPayload, map[string]string{
+				"op":    "replace",
+				"path":  fmt.Sprintf("/spec/addressSettings/addressSetting/%d/redeliveryDelayMultiplier", i),
+				"value": fmt.Sprintf("%.9f", redeliveryDelayMultiplier),
+			})
+		}
+		if addressSettings[i].RedeliveryCollisionAvoidanceFactor != nil && len(addressSettings[i].RedeliveryCollisionAvoidanceFactor.String()) < 9 {
+			redeliveryCollisionAvoidanceFactor, err := addressSettings[i].RedeliveryCollisionAvoidanceFactor.Float64()
+			if err != nil {
+				clog.Error(err, "Error parsing RedeliveryCollisionAvoidanceFactor", "ActiveMQArtemis", namespacedName)
+				return err
+			}
+			patchPayload = append(patchPayload, map[string]string{
+				"op":    "replace",
+				"path":  fmt.Sprintf("/spec/addressSettings/addressSetting/%d/redeliveryCollisionAvoidanceFactor", i),
+				"value": fmt.Sprintf("%.9f", redeliveryCollisionAvoidanceFactor),
+			})
+		}
+	}
+
+	if len(patchPayload) > 0 {
+		payloadBytes, _ := json.Marshal(patchPayload)
+
+		patchObj := rtclient.RawPatch(types.JSONPatchType, payloadBytes)
+		if err := client.Patch(context.TODO(), cr, patchObj); err != nil {
+			clog.Error(err, "unable to patch CR", "ActiveMQArtemis", namespacedName)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, namespacedName types.NamespacedName) error {
