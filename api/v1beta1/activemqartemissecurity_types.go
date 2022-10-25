@@ -180,9 +180,9 @@ type LdapLoginModuleType struct {
 	// Enable the LDAP connection pool property 'com.sun.jndi.ldap.connect.pool'
 	ConnectionPool *bool `json:"connectionPool,omitempty"`
 	// Specifies the string representation of an integer representing the connection timeout in milliseconds
-	ConnectionTimeout *bool `json:"connectionTimeout,omitempty"`
+	ConnectionTimeout *int64 `json:"connectionTimeout,omitempty"`
 	// Specifies the string representation of an integer representing the read timeout in milliseconds for LDAP operations
-	ReadTimeout *bool `json:"readTimeout,omitempty"`
+	ReadTimeout *int64 `json:"readTimeout,omitempty"`
 	// Selects a particular subtree of the DIT to search for user entries
 	UserBase *string `json:"userBase,omitempty"`
 	// Specifies an LDAP search filter, which is applied to the subtree selected by userBase
@@ -190,7 +190,7 @@ type LdapLoginModuleType struct {
 	// Specify the search depth for user entries, relative to the node specified by userBase
 	UserSearchSubtree *bool `json:"userSearchSubtree,omitempty"`
 	// Specifies the name of the multi-valued attribute of the user entry that contains a list of role names for the user
-	UserRoleName *bool `json:"userRoleName,omitempty"`
+	UserRoleName *string `json:"userRoleName,omitempty"`
 	// If you want to store role data directly in the directory server, you can use a combination of role options (roleBase, roleSearchMatching, roleSearchSubtree, and roleName) as an alternative to (or in addition to) specifying the userRoleName option
 	RoleBase *string `json:"roleBase,omitempty"`
 	// Specifies the attribute type of the role entry that contains the name of the role/group (e.g. C, O, OU, etc.)
