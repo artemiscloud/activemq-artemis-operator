@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +60,40 @@ type AddressSettingsType struct {
 	AddressSetting []AddressSettingType `json:"addressSetting,omitempty"`
 }
 
+// A Number represents a JSON number literal.
+type LiteralFloat32 string
+
+// String returns the literal text of the number.
+func (n LiteralFloat32) String() string { return string(n) }
+
+// Float64 returns the number as a float64.
+func (n LiteralFloat32) Float() (float64, error) {
+	return strconv.ParseFloat(string(n), 64)
+}
+
+func (n *LiteralFloat32) MarshalJSON() ([]byte, error) {
+	data, err := json.Marshal(n.String())
+
+	return data, err
+}
+
+func (n *LiteralFloat32) UnmarshalJSON(data []byte) error {
+
+	if _, err := strconv.ParseFloat(string(data), 32); err == nil {
+		*n = LiteralFloat32(data)
+	} else {
+		var v string
+
+		if err := json.Unmarshal(data, &v); err != nil {
+			return err
+		}
+
+		*n = LiteralFloat32(v)
+	}
+
+	return nil
+}
+
 type AddressSettingType struct {
 	// the address to send dead messages to
 	DeadLetterAddress *string `json:"deadLetterAddress,omitempty"`
@@ -85,9 +120,9 @@ type AddressSettingType struct {
 	// the time (in ms) to wait before redelivering a cancelled message.
 	RedeliveryDelay *int32 `json:"redeliveryDelay,omitempty"`
 	// multiplier to apply to the redelivery-delay
-	RedeliveryDelayMultiplier *json.Number `json:"redeliveryDelayMultiplier,omitempty"`
+	RedeliveryDelayMultiplier *LiteralFloat32 `json:"redeliveryDelayMultiplier,omitempty"`
 	// factor by which to modify the redelivery delay slightly to avoid collisions
-	RedeliveryCollisionAvoidanceFactor *json.Number `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
+	RedeliveryCollisionAvoidanceFactor *LiteralFloat32 `json:"redeliveryCollisionAvoidanceFactor,omitempty"`
 	// Maximum value for the redelivery-delay
 	MaxRedeliveryDelay *int32 `json:"maxRedeliveryDelay,omitempty"`
 	// how many times to attempt to deliver a message before sending to dead letter address

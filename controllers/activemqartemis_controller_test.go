@@ -275,6 +275,33 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
 				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+			crd := generateArtemisSpec(defaultNamespace)
+			var literalVar = brokerv1beta1.LiteralFloat32("3.5")
+			crd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
+				ApplyRule: &ma,
+				AddressSetting: []brokerv1beta1.AddressSettingType{
+					{
+						Match:                              "#",
+						RedeliveryCollisionAvoidanceFactor: &literalVar,
+					},
+				},
+			}
+
+			By("deploying v1beta1 with LiteralFloat32")
+
+			Expect(k8sClient.Create(context.TODO(), &crd)).Should(Succeed())
+
+			key = types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		})
 	})
 
