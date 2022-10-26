@@ -125,7 +125,7 @@ test-mk-do: manifests generate fmt vet envtest generate-deploy ## Run tests agai
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt vet manifests ## Build manager binary.
 	go build -ldflags=$(LDFLAGS) -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.

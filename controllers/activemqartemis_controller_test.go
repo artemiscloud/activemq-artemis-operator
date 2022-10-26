@@ -259,7 +259,53 @@ var _ = Describe("artemis controller", func() {
 				},
 			}
 
-			By("deploying v2lpha5 with float32")
+			By("deploying v2lpha5 with float32, ignored")
+			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
+
+			key := types.NamespacedName{Name: namer.CrToSS(toCreate.Name), Namespace: defaultNamespace}
+			createdSs := &appsv1.StatefulSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			By("checking status - using original version - exercise in marshalling")
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrdv2alpha5 := &v2alpha5.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrdv2alpha5)).Should(Succeed())
+				g.Expect(len(createdCrdv2alpha5.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+			}, timeout, interval).Should(Succeed())
+
+			By("checking status - using served version - with conditions")
+			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
+			createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
+				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+
+		It("can reconcile latest version with config in brokerProperties", func() {
+
+			toCreate := brokerv1beta1.ActiveMQArtemis{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ActiveMQArtemis",
+					APIVersion: brokerv1beta1.GroupVersion.Identifier(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nameFromTest(),
+					Namespace: defaultNamespace,
+				},
+				Spec: brokerv1beta1.ActiveMQArtemisSpec{
+					BrokerProperties: []string{
+						"addressesSettings.#.redeliveryDelayMultiplier=2.3",
+						"addressesSettings.#.redeliveryCollisionAvoidanceFactor=1.2",
+					},
+				},
+			}
 
 			Expect(k8sClient.Create(context.TODO(), &toCreate)).Should(Succeed())
 
@@ -274,34 +320,11 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
 				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
+				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-			crd := generateArtemisSpec(defaultNamespace)
-			var literalVar = brokerv1beta1.LiteralFloat32("3.5")
-			crd.Spec.AddressSettings = brokerv1beta1.AddressSettingsType{
-				ApplyRule: &ma,
-				AddressSetting: []brokerv1beta1.AddressSettingType{
-					{
-						Match:                              "#",
-						RedeliveryCollisionAvoidanceFactor: &literalVar,
-					},
-				},
-			}
+			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
 
-			By("deploying v1beta1 with LiteralFloat32")
-
-			Expect(k8sClient.Create(context.TODO(), &crd)).Should(Succeed())
-
-			key = types.NamespacedName{Name: namer.CrToSS(crd.Name), Namespace: defaultNamespace}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, key, createdSs)).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
-			key = types.NamespacedName{Name: toCreate.Name, Namespace: toCreate.Namespace}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, key, createdCrd)).Should(Succeed())
-				g.Expect(len(createdCrd.Status.PodStatus.Stopped)).Should(BeEquivalentTo(1))
-			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 		})
 	})
 
