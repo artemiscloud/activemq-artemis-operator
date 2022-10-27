@@ -114,6 +114,8 @@ var (
 	managerChannel chan struct{}
 
 	logBuffer *bytes.Buffer
+
+	artemisGvk = schema.GroupVersionKind{Group: "broker", Version: "v1beta1", Kind: "ActiveMQArtemis"}
 )
 
 func TestAPIs(t *testing.T) {

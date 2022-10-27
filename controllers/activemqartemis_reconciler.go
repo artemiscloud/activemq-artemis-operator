@@ -438,7 +438,7 @@ func isLocalOnly() bool {
 	return false
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis").WithName("sourceEnvVarFromSecret")
 
@@ -460,12 +460,15 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomR
 
 	secretDefinition := secrets.NewSecret(namespacedName, secretName, stringDataMap, namer.LabelBuilder.Labels())
 
+	desired := false
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(1).Info("Did not find secret " + secretName)
+		} else {
+			log.Error(err, "Error while retrieving secret", "key", namespacedName)
 		}
+		desired = true
 	} else {
-
 		log.V(1).Info("updating from " + secretName)
 		for k := range *envVars {
 			elem, exists := secretDefinition.Data[k]
@@ -476,10 +479,20 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(fcustomR
 				}
 			}
 		}
+		//if operator doesn't own it, don't track
+		if len(secretDefinition.OwnerReferences) > 0 {
+			for _, or := range secretDefinition.OwnerReferences {
+				if or.Kind == "ActiveMQArtemis" && or.Name == customResource.Name {
+					desired = true
+				}
+			}
+		}
 	}
 
-	// ensure processResources sees it
-	reconciler.trackDesired(secretDefinition)
+	if desired {
+		// ensure processResources sees it
+		reconciler.trackDesired(secretDefinition)
+	}
 
 	internalSecretName := secretName + "-internal"
 	if len(internalStringDataMap) > 0 {
