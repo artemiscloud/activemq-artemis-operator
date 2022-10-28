@@ -425,4 +425,11 @@ const (
 	ValidConditionType                      = "Valid"
 	ValidConditionSuccessReason             = "ValidationSucceeded"
 	ValidConditionFailedReservedLabelReason = "ReservedLabelReference"
+
+	ConfigAppliedConditionType                            = "BrokerPropertiesApplied"
+	ConfigAppliedConditionSynchedReason                   = "Applied"
+	ConfigAppliedConditionUnknownReason                   = "UnableToRetrieveStatus"
+	ConfigAppliedConditionOutOfSyncReason                 = "OutOfSync"
+	ConfigAppliedConditionOutOfSyncMessage                = "Waiting for the Broker to ackowledge the changes"
+	ConfigAppliedConditionNoJolokiaClientsAvailableReason = "NoJolokiaClientsAvailable"
 )
