@@ -2048,8 +2048,8 @@ spec:
                         not. Defaults to "".'
                       type: string
                     valueFrom:
-                      description: Source for the environment variable's value. Cannot
-                        be used if value is not empty.
+                      description: Source for the environment variable's value. Only
+                        used if value property is empty.
                       properties:
                         configMapKeyRef:
                           description: Selects a key of a ConfigMap.
