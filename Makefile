@@ -93,17 +93,17 @@ help: ## Display this help.
 ##@ Development
 
 manifests: controller-gen kustomize
-ifeq ($(ENABLE_WEBHOOKS),true)
-## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-## v2alpha3, v2alpha4 and v2alpha3 requires allowDangerousTypes=true because they use float32 type
-	cd config/manager && $(KUSTOMIZE) edit add resource webhook_secret.yaml 
-	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	find config -type f -exec sed -i -e '/creationTimestamp/d' {} \;
-else
+ifeq ($(USE_CERTMANAGER),true)
 ## Generate ClusterRole and CustomResourceDefinition objects.
 ## v2alpha3, v2alpha4 and v2alpha3 requires allowDangerousTypes=true because they use float32 type
 	cd config/manager && $(KUSTOMIZE) edit remove resource webhook_secret.yaml 
 	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=config/crd/bases
+	find config -type f -exec sed -i -e '/creationTimestamp/d' {} \;
+else
+## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+## v2alpha3, v2alpha4 and v2alpha3 requires allowDangerousTypes=true because they use float32 type
+	cd config/manager && $(KUSTOMIZE) edit add resource webhook_secret.yaml 
+	$(CONTROLLER_GEN) rbac:roleName=$(OPERATOR_CLUSTER_ROLE_NAME) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	find config -type f -exec sed -i -e '/creationTimestamp/d' {} \;
 endif
 
@@ -120,10 +120,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -ginkgo.fail-fast -coverprofile cover.out
 
 test-mk: manifests generate fmt vet envtest ## Run tests against minikube with local operator.
-	USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./... $(TEST_ARGS) -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
+	USE_EXISTING_CLUSTER=true go test  ./... $(TEST_ARGS) -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -coverprofile cover-mk.out
 
 test-mk-do: manifests generate fmt vet envtest generate-deploy ## Run tests against minikube with deployed operator(do)
-	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true ENABLE_WEBHOOKS=false go test  ./controllers/... -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -ginkgo.v -ginkgo.label-filter="do"
+	DEPLOY_OPERATOR=true USE_EXISTING_CLUSTER=true go test  ./controllers/... -test.timeout=30m -ginkgo.slow-spec-threshold=30s -ginkgo.fail-fast -ginkgo.v -ginkgo.label-filter="do"
 
 ##@ Build
 

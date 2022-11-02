@@ -1,6 +1,8 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: activemq-artemis-operator/activemq-artemis-serving-cert
   name: activemq-artemis-validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:

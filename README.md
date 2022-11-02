@@ -26,3 +26,34 @@ Install delve in the `builder` container, i.e. `RUN go install github.com/go-del
 Disable build optimization, i.e. `go build -gcflags="all=-N -l"`
 Copy delve to the `base-env` container, i.e. `COPY --from=builder /go/bin/dlv /bin`
 Execute operator using delve, i.e. `/bin/dlv exec --listen=0.0.0.0:40000 --headless=true --api-version=2 --accept-multiclient ${OPERATOR} $@`
+
+## Using cert-manager
+
+In case that you want to leverage the cert-manager operator for creating the Webhook certificates, you
+must have the operator installed on your cluster. Refer to the [cert-manager installation instructions](https://cert-manager.io/docs/installation/).
+
+Then use the `USE_CERTMANAGER=true` flag during the local deployment.
+
+```bash
+make deploy USE_CERTMANAGER=true
+```
+
+Then check that the volume is properly mounted:
+
+```bash
+$ kubectl get deployment -n activemq-artemis-operator activemq-artemis-controller-manager -oyaml | yq .spec.template.spec.volumes
+- name: cert
+  secret:
+    defaultMode: 420
+    secretName: webhook-server-cert
+```
+
+By default a self-signed certificate is created and used instead:
+
+```bash
+$ kubectl get deployment -n activemq-artemis-operator activemq-artemis-controller-manager -oyaml | yq .spec.template.spec.volumes
+- name: cert
+  secret:
+    defaultMode: 420
+    secretName: activemq-artemis-webhook-server-cert
+```
