@@ -28,6 +28,8 @@ spec:
         command:
         - /home/activemq-artemis-operator/bin/entrypoint
         env:
+        - name: ENABLE_WEBHOOKS
+          value: "true"
         - name: OPERATOR_NAME
           valueFrom:
             fieldRef:
@@ -76,8 +78,6 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.8
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2260
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.9
-        - name: ENABLE_WEBHOOKS
-          value: "false"
         image: quay.io/artemiscloud/activemq-artemis-operator:1.0.6
         livenessProbe:
           httpGet:
