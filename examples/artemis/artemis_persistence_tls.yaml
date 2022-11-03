@@ -9,7 +9,7 @@ spec:
     persistenceEnabled: true
     messageMigration: true
   acceptors:
-  - name: amqp
-    protocols: amqp
-    port: 5672
-    sslEnabled: true
+    - name: amqp
+      protocols: amqp
+      port: 5672
+      sslEnabled: true

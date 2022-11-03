@@ -6,5 +6,5 @@ spec:
   addressName: emptyAddress
   queueName: ""
   routingType: multicast
-  removeFromBrokerOnDelete: true
+  removeFromBrokerOnDelete: true  # optional
 

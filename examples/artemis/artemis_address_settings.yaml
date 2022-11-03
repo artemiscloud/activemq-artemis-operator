@@ -7,7 +7,7 @@ spec:
     size: 1
     image: placeholder
   addressSettings:
-    applyRule: merge_all
+    applyRule: merge_all # merge_replace| replace_all | See documentation for details
     addressSetting:
     - match: '#'
       deadLetterAddress: DLQ
