@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: activemq-artemis-catalog
+  namespace: activemq-artemis-operator
+spec:
+  sourceType: grpc
+  image: quay.io/artemiscloud/activemq-artemis-operator-catalog:v1.0.0
+  displayName: ActiveMQ Artemis Operators
+  publisher: Red Hat

@@ -8,9 +8,10 @@ VERSION ?= 1.0.0
 KUBE_CLI=kubectl
 OPERATOR_VERSION := 1.0.6
 OPERATOR_ACCOUNT_NAME := activemq-artemis-operator
-OPERATOR_CLUSTER_ROLE_NAME := operator-role
+OPERATOR_CLUSTER_ROLE_NAME := operator
 OPERATOR_IMAGE_REPO := quay.io/artemiscloud/activemq-artemis-operator
 OPERATOR_NAMESPACE := activemq-artemis-operator
+CATALOG_NAMESPACE := $(OPERATOR_NAMESPACE)
 GO_MODULE := github.com/artemiscloud/activemq-artemis-operator
 
 # directory to hold static resources for deploying operator
@@ -248,3 +249,13 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+# Deploy the catalog.
+.PHONY: catalog-deploy
+catalog-deploy: opm ## Creates a catalog source
+	@sed -i 's|image.*|image: $(CATALOG_IMG)|' deploy/catalog/catalog-source.yaml
+	@sed -i 's|namespace.*|namespace: $(CATALOG_NAMESPACE)|' deploy/catalog/catalog-source.yaml
+	$(KUBE_CLI) apply -f deploy/catalog/catalog-source.yaml
+
+catalog-undeploy: ## Removes the catalog source
+	$(KUBE_CLI) delete -f deploy/catalog/catalog-source.yaml

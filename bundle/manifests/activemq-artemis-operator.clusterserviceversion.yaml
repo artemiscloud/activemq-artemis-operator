@@ -82,7 +82,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: activemq-artemis-operator.v1.0.0
   namespace: placeholder
@@ -215,6 +215,8 @@ spec:
                 command:
                 - /home/activemq-artemis-operator/bin/entrypoint
                 env:
+                - name: ENABLE_WEBHOOKS
+                  value: "true"
                 - name: OPERATOR_NAME
                   valueFrom:
                     fieldRef:
@@ -263,8 +265,6 @@ spec:
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.8
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2260
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.9
-                - name: ENABLE_WEBHOOKS
-                  value: "false"
                 image: quay.io/artemiscloud/activemq-artemis-operator:1.0.6
                 livenessProbe:
                   httpGet:
@@ -273,6 +273,10 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: manager
+                ports:
+                - containerPort: 9443
+                  name: webhook-server
+                  protocol: TCP
                 readinessProbe:
                   httpGet:
                     path: /readyz
@@ -282,10 +286,19 @@ spec:
                 resources: {}
                 securityContext:
                   allowPrivilegeEscalation: false
+                volumeMounts:
+                - mountPath: /tmp/k8s-webhook-server/serving-certs
+                  name: cert
+                  readOnly: true
               securityContext:
                 runAsNonRoot: true
               serviceAccountName: activemq-artemis-controller-manager
               terminationGracePeriodSeconds: 10
+              volumes:
+              - name: cert
+                secret:
+                  defaultMode: 420
+                  secretName: webhook-server-cert
       permissions:
       - rules:
         - apiGroups:
@@ -319,6 +332,191 @@ spec:
           verbs:
           - create
           - patch
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - routes
+          - secrets
+          - serviceaccounts
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisaddresses/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemises/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemisscaledowns/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - activemqartemissecurities/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - broker.amq.io
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - networking.k8s.io
+          resources:
+          - ingresses
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          - routes/custom-host
+          - routes/status
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
         serviceAccountName: activemq-artemis-controller-manager
     strategy: deployment
   installModes:
@@ -351,3 +549,136 @@ spec:
     name: ArtemisCloud
     url: https://github.com/artemiscloud/activemq-artemis-operator
   version: 1.0.0
+  webhookdefinitions:
+  - admissionReviewVersions:
+    - v2alpha5
+    - v1beta1
+    containerPort: 443
+    conversionCRDs:
+    - activemqartemises.broker.amq.io
+    deploymentName: activemq-artemis-controller-manager
+    generateName: cactivemqartemises.kb.io
+    sideEffects: None
+    targetPort: 9443
+    type: ConversionWebhook
+    webhookPath: /convert
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: mactivemqartemis.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemises
+    sideEffects: None
+    targetPort: 9443
+    type: MutatingAdmissionWebhook
+    webhookPath: /mutate-broker-amq-io-v1beta1-activemqartemis
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: mactivemqartemisaddress.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemisaddresses
+    sideEffects: None
+    targetPort: 9443
+    type: MutatingAdmissionWebhook
+    webhookPath: /mutate-broker-amq-io-v1beta1-activemqartemisaddress
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: mactivemqartemissecurity.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemissecurities
+    sideEffects: None
+    targetPort: 9443
+    type: MutatingAdmissionWebhook
+    webhookPath: /mutate-broker-amq-io-v1beta1-activemqartemissecurity
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: vactivemqartemis.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemises
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-broker-amq-io-v1beta1-activemqartemis
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: vactivemqartemisaddress.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemisaddresses
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-broker-amq-io-v1beta1-activemqartemisaddress
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: activemq-artemis-controller-manager
+    failurePolicy: Fail
+    generateName: vactivemqartemissecurity.kb.io
+    rules:
+    - apiGroups:
+      - broker.amq.io
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - activemqartemissecurities
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-broker-amq-io-v1beta1-activemqartemissecurity
