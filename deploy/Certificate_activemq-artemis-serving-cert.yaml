@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: activemq-artemis-serving-cert
+spec:
+  dnsNames:
+  - activemq-artemis-webhook-service.activemq-artemis-operator.svc
+  - activemq-artemis-webhook-service.activemq-artemis-operator.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: activemq-artemis-selfsigned-issuer
+  secretName: webhook-server-cert

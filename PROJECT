@@ -53,11 +53,6 @@ resources:
   path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5
   plural: activemqartemises
   version: v2alpha5
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
