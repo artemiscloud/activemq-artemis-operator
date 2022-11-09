@@ -158,7 +158,7 @@ func setUpEnvTest() {
 	createControllerManagerForSuite()
 }
 
-//Set up test-proxy for external http requests
+// Set up test-proxy for external http requests
 func setUpTestProxy() {
 
 	var err error
@@ -372,8 +372,8 @@ func setUpRealOperator() {
 	Expect(err).To(Succeed(), "failed to install operator")
 }
 
-//Deploy operator resources
-//TODO: provide 'watch all namespaces' option
+// Deploy operator resources
+// TODO: provide 'watch all namespaces' option
 func installOperator() error {
 	logf.Log.Info("#### Installing Operator ####")
 	for _, res := range oprRes {

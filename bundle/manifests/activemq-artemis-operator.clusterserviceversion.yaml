@@ -82,7 +82,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.25.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: activemq-artemis-operator.v1.0.0
   namespace: placeholder
@@ -190,7 +190,9 @@ spec:
   install:
     spec:
       deployments:
-      - name: activemq-artemis-controller-manager
+      - label:
+          control-plane: controller-manager
+        name: activemq-artemis-controller-manager
         spec:
           replicas: 1
           selector:
@@ -539,4 +541,41 @@ spec:
   provider:
     name: ArtemisCloud
     url: https://github.com/artemiscloud/activemq-artemis-operator
+  relatedImages:
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
+    name: activemq-artemis-broker-init-2150
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.4
+    name: activemq-artemis-broker-init-2160
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.10
+    name: activemq-artemis-broker-init-2180
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.0
+    name: activemq-artemis-broker-init-2200
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.2
+    name: activemq-artemis-broker-init-2210
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.5
+    name: activemq-artemis-broker-init-2220
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.7
+    name: activemq-artemis-broker-init-2230
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.8
+    name: activemq-artemis-broker-init-2250
+  - image: quay.io/artemiscloud/activemq-artemis-broker-init:1.0.9
+    name: activemq-artemis-broker-init-2260
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.0
+    name: activemq-artemis-broker-kubernetes-2150
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.1
+    name: activemq-artemis-broker-kubernetes-2160
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:0.2.7
+    name: activemq-artemis-broker-kubernetes-2180
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.0
+    name: activemq-artemis-broker-kubernetes-2200
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.2
+    name: activemq-artemis-broker-kubernetes-2210
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.5
+    name: activemq-artemis-broker-kubernetes-2220
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.7
+    name: activemq-artemis-broker-kubernetes-2230
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.8
+    name: activemq-artemis-broker-kubernetes-2250
+  - image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.9
+    name: activemq-artemis-broker-kubernetes-2260
   version: 1.0.0

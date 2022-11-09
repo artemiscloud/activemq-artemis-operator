@@ -322,7 +322,7 @@ func GetDefaultLabels(cr *brokerv1beta1.ActiveMQArtemis) map[string]string {
 	return defaultLabelData.Labels()
 }
 
-//only test uses this
+// only test uses this
 func NewReconcileActiveMQArtemis(c rtclient.Client, s *runtime.Scheme) ActiveMQArtemisReconciler {
 	return ActiveMQArtemisReconciler{
 		Client: c,

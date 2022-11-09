@@ -1,5 +1,7 @@
 # Build the manager binary
-FROM golang:1.17 as builder
+FROM golang:1.19 as builder
+ARG TARGETOS
+ARG TARGETARCH
 
 ENV GOOS=linux
 ENV CGO_ENABLED=0
@@ -27,7 +29,11 @@ COPY version/ version/
 COPY entrypoint/ entrypoint/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+# the GOARCH has not a default value to allow the binary be built according to the host where the command
+# was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
+# the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
+# by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a \
     -ldflags="-X '${GO_MODULE}/version.CommitHash=`git rev-parse --short HEAD`' \
     -X '${GO_MODULE}/version.BuildTimestamp=`date '+%Y-%m-%dT%H:%M:%S'`'" \
     -o /tmp/activemq-artemis-operator/${BROKER_NAME}-operator main.go

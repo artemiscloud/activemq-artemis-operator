@@ -219,7 +219,7 @@ func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledow
 	c.ssToCrMap[namespacedName] = instance
 }
 
-//for debug only
+// for debug only
 func (c *Controller) dumpSsNamesMap() {
 	for k, v := range c.ssNamesMap {
 		dlog.Info("ssMap", "key", k)
