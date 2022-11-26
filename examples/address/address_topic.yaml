@@ -3,8 +3,6 @@ kind: ActiveMQArtemisAddress
 metadata:
   name: ex-aaoaddress
 spec:
-  addressName: myAddress0
-  queueName: myQueue0
-  routingType: anycast
+  addressName: emptyAddress
+  routingType: multicast
   removeFromBrokerOnDelete: true
-

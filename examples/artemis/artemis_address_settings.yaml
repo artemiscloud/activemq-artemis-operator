@@ -17,6 +17,3 @@ spec:
       maxSizeBytes: '10m'
     - match: 'jms'
       deadLetterAddress: jmsdlq
-
-
-
