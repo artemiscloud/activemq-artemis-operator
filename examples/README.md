@@ -13,6 +13,4 @@ kubectl create -f examples/artemis/artemis_single.yaml -n <namespace>
 
 See https://artemiscloud.io/ for tutorials and more information about Artemis.
 
-For security enabled (TLS) connections example, please follow guide [Secured connection with ArtemisCloud Operator](https://artemiscloud.io/docs/tutorials/ssl_broker_setup).
-
-[ArtemisCloud Operator Security Configuration Example](https://github.com/artemiscloud/artemiscloud-examples/tree/main/operator/keycloak) provides example of JAAS configuration with Keycloak.
+For security enabled (TLS) connections example, please follow guide [Secured connection with ArtemisCloud Operator](https://artemiscloud.io/docs/tutorials/ssl_broker_setup)
