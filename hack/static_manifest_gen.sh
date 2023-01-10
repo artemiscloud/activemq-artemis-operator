@@ -47,17 +47,40 @@ function writeFile() {
       fi
       ;;
 
+    ClusterRole)
+      if [[ ${resource_name} =~ (operator) ]]; then
+        createFile "$installDir/060_common_cluster_role.yaml"
+        sed -i -e 's/name: activemq-artemis-operator-role/name: activemq-artemis-operator-cluster-role/' \
+          "$installDir/060_common_cluster_role.yaml"  
+      else
+        createFile "$installDir/${resource_name}.yaml"
+      fi
+      ;;
+
     RoleBinding)
       if [[ ${resource_name} =~ (operator) ]]; then
         createFile "$installDir/070_namespace_role_binding.yaml"
         createFile "$installDir/070_cluster_role_binding.yaml"
+
         sed -i -e 's/kind: Role/kind: ClusterRole/' \
           -e 's/kind: RoleBinding/kind: ClusterRoleBinding/' \
           "$installDir/070_cluster_role_binding.yaml"
         echo '  namespace: activemq-artemis-operator' >> \
           "$installDir/070_cluster_role_binding.yaml"
+
       elif [[ ${resource_name} =~ (leader-election) ]]; then
         createFile "$installDir/090_election_role_binding.yaml"
+      else
+        createFile "$installDir/${resource_name}.yaml"
+      fi
+      ;;
+
+    ClusterRoleBinding)
+      if [[ ${resource_name} =~ (operator) ]]; then
+        createFile "$installDir/070_common_cluster_role_binding.yaml"
+
+        sed -i -e 's/name: activemq-artemis-operator-role/name: activemq-artemis-operator-cluster-role/' \
+          "$installDir/070_common_cluster_role_binding.yaml"
       else
         createFile "$installDir/${resource_name}.yaml"
       fi

@@ -118,7 +118,7 @@ func RetriveSecret(namespacedName types.NamespacedName, secretName string, label
 }
 
 func GetValueFromSecret(namespace string,
-	secretName string, key string, labels map[string]string, client client.Client, scheme *runtime.Scheme, owner metav1.Object) *string {
+	secretName string, key string, labels map[string]string, client client.Client) *string {
 	//check if the secret exists.
 	namespacedName := types.NamespacedName{
 		Name:      secretName,
