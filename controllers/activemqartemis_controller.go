@@ -237,25 +237,7 @@ func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Cli
 		return true, nil
 	}
 
-	if !validBrokerVersion(customResource) {
-		condition := metav1.Condition{
-			Type:    common.ValidConditionType,
-			Status:  metav1.ConditionFalse,
-			Reason:  common.ValidConditionImageVersionConflictReason,
-			Message: common.ImageVersionConflictMessage,
-		}
-		meta.SetStatusCondition(&customResource.Status.Conditions, condition)
-		return true, nil
-	}
-
 	return false, nil
-}
-
-func validBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) bool {
-	if customResource.Spec.Version != "" {
-		return customResource.Spec.DeploymentPlan.Image == "" && customResource.Spec.DeploymentPlan.InitImage == ""
-	}
-	return true
 }
 
 func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) ([]string, error) {

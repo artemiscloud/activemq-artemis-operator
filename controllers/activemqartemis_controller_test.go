@@ -184,34 +184,6 @@ var _ = Describe("artemis controller", func() {
 
 		})
 
-		It("version validation when both version and images are explicitly specified", func() {
-			By("deploy a broker with images specified")
-			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
-				candidate.Spec.Version = "2"
-				candidate.Spec.DeploymentPlan.Image = "myrepo/my-image:1.0"
-				candidate.Spec.DeploymentPlan.InitImage = "myrepo/my-init-image:1.0"
-			})
-
-			By("checking the CR gets rejected with status updated")
-			brokerKey := types.NamespacedName{Name: createdBrokerCr.Name, Namespace: createdBrokerCr.Namespace}
-			Eventually(func(g Gomega) {
-
-				g.Expect(k8sClient.Get(ctx, brokerKey, createdBrokerCr)).Should(Succeed())
-				g.Expect(meta.IsStatusConditionTrue(createdBrokerCr.Status.Conditions, common.ValidConditionType)).Should(BeFalse())
-				condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, common.ValidConditionType)
-				g.Expect(condition).NotTo(BeNil())
-				g.Expect(condition.Reason).To(Equal(common.ValidConditionImageVersionConflictReason))
-				g.Expect(condition.Message).To(Equal(common.ImageVersionConflictMessage))
-			}, timeout, interval).Should(Succeed())
-
-			// cleanup
-			Expect(k8sClient.Delete(ctx, brokerCr)).Should(Succeed())
-			By("check it has gone")
-			Eventually(func() bool {
-				return checkCrdDeleted(brokerCr.Name, defaultNamespace, createdBrokerCr)
-			}, timeout, interval).Should(BeTrue())
-		})
-
 		It("version handling when images are explicitly specified", func() {
 			By("deploy a broker with images specified")
 			brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {

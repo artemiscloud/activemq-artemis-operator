@@ -19,17 +19,15 @@ import (
 )
 
 const (
-	ReadyConditionType          = "Ready"
-	ReadyConditionReason        = "ResourceReady"
-	NotReadyConditionReason     = "WaitingForAllConditions"
-	NotReadyConditionMessage    = "Some conditions are not met"
-	ImageVersionConflictMessage = "Version and Images cannot be specified at the same time"
+	ReadyConditionType       = "Ready"
+	ReadyConditionReason     = "ResourceReady"
+	NotReadyConditionReason  = "WaitingForAllConditions"
+	NotReadyConditionMessage = "Some conditions are not met"
 
-	ValidConditionType                       = "Validation"
-	ValidConditionSuccessReason              = "ValidationSucceded"
-	ValidConditionMissingResourcesReason     = "MissingDependentResources"
-	ValidConditionFailedReason               = "UnableToPerformValidation"
-	ValidConditionImageVersionConflictReason = "VersionAndImagesConflict"
+	ValidConditionType                   = "Validation"
+	ValidConditionSuccessReason          = "ValidationSucceded"
+	ValidConditionMissingResourcesReason = "MissingDependentResources"
+	ValidConditionFailedReason           = "UnableToPerformValidation"
 )
 
 func SetReadyCondition(conditions *[]metav1.Condition) {
