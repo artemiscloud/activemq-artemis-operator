@@ -239,29 +239,41 @@ func TestGetConfigAppliedConfigMapName(t *testing.T) {
 	name := getConfigAppliedConfigMapName(&cr)
 	assert.Equal(t, "test-ns", name.Namespace)
 	assert.Equal(t, "test-props", name.Name)
-}
 
-func TestExtractSha(t *testing.T) {
-	json := `{"configuration": {"properties": {"a_status.properties": {"alder32": "123456"}}}}`
-	status, err := unmarshallStatus(json)
-	assert.NoError(t, err)
-	sha, err := extractSha(status, "a_status.properties")
-	assert.Equal(t, "123456", sha)
-	assert.NoError(t, err)
+	var tests = []struct {
+		input    string
+		hasError bool
+		sha      string
+	}{
+		{
+			`{"configuration": {"properties": {"a_status.properties": {"alder32": "123456"}}}}`,
+			false,
+			"123456",
+		},
+		{
+			`{"configuration": {"properties": {"a_status.properties": {}}}}`,
+			false,
+			"",
+		}, {
+			`you shall fail`,
+			true,
+			"",
+		},
+	}
 
-	json = `{"configuration": {"properties": {"a_status.properties": {}}}}`
-	status, err = unmarshallStatus(json)
-	assert.NoError(t, err)
-	sha, err = extractSha(status, "a_status.properties")
-	assert.Empty(t, sha)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		status, err := unmarshallStatus(tt.input)
+		if tt.hasError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			sha, err := extractSha(status, "a_status.properties")
 
-	json = `you shall fail`
-	status, err = unmarshallStatus(json)
-	assert.Error(t, err)
-	sha, err = extractSha(status, "a_status.properties")
-	assert.Empty(t, sha)
-	assert.Error(t, err)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.sha, sha)
+		}
+
+	}
 }
 
 func extractSha(status brokerStatus, name string) (string, error) {
@@ -337,7 +349,6 @@ func TestExtractErrors(t *testing.T) {
 
 	marshalledErrorsStr := marshallApplyErrors(appplyErrors)
 	assert.True(t, strings.Contains(marshalledErrorsStr, "bla"))
-
 }
 
 func TestGetJaasConfigExtraMountPath(t *testing.T) {
@@ -398,11 +409,15 @@ func TestGetJaasConfigExtraMountPathNotPresent(t *testing.T) {
 	assert.False(t, found)
 }
 
-func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
+func TestNewPodTemplateSpecForCR_IncludesJavaArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
 	reconciler := &ActiveMQArtemisReconcilerImpl{}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "some-ns",
+		},
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
 			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
 				ExtraMounts: brokerv1beta1.ExtraMountsType{
@@ -423,21 +438,25 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
 	expectedEnv := v1.EnvVar{
-		Name:  "DEBUG_ARGS",
-		Value: "-Djava.security.auth.login.config=/amq/extra/configmaps/test-config-jaas-config/login.config",
+		Name:  "JAVA_ARGS_APPEND",
+		Value: "-Djava.security.auth.login.config=/amq/extra/configmaps/test-config-jaas-config/login.config -Dhawtio.realm=management -Djava.security.properties=/amq/extra/configmaps/test-jaas-mgmt/security.properties",
 	}
 	assert.Contains(t, newSpec.Spec.Containers[0].Env, expectedEnv)
 }
 
-func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
+func TestNewPodTemplateSpecForCR_AppendsJavaArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
 	reconciler := &ActiveMQArtemisReconcilerImpl{}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "some-ns",
+		},
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
 			Env: []v1.EnvVar{
 				{
-					Name:  "DEBUG_ARGS",
+					Name:  "JAVA_ARGS_APPEND",
 					Value: "-Dtest.arg=foo",
 				},
 			},
@@ -460,8 +479,26 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
 	expectedEnv := v1.EnvVar{
-		Name:  "DEBUG_ARGS",
-		Value: "-Dtest.arg=foo -Djava.security.auth.login.config=/amq/extra/configmaps/test-config-jaas-config/login.config",
+		Name:  "JAVA_ARGS_APPEND",
+		Value: "-Dtest.arg=foo -Djava.security.auth.login.config=/amq/extra/configmaps/test-config-jaas-config/login.config -Dhawtio.realm=management -Djava.security.properties=/amq/extra/configmaps/test-jaas-mgmt/security.properties",
 	}
 	assert.Contains(t, newSpec.Spec.Containers[0].Env, expectedEnv)
+}
+
+func TestGetServiceAccountNameForCR(t *testing.T) {
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "broker",
+			Namespace: "broker-ns",
+		},
+	}
+	assert.Equal(t, cr.Name, getServiceAccountNameForCR(cr))
+
+	serviceAccountName := ""
+	cr.Spec.DeploymentPlan.PodSecurity.ServiceAccountName = &serviceAccountName
+	assert.Equal(t, cr.Name, getServiceAccountNameForCR(cr))
+
+	serviceAccountName = "custom-sa"
+	cr.Spec.DeploymentPlan.PodSecurity.ServiceAccountName = &serviceAccountName
+	assert.Equal(t, serviceAccountName, getServiceAccountNameForCR(cr))
 }

@@ -18,11 +18,11 @@ package controllers
 
 import (
 	"context"
-	"io/ioutil"
 	"time"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/draincontroller"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -105,7 +105,7 @@ func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, 
 	controllerKey := "*"
 	if localOnly {
 		if namespace == "" {
-			bytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+			bytes, err := sdkk8sutil.GetOperatorNamespace()
 			if err != nil {
 				slog.Error(err, "Using --localOnly without --namespace, but unable to determine namespace")
 			}

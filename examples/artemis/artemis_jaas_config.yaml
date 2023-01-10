@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-jaas-config
+data:
+  login.config: |2
+      activemq {
+        org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient
+          reload=true
+          org.apache.activemq.jaas.properties.user="other-users.properties"
+          org.apache.activemq.jaas.properties.role="other-roles.properties"
+        ;
+      };
+  other-roles.properties: |-
+    admin=bob
+    other=joe
+  other-users.properties: |-
+    bob=admin1!
+    joe=joe1!
+---
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  deploymentPlan:
+    size: 1
+    image: placeholder
+    extraMounts:
+      configMaps:
+        - custom-jaas-config

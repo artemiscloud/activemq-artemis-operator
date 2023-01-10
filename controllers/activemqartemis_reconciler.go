@@ -24,6 +24,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/sdkk8sutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
@@ -34,6 +35,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,6 +53,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	netv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -69,6 +72,7 @@ const (
 	defaultLivenessProbeInitialDelay = 5
 	TCPLivenessPort                  = 8161
 	jaasConfigSuffix                 = "-jaas-config"
+	operatorServiceAccount           = "activemq-artemis-controller-manager"
 	loggingConfigSuffix              = "-logging-config"
 
 	cfgMapPathBase = "/amq/extra/configmaps/"
@@ -209,6 +213,17 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 	obj := reconciler.cloneOfDeployed(reflect.TypeOf(appsv1.StatefulSet{}), ssNamespacedName.Name)
 	if obj != nil {
 		currentStatefulSet = obj.(*appsv1.StatefulSet)
+	}
+
+	err = reconciler.ensureServiceAccountForCR(customResource, client)
+	if err != nil {
+		reqLogger.Error(err, "Error ensuring serviceAccount")
+		return nil, err
+	}
+	err = reconciler.ensureRBACForCR(customResource, client)
+	if err != nil {
+		reqLogger.Error(err, "Error ensuring RBAC")
+		return nil, err
 	}
 
 	log.Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
@@ -1628,14 +1643,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		}
 	}
 	// validation success
-	prevCondition := meta.FindStatusCondition(customResource.Status.Conditions, common.ValidConditionType)
-	if prevCondition == nil {
-		meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
-			Type:   common.ValidConditionType,
-			Status: metav1.ConditionTrue,
-			Reason: common.ValidConditionSuccessReason,
-		})
-	}
+	meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
+		Type:   common.ValidConditionType,
+		Status: metav1.ConditionTrue,
+		Reason: common.ValidConditionSuccessReason,
+	})
 
 	pts := pods.MakePodTemplateSpec(current, namespacedName, labels)
 	podSpec := &pts.Spec
@@ -1680,6 +1692,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	} else {
 		configMapsToCreate = append(configMapsToCreate, resourceName)
 	}
+	authPropertiesConfigMapName := reconciler.addConfigMapForAuthProperties(customResource)
+	configMapsToCreate = append(configMapsToCreate, authPropertiesConfigMapName)
 	extraVolumes, extraVolumeMounts := createExtraConfigmapsAndSecrets(container, configMapsToCreate, secretsToCreate)
 
 	reqLogger.Info("Extra volumes", "volumes", extraVolumes)
@@ -1733,7 +1747,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	// JAAS Config
 	if jaasConfigPath, found := getJaasConfigExtraMountPath(customResource); found {
 		debugArgs := corev1.EnvVar{
-			Name:  "DEBUG_ARGS",
+			Name:  "JAVA_ARGS_APPEND",
 			Value: fmt.Sprintf("-Djava.security.auth.login.config=%v", jaasConfigPath),
 		}
 		environments.CreateOrAppend(podSpec.Containers, &debugArgs)
@@ -1746,6 +1760,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		}
 		environments.CreateOrAppend(podSpec.Containers, &loggerOpts)
 	}
+	// JAAS Management Config
+	jaasMgmtPath := getJaasManagementPath(customResource)
+	debugArgs := corev1.EnvVar{
+		Name:  "JAVA_ARGS_APPEND",
+		Value: fmt.Sprintf("-Dhawtio.realm=management -Djava.security.properties=%v/security.properties", jaasMgmtPath),
+	}
+	environments.CreateOrAppend(podSpec.Containers, &debugArgs)
 
 	//add empty-dir volume and volumeMounts to main container
 	volumeForCfg := volumes.MakeVolumeForCfg(cfgVolumeName)
@@ -1942,7 +1963,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	environments.Create(podSpec.InitContainers, &envBrokerCustomInstanceDir)
 
 	// NOTE: PodSecurity contains a RunAsUser that will be overridden by that in the provided PodSecurityContext if any
-	configPodSecurity(podSpec, &customResource.Spec.DeploymentPlan.PodSecurity)
+	configPodSecurity(podSpec, customResource)
 	configurePodSecurityContext(podSpec, customResource.Spec.DeploymentPlan.PodSecurityContext)
 
 	clog.Info("Final Init spec", "Detail", podSpec.InitContainers)
@@ -2160,6 +2181,21 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 	return resourceName.Name, true
 }
 
+const statusPropertiesName = "a_status.properties"
+
+func appendStatus(data map[string]string, shaOfMap string) map[string]string {
+	buf := &bytes.Buffer{}
+	fmt.Fprintln(buf, "# generated by crd")
+	fmt.Fprintln(buf, "#")
+
+	// populating the sha key of the config::properties broker status object with JSON
+	fmt.Fprintf(buf, "status={\"properties\":{\"%s\": { \"cr:alder32\": \"%s\"}}}\n", statusPropertiesName, shaOfMap)
+
+	// a is alphanumericlaly first to be applied
+	data[statusPropertiesName] = buf.String()
+	return data
+}
+
 func alder32StringValue(alder32Bytes []byte) string {
 	return fmt.Sprintf("%d", binary.BigEndian.Uint32(alder32Bytes))
 }
@@ -2177,15 +2213,103 @@ func alder32Of(props []string) []byte {
 }
 
 func brokerPropertiesData(props []string) map[string]string {
-	buf := &bytes.Buffer{}
-	fmt.Fprintln(buf, "# generated by crd")
-	fmt.Fprintln(buf, "#")
+	buf := newPropsWithHeader()
 
 	for _, k := range props {
 		fmt.Fprintf(buf, "%s\n", k)
 	}
 
 	return map[string]string{brokerPropertiesName: buf.String()}
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) addConfigMapForAuthProperties(customResource *brokerv1beta1.ActiveMQArtemis) string {
+
+	configMapName := types.NamespacedName{
+		Namespace: customResource.Namespace,
+		Name:      customResource.Name + "-jaas-mgmt",
+	}
+
+	var desired *corev1.ConfigMap
+
+	obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.ConfigMap{}), configMapName.Name)
+	if obj != nil {
+		desired = obj.(*corev1.ConfigMap)
+	}
+
+	if desired == nil {
+
+		desired = &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "k8s.io.api.core.v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:         configMapName.Name,
+				GenerateName: "",
+				Namespace:    configMapName.Namespace,
+			},
+		}
+	}
+
+	desired.Data = getJaasManagementPropertiesData(customResource)
+
+	clog.V(1).Info("Requesting configMap for broker JaaS management", "name", configMapName.Name)
+	reconciler.trackDesired(desired)
+
+	clog.V(1).Info("Requesting mount for broker JaaS management config map")
+	return configMapName.Name
+}
+
+func getJaasManagementPropertiesData(customResource *brokerv1beta1.ActiveMQArtemis) map[string]string {
+	security_properties := newPropsWithHeader()
+	fmt.Fprintf(security_properties, "login.config.url.1=file:%v/login.config\n", getJaasManagementPath(customResource))
+	result := map[string]string{
+		"security.properties": security_properties.String(),
+	}
+	login_config := &bytes.Buffer{}
+	fmt.Fprintln(login_config, "management {")
+
+	if jolokia_client.SupportsTokenAuth(customResource.Spec.Version) {
+		fmt.Fprintln(login_config, "  org.apache.activemq.artemis.spi.core.security.jaas.KubernetesLoginModule sufficient")
+		fmt.Fprintln(login_config, "    reload=true")
+		fmt.Fprintln(login_config, "    org.apache.activemq.jaas.kubernetes.role=\"k8s-roles.properties\"")
+		fmt.Fprintf(login_config, "    baseDir=\"%v\"\n", getJaasManagementPath(customResource))
+		fmt.Fprintln(login_config, "  ;")
+		fmt.Fprintln(login_config, "")
+
+		k8s_roles_properties := newPropsWithHeader()
+		bytes, err := sdkk8sutil.GetOperatorNamespace()
+		namespace := "local"
+		if err != nil {
+			clog.V(5).Info("Using --localOnly without --namespace, but unable to determine namespace")
+		} else {
+			namespace = string(bytes)
+		}
+		fmt.Fprintf(k8s_roles_properties, "admin=system:serviceaccount:%v:%v\n", string(namespace), operatorServiceAccount)
+		result["k8s-roles.properties"] = k8s_roles_properties.String()
+	}
+
+	fmt.Fprintln(login_config, "  org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient")
+	fmt.Fprintln(login_config, "    org.apache.activemq.jaas.properties.user=\"artemis-users.properties\"")
+	fmt.Fprintln(login_config, "    org.apache.activemq.jaas.properties.role=\"artemis-roles.properties\"")
+	fmt.Fprintln(login_config, "    baseDir=\"/home/jboss/amq-broker/etc\"")
+	fmt.Fprintln(login_config, "  ;")
+	fmt.Fprintln(login_config, "};")
+
+	result["login.config"] = login_config.String()
+
+	return result
+}
+
+func newPropsWithHeader() *bytes.Buffer {
+	buf := &bytes.Buffer{}
+	fmt.Fprintln(buf, "# generated by crd")
+	fmt.Fprintln(buf, "#")
+	return buf
+}
+
+func getJaasManagementPath(customResource *brokerv1beta1.ActiveMQArtemis) string {
+	return fmt.Sprintf("/amq/extra/configmaps/%v-jaas-mgmt", customResource.Name)
 }
 
 func configureAffinity(podSpec *corev1.PodSpec, affinity *corev1.Affinity) {
@@ -2237,11 +2361,12 @@ func sortedKeysStringKeyByteValue(props map[string][]byte) []string {
 	return sortedKeys
 }
 
-func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSecurityType) {
-	if podSecurity.ServiceAccountName != nil {
-		clog.Info("Pod serviceAccountName specified", "existing", podSpec.ServiceAccountName, "new", *podSecurity.ServiceAccountName)
-		podSpec.ServiceAccountName = *podSecurity.ServiceAccountName
-	}
+func configPodSecurity(podSpec *corev1.PodSpec, cr *brokerv1beta1.ActiveMQArtemis) {
+	serviceAccountName := getServiceAccountNameForCR(cr)
+	clog.Info("Setting pod serviceAccountName", "name", serviceAccountName)
+	podSpec.ServiceAccountName = serviceAccountName
+
+	podSecurity := cr.Spec.DeploymentPlan.PodSecurity
 	if podSecurity.RunAsUser != nil {
 		clog.Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
 		if podSpec.SecurityContext == nil {
@@ -2395,6 +2520,113 @@ func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMa
 	}
 
 	return extraVolumes, extraVolumeMounts
+}
+
+func getServiceAccountNameForCR(customResource *brokerv1beta1.ActiveMQArtemis) string {
+	if customResource.Spec.DeploymentPlan.PodSecurity.ServiceAccountName != nil && *customResource.Spec.DeploymentPlan.PodSecurity.ServiceAccountName != "" {
+		return *customResource.Spec.DeploymentPlan.PodSecurity.ServiceAccountName
+	}
+	return customResource.Name
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) ensureServiceAccountForCR(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) error {
+	reqLogger := ctrl.Log.WithName(customResource.Name)
+
+	serviceAccountName := getServiceAccountNameForCR(customResource)
+	if serviceAccountName != customResource.Name {
+		return nil
+	}
+
+	serviceAccount := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: customResource.Namespace,
+		},
+	}
+	serviceAccount.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: customResource.GroupVersionKind().GroupVersion().String(),
+		Kind:       customResource.GroupVersionKind().Kind,
+		Name:       customResource.Name,
+		UID:        customResource.GetUID()},
+	})
+
+	current := &corev1.ServiceAccount{}
+	key := types.NamespacedName{
+		Name:      serviceAccount.Name,
+		Namespace: serviceAccount.Namespace,
+	}
+	reqLogger.Info("ensuring serviceAccount", "name", serviceAccountName)
+	err := client.Get(context.TODO(), key, current)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			reqLogger.Info("creating missing serviceAccount", "name", serviceAccountName)
+			err = client.Create(context.TODO(), serviceAccount)
+		}
+		if err != nil {
+			reqLogger.Error(err, "unable to create serviceAccount")
+			return err
+		}
+	} else {
+		reqLogger.Info("serviceAccount already exists", "name", serviceAccountName)
+	}
+	return nil
+}
+
+func (reconciler *ActiveMQArtemisReconcilerImpl) ensureRBACForCR(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) error {
+	reqLogger := ctrl.Log.WithName(customResource.Name)
+	serviceAccountName := getServiceAccountNameForCR(customResource)
+
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: serviceAccountName + "-binding",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: customResource.Namespace,
+			},
+		},
+	}
+	clusterRoleBinding.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: customResource.GroupVersionKind().GroupVersion().String(),
+		Kind:       customResource.GroupVersionKind().Kind,
+		Name:       customResource.GetName(),
+		UID:        customResource.GetUID()},
+	})
+
+	current := &rbacv1.ClusterRoleBinding{}
+	key := types.NamespacedName{
+		Name: clusterRoleBinding.Name,
+	}
+	reqLogger.Info("ensuring clusterRoleBinding", "name", key.Name)
+	err := client.Get(context.TODO(), key, current)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			reqLogger.Info("creating missing clusterRoleBinding", "name", key.Name)
+			err = client.Create(context.TODO(), clusterRoleBinding)
+		}
+		if err != nil {
+			reqLogger.Error(err, "unable to create clusterRoleBinding")
+			return err
+		}
+	} else {
+		reqLogger.Info("clusterRoleBinding already exists", "name", key.Name)
+	}
+	return nil
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStateFullSet *appsv1.StatefulSet, client rtclient.Client) (*appsv1.StatefulSet, error) {

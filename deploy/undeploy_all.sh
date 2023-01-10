@@ -17,8 +17,10 @@ $KUBE_CLI delete -f $DEPLOY_PATH/040_crd_artemis_scaledown.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/050_service_account.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/060_cluster_role.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/060_namespace_role.yaml
+$KUBE_CLI delete -f $DEPLOY_PATH/060_common_cluster_role.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/070_cluster_role_binding.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/070_namespace_role_binding.yaml
+$KUBE_CLI delete -f $DEPLOY_PATH/070_common_cluster_role_binding.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/080_election_role.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/090_election_role_binding.yaml
 $KUBE_CLI delete -f $DEPLOY_PATH/100_operator_config.yaml

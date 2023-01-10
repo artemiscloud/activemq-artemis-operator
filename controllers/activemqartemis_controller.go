@@ -122,7 +122,10 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups=route.openshift.io,namespace=activemq-artemis-operator,resources=routes;routes/custom-host;routes/status,verbs=get;list;watch;create;delete;update
 //+kubebuilder:rbac:groups=monitoring.coreos.com,namespace=activemq-artemis-operator,resources=servicemonitors,verbs=get;create
 //+kubebuilder:rbac:groups=apps,namespace=activemq-artemis-operator,resources=deployments/finalizers,verbs=update
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,namespace=activemq-artemis-operator,resources=roles;rolebindings,verbs=create;get;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,namespace=activemq-artemis-operator,resources=roles;rolebindings,verbs=list;create;get;delete;watch
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings;roles;rolebindings,verbs=list;create;get;delete;watch
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -194,103 +197,138 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 }
 
 func validate(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
-	// Do additional validation here
-	validationCondition := metav1.Condition{
-		Type:   common.ValidConditionType,
-		Status: metav1.ConditionTrue,
-		Reason: common.ValidConditionSuccessReason,
-	}
-	condition, err := validateExtraMounts(customResource, client, scheme)
+	resources, err := validateExtraMounts(customResource, client)
 	if err != nil {
 		return false, err
 	}
-	if condition != nil {
-		validationCondition = *condition
+
+	serviceAccount, err := validateServiceAccount(customResource, client)
+	if err != nil {
+		return false, err
+	}
+	if serviceAccount != nil {
+		resources = append(resources, *serviceAccount)
 	}
 
-	// validate version
-	if validationCondition.Status == metav1.ConditionTrue {
-		condition := validateBrokerVersion(customResource)
-		if condition != nil {
-			validationCondition = *condition
+	loggingProperties, err := validateDataKey(customResource, "logging.properties", loggingConfigSuffix, client)
+	if err != nil {
+		return false, err
+	}
+	if loggingProperties != nil {
+		resources = append(resources, *loggingProperties)
+	}
+
+	jaasConfig, err := validateDataKey(customResource, "login.config", jaasConfigSuffix, client)
+	if err != nil {
+		return false, err
+	}
+	if jaasConfig != nil {
+		resources = append(resources, *jaasConfig)
+	}
+
+	if len(resources) != 0 {
+		condition := metav1.Condition{
+			Type:    common.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  common.ValidConditionMissingResourcesReason,
+			Message: fmt.Sprintf("Missing required resources %v", resources),
 		}
+		meta.SetStatusCondition(&customResource.Status.Conditions, condition)
+		return true, nil
 	}
 
-	meta.SetStatusCondition(&customResource.Status.Conditions, validationCondition)
+	if !validBrokerVersion(customResource) {
+		condition := metav1.Condition{
+			Type:    common.ValidConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  common.ValidConditionImageVersionConflictReason,
+			Message: common.ImageVersionConflictMessage,
+		}
+		meta.SetStatusCondition(&customResource.Status.Conditions, condition)
+		return true, nil
+	}
+
 	return false, nil
 }
 
-func validateBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) *metav1.Condition {
+func validBrokerVersion(customResource *brokerv1beta1.ActiveMQArtemis) bool {
 	if customResource.Spec.Version != "" {
-		if customResource.Spec.DeploymentPlan.Image != "" || customResource.Spec.DeploymentPlan.InitImage != "" {
-			return &metav1.Condition{
-				Type:    common.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionImageVersionConflictReason,
-				Message: common.ImageVersionConflictMessage,
-			}
-		}
+		return customResource.Spec.DeploymentPlan.Image == "" && customResource.Spec.DeploymentPlan.InitImage == ""
 	}
-	return nil
+	return true
 }
 
-func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (*metav1.Condition, error) {
+func validateExtraMounts(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) ([]string, error) {
+	var missing []string
 	for _, cm := range customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps {
-		configMap := corev1.ConfigMap{}
-		found, err := validateExtraMount(cm, customResource.Namespace, &configMap, client, scheme)
+		configMap := &corev1.ConfigMap{}
+		found, err := validateResource(cm, customResource.Namespace, configMap, client)
 		if err != nil {
 			return nil, err
 		}
 		if !found {
-			return &metav1.Condition{
-				Type:    common.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionMissingResourcesReason,
-				Message: fmt.Sprintf("Missing required configMap %v", cm),
-			}, nil
-		}
-		//validate logging
-		if strings.HasSuffix(cm, loggingConfigSuffix) {
-			if _, ok := configMap.Data["logging.properties"]; !ok {
-				return &metav1.Condition{
-					Type:    common.ValidConditionType,
-					Status:  metav1.ConditionFalse,
-					Reason:  common.ValidConditionFailedReason,
-					Message: fmt.Sprintf("Logging configmap %v must have key logging.properties", cm),
-				}, nil
-			}
+			missing = append(missing, "configMap/"+cm)
 		}
 	}
 	for _, s := range customResource.Spec.DeploymentPlan.ExtraMounts.Secrets {
-		secret := corev1.Secret{}
-		found, err := validateExtraMount(s, customResource.Namespace, &secret, client, scheme)
+		secret := &corev1.Secret{}
+		found, err := validateResource(s, customResource.Namespace, secret, client)
 		if err != nil {
 			return nil, err
 		}
 		if !found {
-			return &metav1.Condition{
-				Type:    common.ValidConditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  common.ValidConditionMissingResourcesReason,
-				Message: fmt.Sprintf("Missing required secret %v", s),
-			}, nil
+			missing = append(missing, "secret/"+s)
 		}
-		//validate logging
-		if strings.HasSuffix(s, loggingConfigSuffix) {
-			if _, ok := secret.Data["logging.properties"]; !ok {
-				return &metav1.Condition{
-					Type:    common.ValidConditionType,
-					Status:  metav1.ConditionFalse,
-					Reason:  common.ValidConditionFailedReason,
-					Message: fmt.Sprintf("Logging secret %v must have key logging.properties", s),
-				}, nil
+	}
+	return missing, nil
+}
+
+func validateServiceAccount(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client) (*string, error) {
+	saName := customResource.Spec.DeploymentPlan.PodSecurity.ServiceAccountName
+	if saName == nil || *saName == "" {
+		return nil, nil
+	}
+
+	found, err := validateResource(*saName, customResource.Namespace, &corev1.ServiceAccount{}, client)
+	if !found {
+		msg := "serviceAccount/" + *saName
+		return &msg, err
+	}
+	return nil, err
+}
+
+func validateDataKey(customResource *brokerv1beta1.ActiveMQArtemis, keyName, resourceSuffix string, client rtclient.Client) (*string, error) {
+	var errorMsg string
+	ok := true
+	for _, cm := range customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps {
+		if strings.HasSuffix(cm, resourceSuffix) {
+			configMap := &corev1.ConfigMap{}
+			found, err := validateResource(cm, customResource.Namespace, configMap, client)
+			if err != nil || !found {
+				return nil, err
 			}
+			_, ok = configMap.Data[keyName]
+			errorMsg = "configMap/" + cm + "/" + keyName
 		}
+	}
+	for _, s := range customResource.Spec.DeploymentPlan.ExtraMounts.Secrets {
+		if strings.HasSuffix(s, resourceSuffix) {
+			secret := &corev1.Secret{}
+			found, err := validateResource(s, customResource.Namespace, secret, client)
+			if err != nil || !found {
+				return nil, err
+			}
+			_, ok = secret.Data[keyName]
+			errorMsg = "secret/" + s + "/" + keyName
+		}
+	}
+	if !ok {
+		return &errorMsg, nil
 	}
 	return nil, nil
 }
 
-func validateExtraMount(name, namespace string, obj rtclient.Object, client rtclient.Client, scheme *runtime.Scheme) (bool, error) {
+func validateResource(name, namespace string, obj rtclient.Object, client rtclient.Client) (bool, error) {
 	err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -347,7 +385,7 @@ func GetDefaultLabels(cr *brokerv1beta1.ActiveMQArtemis) map[string]string {
 	return defaultLabelData.Labels()
 }
 
-// only test uses this
+//  only test uses this
 func NewReconcileActiveMQArtemis(c rtclient.Client, s *runtime.Scheme) ActiveMQArtemisReconciler {
 	return ActiveMQArtemisReconciler{
 		Client: c,
@@ -439,9 +477,23 @@ func UpdateCRStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, n
 		return err
 	}
 
+	if len(cr.Status.ExternalConfigs) != len(current.Status.ExternalConfigs) {
+		return resources.UpdateStatus(client, cr)
+	}
+	if len(cr.Status.ExternalConfigs) >= 0 {
+		for _, cfg := range cr.Status.ExternalConfigs {
+			for _, curCfg := range current.Status.ExternalConfigs {
+				if curCfg.Name == cfg.Name && curCfg.ResourceVersion != cfg.ResourceVersion {
+					return resources.UpdateStatus(client, cr)
+				}
+			}
+		}
+	}
+
 	if !reflect.DeepEqual(current.Status.PodStatus, cr.Status.PodStatus) {
 		return resources.UpdateStatus(client, cr)
 	}
+
 	if len(current.Status.Conditions) != len(cr.Status.Conditions) {
 		return resources.UpdateStatus(client, cr)
 	}

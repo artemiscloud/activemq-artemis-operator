@@ -112,7 +112,9 @@ var (
 	oprRes = []string{
 		"../deploy/install/050_service_account.yaml",
 		"../deploy/install/060_namespace_role.yaml",
+		"../deploy/install/060_common_cluster_role.yaml",
 		"../deploy/install/070_namespace_role_binding.yaml",
+		"../deploy/install/070_common_cluster_role_binding.yaml",
 		"../deploy/install/080_election_role.yaml",
 		"../deploy/install/090_election_role_binding.yaml",
 		"../deploy/install/100_operator_config.yaml",

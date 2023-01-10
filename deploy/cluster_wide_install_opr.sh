@@ -21,8 +21,10 @@ $KUBE_CLI create -f $DEPLOY_PATH/030_crd_artemis_address.yaml
 $KUBE_CLI create -f $DEPLOY_PATH/040_crd_artemis_scaledown.yaml
 $KUBE_CLI create -f $DEPLOY_PATH/050_service_account.yaml
 $KUBE_CLI create -f $DEPLOY_PATH/060_cluster_role.yaml
+$KUBE_CLI create -f $DEPLOY_PATH/060_common_cluster_role.yaml
 SERVICE_ACCOUNT_NS="$(kubectl get -f $DEPLOY_PATH/050_service_account.yaml -o jsonpath='{.metadata.namespace}')"
 sed "s/namespace:.*/namespace: ${SERVICE_ACCOUNT_NS}/" $DEPLOY_PATH/070_cluster_role_binding.yaml | kubectl apply -f -
+sed "s/namespace:.*/namespace: ${SERVICE_ACCOUNT_NS}/" $DEPLOY_PATH/070_common_cluster_role_binding.yaml | kubectl apply -f -
 $KUBE_CLI create -f $DEPLOY_PATH/080_election_role.yaml
 $KUBE_CLI create -f $DEPLOY_PATH/090_election_role_binding.yaml
 $KUBE_CLI create -f $DEPLOY_PATH/100_operator_config.yaml
