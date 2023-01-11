@@ -18,25 +18,63 @@ package jolokia_client
 
 import (
 	"context"
+	"os"
 	"strconv"
 
+	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
 	mgmt "github.com/artemiscloud/activemq-artemis-operator/pkg/utils/artemis"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/jolokia"
+	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+)
+
+const (
+	DEFAULT_JOLOKIA_PROTOCOL = "http"
+	BASIC_AUTH               = "Basic"
+	TOKEN_AUTH               = "Token"
+	TOKEN_AUTH_MIN_VERSION   = 2280
 )
 
 type JkInfo struct {
 	Artemis *mgmt.Artemis
 	IP      string
 	Ordinal string
+}
+
+func SupportsTokenAuth(specVersion string) bool {
+	reqLogger := ctrl.Log.WithValues("SupportsTokenAuth", specVersion)
+	if jolokiaAuth, isSet := os.LookupEnv("JOLOKIA_AUTH"); isSet {
+		reqLogger.V(5).Info("JOLOKIA_AUTH env var set", "value", jolokiaAuth)
+		return jolokiaAuth == TOKEN_AUTH
+	}
+	compactVersion := version.CompactLatestVersion
+	if specVersion != "" {
+		compactVersion = version.CompactVersionFromVersion[specVersion]
+		reqLogger.V(5).Info("retrieve supported authentication method from version", "spec.Version", specVersion, "compactVersion", compactVersion)
+	} else {
+		reqLogger.V(5).Info("spec.Version not provided, assuming latest supported", "spec.Version", compactVersion)
+	}
+	v, err := strconv.Atoi(compactVersion)
+	if err != nil {
+		reqLogger.Error(err, "unable to convert compactVersion to integer", "compactVersion", compactVersion)
+		return true
+	}
+	if v >= TOKEN_AUTH_MIN_VERSION {
+		reqLogger.V(5).Info("Token Authentication supported", "compactVersion", compactVersion)
+		return true
+	} else {
+		reqLogger.V(5).Info("Token Authentication not supported using Basic Authentication", "compactVersion", compactVersion)
+	}
+	return false
 }
 
 func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, client rtclient.Client) []*JkInfo {
@@ -75,12 +113,17 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 				} else {
 					reqLogger.Info("Pod found", "Namespace", resource.Namespace, "Name", resource.Name)
 					containers := pod.Spec.Containers //get env from this
-					jolokiaSecretName := resource.Name + "-jolokia-secret"
 
-					jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(resource.Namespace, client, client.Scheme(), jolokiaSecretName, &containers, podNamespacedName, statefulset, info.Labels)
+					jolokiaProtocol := resolveJolokiaProtocol(client, &containers, podNamespacedName, statefulset, info.Labels)
 
-					reqLogger.Info("New Jolokia with ", "User: ", jolokiaUser, "Protocol: ", jolokiaProtocol, "broker ip", pod.Status.PodIP)
-					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
+					jolokiaAuth, err := resolveJolokiaAuth(resource, client, &containers, podNamespacedName, statefulset, info.Labels)
+					if err != nil {
+						reqLogger.Error(err, "Unable to retrieve service account token")
+						return nil
+					}
+					reqLogger.Info("New Jolokia with ", "Protocol: ", jolokiaProtocol, "broker ip", pod.Status.PodIP)
+
+					artemis := mgmt.GetArtemis(pod.Status.PodIP, "8161", "amq-broker", jolokiaAuth, jolokiaProtocol)
 					jkInfo := JkInfo{
 						Artemis: artemis,
 						IP:      pod.Status.PodIP,
@@ -96,27 +139,64 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 	return artemisArray
 }
 
-func resolveJolokiaRequestParams(namespace string,
-	client rtclient.Client,
-	scheme *runtime.Scheme,
-	jolokiaSecretName string,
+func resolveJolokiaProtocol(client rtclient.Client,
 	containers *[]corev1.Container,
 	podNamespacedName types.NamespacedName,
 	statefulset *appsv1.StatefulSet,
-	labels map[string]string) (string, string, string) {
+	labels map[string]string) string {
 
-	var jolokiaUser string
-	var jolokiaPassword string
-	var jolokiaProtocol string
+	if len(*containers) == 1 {
+		envVars := (*containers)[0].Env
+		for _, oneVar := range envVars {
+			if oneVar.Name == "AMQ_CONSOLE_ARGS" {
+				jolokiaProtocol := getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
+				if jolokiaProtocol == "https" {
+					return jolokiaProtocol
+				}
+				return DEFAULT_JOLOKIA_PROTOCOL
+			}
+		}
+	}
+	return DEFAULT_JOLOKIA_PROTOCOL
+}
 
+func resolveJolokiaAuth(resource types.NamespacedName, client rtclient.Client,
+	containers *[]corev1.Container,
+	podNamespacedName types.NamespacedName,
+	statefulset *appsv1.StatefulSet,
+	labels map[string]string) (jolokia.Auth, error) {
+	reqLogger := ctrl.Log.WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
+	version := getVersionFromStatefulset(statefulset, client)
+	// Token Auth
+	if SupportsTokenAuth(version) {
+		cfg, err := config.GetConfig()
+		if err != nil {
+			reqLogger.Error(err, "unable to read kubernetes configuration")
+			return nil, err
+		}
+
+		jolokiaToken := cfg.BearerToken
+		if jolokiaToken != "" {
+			reqLogger.Info("retrieved service account token")
+		} else {
+			reqLogger.Info("empty service account token found, skipping...")
+		}
+		return &jolokia.TokenAuth{
+			Token: jolokiaToken,
+		}, nil
+	}
+
+	// Basic Auth
+	jolokiaSecretName := resource.Name + "-jolokia-secret"
+	var jolokiaUser, jolokiaPassword string
 	userDefined := false
-	jolokiaUserFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaUser", labels, client, scheme, nil)
+	jolokiaUserFromSecret := secrets.GetValueFromSecret(resource.Namespace, jolokiaSecretName, "jolokiaUser", labels, client)
 	if jolokiaUserFromSecret != nil {
 		userDefined = true
 		jolokiaUser = *jolokiaUserFromSecret
 	}
 	if userDefined {
-		jolokiaPasswordFromSecret := secrets.GetValueFromSecret(namespace, jolokiaSecretName, "jolokiaPassword", labels, client, scheme, nil)
+		jolokiaPasswordFromSecret := secrets.GetValueFromSecret(resource.Namespace, jolokiaSecretName, "jolokiaPassword", labels, client)
 		if jolokiaPasswordFromSecret != nil {
 			jolokiaPassword = *jolokiaPasswordFromSecret
 		}
@@ -130,22 +210,40 @@ func resolveJolokiaRequestParams(namespace string,
 			if !userDefined && oneVar.Name == "AMQ_PASSWORD" {
 				jolokiaPassword = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
 			}
-			if oneVar.Name == "AMQ_CONSOLE_ARGS" {
-				jolokiaProtocol = getEnvVarValue(&oneVar, &podNamespacedName, statefulset, client, labels)
-			}
-			if jolokiaUser != "" && jolokiaPassword != "" && jolokiaProtocol != "" {
+			if jolokiaUser != "" && jolokiaPassword != "" {
 				break
 			}
 		}
 	}
 
-	if jolokiaProtocol == "" {
-		jolokiaProtocol = "http"
-	} else {
-		jolokiaProtocol = "https"
-	}
+	return &jolokia.BasicAuth{
+		User:     jolokiaUser,
+		Password: jolokiaPassword,
+	}, nil
 
-	return jolokiaUser, jolokiaPassword, jolokiaProtocol
+}
+
+func getVersionFromStatefulset(sts *appsv1.StatefulSet, client rtclient.Client) string {
+	reqLogger := ctrl.Log.WithValues("Namespace", sts.Namespace, "StatefulSet", sts.Name)
+	reqLogger.V(5).Info("retrieving version from statefulset", "statefulset", sts.Name)
+	for _, owner := range sts.OwnerReferences {
+		if owner.Kind == "ActiveMQArtemis" {
+			cr := &brokerv1beta1.ActiveMQArtemis{}
+			crKey := types.NamespacedName{
+				Name:      owner.Name,
+				Namespace: sts.Namespace,
+			}
+			err := client.Get(context.TODO(), crKey, cr)
+			if err == nil {
+				reqLogger.V(5).Info("found ActiveMQArtemis from statefulset", "statefulset", sts.Name, "version", cr.Spec.Version)
+				return cr.Spec.Version
+			} else {
+				reqLogger.V(5).Error(err, "unable to retrieve ActiveMQArtemis from statefulset", "statefulset", sts.Name)
+			}
+		}
+	}
+	reqLogger.V(5).Info("unable to determine resource version from statefulset", "statefulset", sts.Name)
+	return ""
 }
 
 func getEnvVarValue(envVar *corev1.EnvVar, namespace *types.NamespacedName, statefulset *appsv1.StatefulSet, client rtclient.Client, labels map[string]string) string {

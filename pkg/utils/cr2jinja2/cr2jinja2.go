@@ -2,6 +2,7 @@ package cr2jinja2
 
 import (
 	"hash/fnv"
+	"os"
 
 	"github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/api/v2alpha3"
@@ -10,7 +11,6 @@ import (
 
 	//k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -19,10 +19,10 @@ import (
 
 var cr2jinja2Log = ctrl.Log.WithName("cr2jinja2")
 
-//the following values in string type will be parsed as bool values
-//exception empty string which will be translated to None
-//we need to let yacfg know this is what it is, don't try interpret them.
-//https://yaml.org/type/bool.html
+// the following values in string type will be parsed as bool values
+// exception empty string which will be translated to None
+// we need to let yacfg know this is what it is, don't try interpret them.
+// https://yaml.org/type/bool.html
 var specialsMap map[string]bool = map[string]bool{
 	"":      true,
 	"y":     true,
@@ -75,9 +75,9 @@ func GetUniqueShellSafeSubstution(specialVal string) string {
 	return strconv.FormatUint(hasher.Sum64(), 10) + "s"
 }
 
-//Used to check properties that has a special values
-//which may be misinterpreted by yacfg.
-//so we use a determined as uniquekey and in the mean time as prop
+// Used to check properties that has a special values
+// which may be misinterpreted by yacfg.
+// so we use a determined as uniquekey and in the mean time as prop
 func checkStringSpecial(prop *string, specials map[string]string) *string {
 	if nil == prop {
 		return nil
@@ -164,7 +164,7 @@ func MakeBrokerCfgOverrides(customResource interface{}, envVar *string, output *
 
 	if output != nil && *output != "" {
 		fmt.Println("output " + *output)
-		err := ioutil.WriteFile(*output, []byte(result), 0644)
+		err := os.WriteFile(*output, []byte(result), 0644)
 		if err != nil {
 			panic(err)
 		}

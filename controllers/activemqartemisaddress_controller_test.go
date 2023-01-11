@@ -47,6 +47,11 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
+var JOLOKIA_AUTH = jolokia.BasicAuth{
+	User:     "admin",
+	Password: "admin1!",
+}
+
 var _ = Describe("Address controller tests", func() {
 
 	Context("address queue config defaults", Label("queue-config-defaults"), func() {
@@ -56,7 +61,10 @@ var _ = Describe("Address controller tests", func() {
 			anycastType := "ANYCAST"
 			It("configurationManaged default should be true (without queue configuration)", func() {
 				By("deploy a broker cr")
-				brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+				brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+					candidate.Spec.AdminUser = JOLOKIA_AUTH.User
+					candidate.Spec.AdminPassword = JOLOKIA_AUTH.Password
+				})
 
 				By("deploy an address cr")
 				addressCr, createdAddressCr := DeployCustomAddress(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisAddress) {
@@ -88,7 +96,10 @@ var _ = Describe("Address controller tests", func() {
 
 			It("configurationManaged default should be true (with queue configuration)", func() {
 				By("deploy a broker cr")
-				brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, nil)
+				brokerCr, createdBrokerCr := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+					candidate.Spec.AdminUser = JOLOKIA_AUTH.User
+					candidate.Spec.AdminPassword = JOLOKIA_AUTH.Password
+				})
 
 				By("deploy an address cr")
 				addressCr, createdAddressCr := DeployCustomAddress(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemisAddress) {
@@ -567,6 +578,8 @@ var _ = Describe("Address controller tests", func() {
 			}
 			crd.Spec.DeploymentPlan.Size = 1
 			crd.Spec.DeploymentPlan.JolokiaAgentEnabled = true
+			crd.Spec.AdminUser = "admin"
+			crd.Spec.AdminPassword = "admin1!"
 
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
@@ -590,8 +603,13 @@ var _ = Describe("Address controller tests", func() {
 						podNamespacedName := types.NamespacedName{Name: podName, Namespace: defaultNamespace}
 						g.Expect(k8sClient.Get(ctx, podNamespacedName, pod)).Should(Succeed())
 
-						jolokia := jolokia.GetJolokia(pod.Status.PodIP, "8161", "/console/jolokia", "", "", "http")
-						data, err := jolokia.Exec("", `{ "type":"EXEC","mbean":"org.apache.activemq.artemis:broker=\"amq-broker\"","operation":"listAddresses(java.lang.String)","arguments":[","] }`)
+						auth := &jolokia.BasicAuth{
+							User:     crd.Spec.AdminUser,
+							Password: crd.Spec.AdminPassword,
+						}
+
+						j := jolokia.GetJolokia(pod.Status.PodIP, "8161", "/console/jolokia", auth, "http")
+						data, err := j.Exec("", `{ "type":"EXEC","mbean":"org.apache.activemq.artemis:broker=\"amq-broker\"","operation":"listAddresses(java.lang.String)","arguments":[","] }`)
 						g.Expect(err).To(BeNil())
 						g.Expect(data.Value).Should(ContainSubstring(addressName))
 					}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -1155,7 +1173,7 @@ func CheckQueueAttribute(brokerCrName string, podName string, namespace string, 
 	pod := &corev1.Pod{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-		jolokia := jolokia.GetJolokia(pod.Status.PodIP, "8161", "/console/jolokia", "", "", "http")
+		jolokia := jolokia.GetJolokia(pod.Status.PodIP, "8161", "/console/jolokia", &JOLOKIA_AUTH, "http")
 		data, err := jolokia.Read("org.apache.activemq.artemis:broker=\"amq-broker\",address=\"" + addressName + "\",component=addresses,queue=\"" + queueName + "\",routing-type=\"" + routingType + "\",subcomponent=queues/" + attrName)
 		g.Expect(err).To(BeNil())
 		g.Expect(data.Value).Should(ContainSubstring(attrValueAsString), data.Value)
