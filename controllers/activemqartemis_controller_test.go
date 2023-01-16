@@ -6628,9 +6628,6 @@ var _ = Describe("artemis controller", func() {
 			// mutable
 		}
 
-		crd.Spec.AdminUser = "admin"
-		crd.Spec.AdminPassword = "admin"
-
 		userPropsKey := "users.properties"
 
 		loginPropsKey := "login.config"
@@ -6638,13 +6635,13 @@ var _ = Describe("artemis controller", func() {
 			org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule required
 			reload=true
 			debug=true
-			org.apache.activemq.jaas.properties.user="artemis-users.properties"
-			org.apache.activemq.jaas.properties.role="artemis-roles.properties";
+			org.apache.activemq.jaas.properties.user="users.properties"
+			org.apache.activemq.jaas.properties.role="roles.properties";
 			};`,
-			userPropsKey: `admin=admin
+			userPropsKey: `
 			tom=tom
 			peter=peter`,
-			"roles.properties": `admin=admin,amq,joe`,
+			"roles.properties": `admin=joe`,
 		}
 
 		// extra bits - not read by the broker - won't be in brokerStatus
