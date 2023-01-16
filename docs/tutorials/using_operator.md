@@ -63,7 +63,7 @@ Deploy all the Custom Resource Definitions (CRDs) that the Operator supports:
 Deploy the Operator:
 
 ```shell script
-$ kubectl create -f deploy/install/110_operator.yaml --namespace myproject
+$ kubectl create -f deploy/resources/operator.yaml --namespace myproject
 deployment.apps/activemq-artemis-operator created
 ```
 You might need to wait a few moments for the Operator to fully start. You can verify the Operator status by running the command and looking at the output:
