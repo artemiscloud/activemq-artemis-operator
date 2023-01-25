@@ -49,11 +49,11 @@ To deploy the operator in the current namespace activemq-artemis-operator simply
 ```shell
 kubectl create -f deploy/install
 ```
-or if you have built your own image, change the image defined in deploy/operator.yaml before deploy the operator.
+or if you have built your own image, change the image defined in deploy/install/110_operator.yaml before deploy the operator.
 
 The operator will be deployed into the current namespace and watches the same namespace.
 
-To watch all namespace, change the **WATCH_NAMESPACE** environment variable defined in deploy/operator.yaml to be "*" or empty string before deployment of the operator.
+To watch all namespace, change the **WATCH_NAMESPACE** environment variable defined in deploy/install/110_operator.yaml to be "*" or empty string before deployment of the operator.
 
 ```shell
 kubectl create -f deploy/install

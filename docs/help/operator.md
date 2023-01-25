@@ -107,7 +107,7 @@ metadata:
 You can also edit the operator deployment using the Kubernetes dashboard or the Kubernetes command-line tool, for example
 
 ```shell script
-$ sed 's/--zap-log-level=debug/--zap-log-level=error/' deploy/operator.yaml | kubectl apply -f -
+$ sed 's/--zap-log-level=debug/--zap-log-level=error/' deploy/install/110_operator.yaml | kubectl apply -f -
 ```
 
 However if you install the operator from OperatorHub you don't have control over the resources which are deployed by olm
@@ -255,7 +255,7 @@ Deploy the scaledown controller CRD.
 $ kubectl create -f deploy/crds/broker_activemqartemisscaledown_crd.yaml
 ```
 
-In the deploy directory of the Operator archive that you downloaded and extracted, open the operator.yaml file. Ensure that the value of the spec.containers.image property is set to the latest Operator image for ActiveMQ Artemis , as shown below.
+In the deploy directory of the Operator archive that you downloaded and extracted, open the install/110_operator.yaml file. Ensure that the value of the spec.containers.image property is set to the latest Operator image for ActiveMQ Artemis , as shown below.
 ```yaml
 spec:
     template:
@@ -267,7 +267,7 @@ spec:
 Deploy the Operator.
 
 ```shell script
-$ kubectl create -f deploy/operator.yaml
+$ kubectl create -f deploy/install/operator.yaml
 ```
 
 In your Kubernetes project, the Operator starts in a new Pod.
