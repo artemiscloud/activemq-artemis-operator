@@ -773,7 +773,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 				targetPortName := acceptor.Name + "-" + ordinalString
 				targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
 
-				exposureDefinition := reconciler.ExposureDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled)
+				exposureDefinition := reconciler.ExposureDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, acceptor.SSLEnabled, customResource.Spec.IngressDomain)
 				reconciler.trackDesired(exposureDefinition)
 			}
 		}
@@ -782,7 +782,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureAcceptorsExposure(cust
 	return causedUpdate, err
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool) rtclient.Object {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespacedName types.NamespacedName, labels map[string]string, targetServiceName string, targetPortName string, passthroughTLS bool, domain string) rtclient.Object {
 
 	if isOpenshift, err := environments.DetectOpenshift(); isOpenshift && err == nil {
 		clog.Info("creating route for "+targetPortName, "service", targetServiceName)
@@ -792,7 +792,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespa
 		if obj != nil {
 			existing = obj.(*routev1.Route)
 		}
-		return routes.NewRouteDefinitionForCR(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS)
+		return routes.NewRouteDefinitionForCR(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, domain)
 	} else {
 		clog.Info("creating ingress for "+targetPortName, "service", targetServiceName)
 
@@ -801,7 +801,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(namespa
 		if obj != nil {
 			existing = obj.(*netv1.Ingress)
 		}
-		return ingresses.NewIngressForCRWithSSL(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS)
+		return ingresses.NewIngressForCRWithSSL(existing, namespacedName, labels, targetServiceName, targetPortName, passthroughTLS, domain)
 	}
 }
 
@@ -838,7 +838,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConnectorsExposure(cus
 
 				targetPortName := connector.Name + "-" + ordinalString
 				targetServiceName := customResource.Name + "-" + targetPortName + "-svc"
-				exposureDefinition := reconciler.ExposureDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled)
+				exposureDefinition := reconciler.ExposureDefinitionForCR(namespacedName, serviceRoutelabels, targetServiceName, targetPortName, connector.SSLEnabled, customResource.Spec.IngressDomain)
 
 				reconciler.trackDesired(exposureDefinition)
 			}
@@ -897,7 +897,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 				if obj != nil {
 					existing = obj.(*routev1.Route)
 				}
-				routeDefinition := routes.NewRouteDefinitionForCR(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
+				routeDefinition := routes.NewRouteDefinitionForCR(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain)
 				reconciler.trackDesired(routeDefinition)
 
 			} else {
@@ -907,7 +907,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) configureConsoleExposure(custom
 				if obj != nil {
 					existing = obj.(*netv1.Ingress)
 				}
-				ingressDefinition := ingresses.NewIngressForCRWithSSL(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled)
+				ingressDefinition := ingresses.NewIngressForCRWithSSL(existing, namespacedName, serviceRoutelabels, targetServiceName, targetPortName, console.SSLEnabled, customResource.Spec.IngressDomain)
 				reconciler.trackDesired(ingressDefinition)
 			}
 		}
