@@ -117,6 +117,9 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -ginkgo.fail-fast -coverprofile cover.out
 
+test-junit: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test  ./... $(TEST_ARGS) -ginkgo.fail-fast -coverprofile cover.out -ginkgo.junit-report=report.xml
+
 ## Run tests against minikube with local operator.
 test-mk test-mk-v: TEST_ARGS += -test.timeout=50m -ginkgo.label-filter='!do'
 test-mk test-mk-v: TEST_VARS = ENABLE_WEBHOOKS=false USE_EXISTING_CLUSTER=true RECONCILE_RESYNC_PERIOD=5s
