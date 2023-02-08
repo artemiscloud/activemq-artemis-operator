@@ -1748,18 +1748,6 @@ spec:
                 command:
                 - /home/activemq-artemis-operator/bin/entrypoint
                 env:
-                - name: OPERATOR_NAME
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.labels['name']
-                - name: POD_NAME
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.name
-                - name: WATCH_NAMESPACE
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
                   value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2160
@@ -1804,6 +1792,18 @@ spec:
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.11
                 - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2280
                   value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.14
+                - name: OPERATOR_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['name']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: ENABLE_WEBHOOKS
                   value: "false"
                 image: quay.io/artemiscloud/activemq-artemis-operator:1.0.9

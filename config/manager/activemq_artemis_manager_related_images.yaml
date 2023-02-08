@@ -1,32 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    control-plane: controller-manager
-  name: activemq-artemis-controller-manager
+  name: controller-manager
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      control-plane: controller-manager
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
-    type: RollingUpdate
   template:
-    metadata:
-      labels:
-        control-plane: controller-manager
     spec:
       containers:
-      - args:
-        - --zap-log-level=debug
-        - --zap-encoder=console
-        - --zap-time-encoding=iso8601
-        - --leader-elect
-        command:
-        - /home/activemq-artemis-operator/bin/entrypoint
+      - name: manager
         env:
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2150
           value: quay.io/artemiscloud/activemq-artemis-broker-init:0.2.2
@@ -72,37 +52,3 @@ spec:
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.11
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2280
           value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:1.0.14
-        - name: OPERATOR_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['name']
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: WATCH_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: ENABLE_WEBHOOKS
-          value: "false"
-        image: quay.io/artemiscloud/activemq-artemis-operator:1.0.9
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        name: manager
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        securityContext:
-          allowPrivilegeEscalation: false
-      securityContext:
-        runAsNonRoot: true
-      serviceAccountName: activemq-artemis-controller-manager
-      terminationGracePeriodSeconds: 10
