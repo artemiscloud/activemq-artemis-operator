@@ -1502,7 +1502,17 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 			secretName = acceptor.SSLSecret
 		}
 		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		volumeNameExists := false
+		for _, v := range volumeDefinitions {
+			if v.Name == volume.Name {
+				volumeNameExists = true
+				clog.Info("MakeVolumes found duplicate volume name usage in acceptors, skipping + ", volume.Name)
+				break
+			}
+		}
+		if !volumeNameExists {
+			volumeDefinitions = append(volumeDefinitions, volume)
+		}
 	}
 
 	// Scan connectors for any with sslEnabled
@@ -1515,14 +1525,34 @@ func MakeVolumes(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []
 			secretName = connector.SSLSecret
 		}
 		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		volumeNameExists := false
+		for _, v := range volumeDefinitions {
+			if v.Name == volume.Name {
+				volumeNameExists = true
+				clog.Info("MakeVolumes found duplicate volume name usage in connectors, skipping + ", volume.Name)
+				break
+			}
+		}
+		if !volumeNameExists {
+			volumeDefinitions = append(volumeDefinitions, volume)
+		}
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volumes for ssl console exposure on k8s")
 		secretName := namer.SecretsConsoleNameBuilder.Name()
 		volume := volumes.MakeVolume(secretName)
-		volumeDefinitions = append(volumeDefinitions, volume)
+		volumeNameExists := false
+		for _, v := range volumeDefinitions {
+			if v.Name == volume.Name {
+				volumeNameExists = true
+				clog.Info("MakeVolumes found duplicate volume name usage in console, skipping + ", volume.Name)
+				break
+			}
+		}
+		if !volumeNameExists {
+			volumeDefinitions = append(volumeDefinitions, volume)
+		}
 	}
 
 	return volumeDefinitions
@@ -1546,7 +1576,17 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 			volumeMountName = acceptor.SSLSecret + "-volume"
 		}
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		volumeMountNameExists := false
+		for _, vm := range volumeMounts {
+			if vm.Name == volumeMount.Name {
+				volumeMountNameExists = true
+				clog.Info("MakeVolumeMounts found duplicate volume mount name usage in acceptors, skipping + ", volumeMount.Name)
+				break
+			}
+		}
+		if !volumeMountNameExists {
+			volumeMounts = append(volumeMounts, volumeMount)
+		}
 	}
 
 	// Scan connectors for any with sslEnabled
@@ -1559,14 +1599,34 @@ func MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer Namer
 			volumeMountName = connector.SSLSecret + "-volume"
 		}
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		volumeMountNameExists := false
+		for _, vm := range volumeMounts {
+			if vm.Name == volumeMount.Name {
+				volumeMountNameExists = true
+				clog.Info("MakeVolumeMounts found duplicate volume mount name usage in connectors, skipping + ", volumeMount.Name)
+				break
+			}
+		}
+		if !volumeMountNameExists {
+			volumeMounts = append(volumeMounts, volumeMount)
+		}
 	}
 
 	if customResource.Spec.Console.SSLEnabled {
 		clog.V(1).Info("Make volume mounts for ssl console exposure on k8s")
 		volumeMountName := namer.SecretsConsoleNameBuilder.Name() + "-volume"
 		volumeMount := volumes.MakeVolumeMount(volumeMountName)
-		volumeMounts = append(volumeMounts, volumeMount)
+		volumeMountNameExists := false
+		for _, vm := range volumeMounts {
+			if vm.Name == volumeMount.Name {
+				volumeMountNameExists = true
+				clog.Info("MakeVolumeMounts found duplicate volume mount name usage in console, skipping + ", volumeMount.Name)
+				break
+			}
+		}
+		if !volumeMountNameExists {
+			volumeMounts = append(volumeMounts, volumeMount)
+		}
 	}
 
 	return volumeMounts
