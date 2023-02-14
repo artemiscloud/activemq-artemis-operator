@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/Azure/go-amqp v0.17.4
-	github.com/Masterminds/semver v1.5.0
 	//this module is problematic
 	github.com/RHsyseng/operator-utils v1.4.10
 	github.com/go-logr/logr v1.2.0
@@ -22,6 +21,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
+require github.com/Masterminds/semver v1.5.0
+
 require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -31,6 +32,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/blang/semver/v4 v4.0.0
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect

@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/artemiscloud/activemq-artemis-operator/version"
@@ -279,28 +278,7 @@ func main() {
 }
 
 func getSupportedBrokerVersions() string {
-	allSupportVersions := make([]string, 0, 10)
-	relatedImageEnvVarPrefix := "RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_"
-	// The full env var name should be relatedImageEnvVarPrefix + compactVersion
-	for _, envLine := range os.Environ() {
-		envPair := strings.Split(envLine, "=")
-		if strings.HasPrefix(envPair[0], relatedImageEnvVarPrefix) {
-			//try get compact version
-			compactVersion := envPair[0][len(relatedImageEnvVarPrefix):]
-			if fullVersion, ok := version.FullVersionFromCompactVersion[compactVersion]; ok {
-				allSupportVersions = append(allSupportVersions, fullVersion)
-			}
-		}
-	}
-	sort.Strings(allSupportVersions)
-
-	supportedProductVersions := ""
-	for _, k := range allSupportVersions {
-		supportedProductVersions += k
-		supportedProductVersions += " "
-	}
-
-	return strings.TrimSpace(supportedProductVersions)
+	return strings.Join(version.SupportedActiveMQArtemisVersions, " ")
 }
 
 func setupAccountName(clnt client.Client, ctx context.Context, ns, podname string) {

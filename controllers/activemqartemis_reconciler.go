@@ -11,7 +11,6 @@ import (
 	osruntime "runtime"
 	"sort"
 
-	"github.com/Masterminds/semver"
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
@@ -31,6 +30,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -95,7 +95,7 @@ var configCmd = "/opt/amq/bin/launch.sh"
 
 // default ApplyRule for address-settings
 var defApplyRule string = "merge_all"
-var yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.LatestVersion]
+var yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.LatestActiveMQArtemisVersion]
 
 type ActiveMQArtemisReconcilerImpl struct {
 	requestedResources []rtclient.Object
@@ -1450,6 +1450,41 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	terminationGracePeriodSeconds := int64(60)
 
+	currentActiveMQArtemisVersion := ""
+	currentActiveMQArtemisInitImage := ""
+	currentActiveMQArtemisKubeImage := ""
+	if current != nil {
+		if current.Annotations != nil {
+			currentActiveMQArtemisVersion = current.Annotations["activemq.artemis.version"]
+		}
+		if current.Spec.Containers != nil {
+			for _, c := range current.Spec.Containers {
+				if c.Name == customResource.Name+"-container" {
+					currentActiveMQArtemisKubeImage = c.Image
+				} else if c.Name == customResource.Name+"-container-init" {
+					currentActiveMQArtemisInitImage = c.Image
+				}
+			}
+		}
+	}
+
+	activeMQArtemisVersionToUse, verr := determineActiveMQArtemisVersionToUse(customResource, currentActiveMQArtemisVersion)
+	if verr != nil {
+		reqLogger.Error(verr, "failed to determine ActiveMQ Artemis version to use for", currentActiveMQArtemisVersion, customResource.Spec.Version, customResource.Spec.Upgrades)
+		return nil, verr
+	}
+
+	// custom annotations provided in CR applied only to the pod template spec
+	// note: work with a clone of the CR annotations to not modify them
+	annotations := make(map[string]string)
+	for key, value := range customResource.Spec.DeploymentPlan.Annotations {
+		annotations[key] = value
+	}
+	// Add activemq.artemis.version annotations only if no image
+	if customResource.Spec.DeploymentPlan.Image == "placeholder" || len(customResource.Spec.DeploymentPlan.Image) == 0 {
+		annotations["activemq.artemis.version"] = activeMQArtemisVersionToUse
+	}
+
 	// custom labels provided in CR applied only to the pod template spec
 	// note: work with a clone of the default labels to not modify defaults
 	labels := make(map[string]string)
@@ -1483,7 +1518,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		})
 	}
 
-	pts := pods.MakePodTemplateSpec(current, namespacedName, labels, customResource.Spec.DeploymentPlan.Annotations)
+	pts := pods.MakePodTemplateSpec(current, namespacedName, labels, annotations)
 	podSpec := &pts.Spec
 
 	// REVISIT: don't know when this is nil
@@ -1492,10 +1527,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	}
 
 	imageName := ""
-	var verr error
 	if customResource.Spec.DeploymentPlan.Image == "placeholder" || len(customResource.Spec.DeploymentPlan.Image) == 0 {
 		reqLogger.Info("Determining the kubernetes image to use due to placeholder setting")
-		imageName, verr = determineImageToUse(customResource, "Kubernetes")
+		imageName, verr = determineImageToUse(customResource, "Kubernetes", activeMQArtemisVersionToUse, currentActiveMQArtemisVersion, currentActiveMQArtemisKubeImage)
 		if verr != nil {
 			reqLogger.Error(verr, "failed to determine image for", customResource.Spec.Version)
 			return nil, verr
@@ -1603,7 +1637,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	initImageName := ""
 	if customResource.Spec.DeploymentPlan.InitImage == "placeholder" || len(customResource.Spec.DeploymentPlan.InitImage) == 0 {
 		reqLogger.Info("Determining the init image to use due to placeholder setting")
-		initImageName, verr = determineImageToUse(customResource, "Init")
+		initImageName, verr = determineImageToUse(customResource, "Init", activeMQArtemisVersionToUse, currentActiveMQArtemisVersion, currentActiveMQArtemisInitImage)
 		if verr != nil {
 			reqLogger.Error(verr, "failed to determine init image for", customResource.Spec.Version)
 			return nil, verr
@@ -1620,12 +1654,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
 
-	compactVersionToUse, verr := determineCompactVersionToUse(customResource)
-	if verr != nil {
-		reqLogger.Error(verr, "failed to get compact version for", customResource.Spec.Version)
-		return nil, verr
-	}
-	yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
+	yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[activeMQArtemisVersionToUse]
 	yacfgProfileName := version.YacfgProfileName
 
 	//address settings
@@ -2133,12 +2162,15 @@ func configPodSecurity(podSpec *corev1.PodSpec, podSecurity *brokerv1beta1.PodSe
 	}
 }
 
-func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeName string) (string, error) {
+func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTypeName string, activeMQArtemisVersionToUse string, currentActiveMQArtemisVersion string, currentActiveMQArtemisImage string) (string, error) {
 
 	imageName := ""
-	compactVersionToUse, _ := determineCompactVersionToUse(customResource)
 
-	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeName + "_" + compactVersionToUse
+	if currentActiveMQArtemisImage != "" && activeMQArtemisVersionToUse == currentActiveMQArtemisVersion && !customResource.Spec.Upgrades.Enabled {
+		return currentActiveMQArtemisImage, nil
+	}
+
+	genericRelatedImageEnvVarName := ImageNamePrefix + imageTypeName + "_" + version.CompactActiveMQArtemisVersion(activeMQArtemisVersionToUse)
 	// Default case of x86_64/amd64 covered here
 	archSpecificRelatedImageEnvVarName := genericRelatedImageEnvVarName
 	if osruntime.GOARCH == "s390x" || osruntime.GOARCH == "ppc64le" {
@@ -2154,86 +2186,74 @@ func determineImageToUse(customResource *brokerv1beta1.ActiveMQArtemis, imageTyp
 	return imageName, nil
 }
 
-func resolveBrokerVersion(cr *brokerv1beta1.ActiveMQArtemis) (string, error) {
-	specifiedVersion := cr.Spec.Version
-	if specifiedVersion == "" {
-		return "", nil
-	}
-	originalVersion, verr := semver.NewVersion(specifiedVersion)
-	if verr != nil {
-		return "", verr
-	}
+// The ActiveMQ Artemis version is based on 3 parameters: currentActiveMQArtemisVersion, customResource.Spec.Version and customResource.Spec.Upgrades.
+// The currentActiveMQArtemisVersion is valid only if it matches the customResource.Spec.Version.
+// The customResource.Spec.Upgrades is considered only if currentActiveMQArtemisVersion is valid.
+func determineActiveMQArtemisVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis, currentActiveMQArtemisVersion string) (string, error) {
 
-	existingVersionMap := map[string]*semver.Version{}
-	for _, v := range version.FullVersionFromCompactVersion {
-		if existingVersionMap[v], verr = semver.NewVersion(v); verr != nil {
-			return "", verr
-		}
-	}
-	result := common.ResolveBrokerVersion(existingVersionMap, originalVersion)
-	if result == nil {
-		return "", errors.New("Did not find a matched broker version")
-	}
-	return result.String(), nil
-}
+	var currentActiveMQArtemisSemver semver.Version
 
-func determineCompactVersionToUse(customResource *brokerv1beta1.ActiveMQArtemis) (string, error) {
+	matchDesiredActiveMQArtemisVersioRange := semver.MustParseRange(">=0.0.0")
+	matchUpgradeActiveMQArtemisVersioRange := semver.MustParseRange(">=0.0.0")
 
-	compactVersionToUse := version.CompactLatestVersion
+	// Build matchDesiredActiveMQArtemisVersioRange from customResource.Spec.Version
+	desiredActiveMQArtemisVersion := customResource.Spec.Version
+	if desiredActiveMQArtemisVersion != "" {
+		var parseErr error
 
-	resolvedFullVersion, err := resolveBrokerVersion(customResource)
-	if err != nil {
-		return "", err
-	}
-	// See if we need to lookup what version to use
-	for {
-		// If there's no version specified just use the default above
-		if len(resolvedFullVersion) == 0 {
-			clog.V(1).Info("DetermineImageToUse specifiedVersion was empty")
-			break
-		}
-		clog.V(1).Info("DetermineImageToUse specifiedVersion was " + resolvedFullVersion)
-
-		// There is a version specified by the user...
-		if !customResource.Spec.Upgrades.Enabled {
-			clog.V(1).Info("DetermineImageToUse upgrades are disabled, using version as specified")
-
-			// Upgrades deprecated, we just respect the specified version when (by default) false
-			compactSpecifiedVersion := version.CompactVersionFromVersion[resolvedFullVersion]
-			if len(compactSpecifiedVersion) == 0 {
-				clog.V(1).Info("DetermineImageToUse failed to find the compact form of", "specified version ", resolvedFullVersion, "defaulting to", compactVersionToUse)
-				break
-			}
-			compactVersionToUse = compactSpecifiedVersion
-			clog.V(1).Info("DetermineImageToUse found the compact form of ", "specified version ", resolvedFullVersion, "using version", compactSpecifiedVersion)
-			break
-
+		// Add the wildcard suffix if the semantic version is incomplete
+		if strings.Count(desiredActiveMQArtemisVersion, ".") < 2 && !strings.HasSuffix(desiredActiveMQArtemisVersion, ".x") {
+			matchDesiredActiveMQArtemisVersioRange, parseErr = semver.ParseRange(desiredActiveMQArtemisVersion + ".x")
 		} else {
-			clog.V(1).Info("DetermineImageToUse upgrades are enabled")
+			matchDesiredActiveMQArtemisVersioRange, parseErr = semver.ParseRange(desiredActiveMQArtemisVersion)
 		}
 
-		// We have a specified version and upgrades are enabled in general
-		// Is the version specified on "the list"
-		compactSpecifiedVersion := version.CompactVersionFromVersion[resolvedFullVersion]
-		if len(compactSpecifiedVersion) == 0 {
-			clog.V(1).Info("DetermineImageToUse failed to find the compact form of the specified version " + resolvedFullVersion)
-			break
+		if parseErr != nil {
+			return "", errors.Wrap(parseErr, "Invalid desired ActiveMQ Artemis version")
 		}
-		clog.V(1).Info("DetermineImageToUse found the compact form " + compactSpecifiedVersion + " of specifiedVersion")
-
-		// We found the compact form in our list, is it a minor bump?
-		if version.LastMinorVersion == resolvedFullVersion &&
-			!customResource.Spec.Upgrades.Minor {
-			clog.V(1).Info("DetermineImageToUse requested minor version upgrade but minor upgrades NOT enabled")
-			break
-		}
-
-		clog.V(1).Info("DetermineImageToUse all checks ok using user specified version " + resolvedFullVersion)
-		compactVersionToUse = compactSpecifiedVersion
-		break
 	}
 
-	return compactVersionToUse, nil
+	if currentActiveMQArtemisVersion != "" {
+		var parseErr error
+
+		currentActiveMQArtemisSemver, parseErr = semver.Parse(currentActiveMQArtemisVersion)
+
+		if parseErr != nil {
+			return "", errors.Wrap(parseErr, "Invalid current ActiveMQ Artemis version")
+		}
+
+		// The currentActiveMQArtemisVersion is valid only if it matches the customResource.Spec.Version
+		if matchDesiredActiveMQArtemisVersioRange(currentActiveMQArtemisSemver) {
+
+			// Build matchUpgradeActiveMQArtemisVersioRange from currentActiveMQArtemisVersion
+			upperActiveMQArtemisSemver := currentActiveMQArtemisSemver
+			if customResource.Spec.Upgrades.Enabled {
+				if customResource.Spec.Upgrades.Minor {
+					upperActiveMQArtemisSemver.IncrementMajor()
+					upperActiveMQArtemisSemver.Minor = 0
+					upperActiveMQArtemisSemver.Patch = 0
+				} else {
+					upperActiveMQArtemisSemver.IncrementMinor()
+					upperActiveMQArtemisSemver.Patch = 0
+				}
+			} else {
+				upperActiveMQArtemisSemver.IncrementPatch()
+			}
+
+			matchUpgradeActiveMQArtemisVersioRange, parseErr = semver.ParseRange(">=" + currentActiveMQArtemisSemver.String() + " <" + upperActiveMQArtemisSemver.String())
+		}
+	}
+
+	// Search the greater supported ActiveMQ Artemis version that match desired and upgrade version renages.
+	supportedActiveMQArtemisSemanticVersions := version.SupportedActiveMQArtemisSemanticVersions()
+	for i := len(supportedActiveMQArtemisSemanticVersions) - 1; i >= 0; i-- {
+		supportedActiveMQArtemisSemanticVersion := supportedActiveMQArtemisSemanticVersions[i]
+		if matchDesiredActiveMQArtemisVersioRange(supportedActiveMQArtemisSemanticVersion) && matchUpgradeActiveMQArtemisVersioRange(supportedActiveMQArtemisSemanticVersion) {
+			return supportedActiveMQArtemisSemanticVersion.String(), nil
+		}
+	}
+
+	return "", errors.New("No supported ActiveMQ Artemis versions match")
 }
 
 func createExtraConfigmapsAndSecrets(brokerContainer *corev1.Container, configMaps []string, secrets []string, brokerPropsData map[string]string) ([]corev1.Volume, []corev1.VolumeMount) {
