@@ -1560,7 +1560,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	configMapsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.ConfigMaps
 	secretsToCreate := customResource.Spec.DeploymentPlan.ExtraMounts.Secrets
-	brokerPropertiesResourceName, isSecret, brokerPropertiesMapData := reconciler.addResourceForBrokerProperties(customResource, namer)
+	brokerPropertiesResourceName, isSecret, brokerPropertiesMapData := reconciler.addResourceForBrokerProperties(customResource, namer, labels)
 	if isSecret {
 		secretsToCreate = append(secretsToCreate, brokerPropertiesResourceName)
 	} else {
@@ -2029,7 +2029,7 @@ func getConfigAppliedConfigMapName(artemis *brokerv1beta1.ActiveMQArtemis) types
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) (string, bool, map[string]string) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, labels map[string]string) (string, bool, map[string]string) {
 
 	// fetch and do idempotent transform based on CR
 
@@ -2061,7 +2061,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 
 	data := brokerPropertiesData(customResource.Spec.BrokerProperties)
 	if desired == nil {
-		secret := secrets.MakeSecret(resourceName, resourceName.Name, data, namer.LabelBuilder.Labels())
+		secret := secrets.MakeSecret(resourceName, resourceName.Name, data, labels)
 		desired = &secret
 	} else {
 		desired.StringData = data

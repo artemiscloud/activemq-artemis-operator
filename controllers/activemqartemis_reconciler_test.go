@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -504,6 +505,50 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		Value: "-Djava.security.auth.login.config=/amq/extra/secrets/test-config-jaas-config/login.config",
 	}
 	assert.Contains(t, newSpec.Spec.Containers[0].Env, expectedEnv)
+}
+
+func TestNewPodTemplateSpecForCR_IncludesLabels(t *testing.T) {
+	reconciler := &ActiveMQArtemisReconcilerImpl{}
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				Labels: map[string]string{"myKey": "myValue"},
+			},
+		},
+	}
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, newSpec)
+
+	v, ok := newSpec.Labels["myKey"]
+	assert.True(t, ok)
+	assert.Equal(t, "myValue", v)
+}
+
+func TestNewPodTemplateSpecForCR_SecretsIncludeLabels(t *testing.T) {
+	reconciler := &ActiveMQArtemisReconcilerImpl{}
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				Labels: map[string]string{"myKey": "myValue"},
+			},
+		},
+	}
+
+	_, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	assert.NoError(t, err)
+
+	// check that the secret that was created and stored in requestedResources has the expected label
+	for _, resource := range reconciler.requestedResources {
+		if secret, ok := resource.(*corev1.Secret); ok {
+			assert.True(t, len(secret.Labels) == 1)
+			assert.Equal(t, secret.Labels["myKey"], "myValue")
+		}
+	}
 }
 
 func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
