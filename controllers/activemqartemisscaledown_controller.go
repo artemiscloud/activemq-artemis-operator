@@ -51,6 +51,7 @@ type ActiveMQArtemisScaledownReconciler struct {
 //+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisscaledowns,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisscaledowns/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=broker.amq.io,namespace=activemq-artemis-operator,resources=activemqartemisscaledowns/finalizers,verbs=update
+//+kubebuilder:rbac:groups=batch,namespace=activemq-artemis-operator,resources=jobs,verbs=create;list;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -97,6 +98,14 @@ func (r *ActiveMQArtemisScaledownReconciler) Reconcile(ctx context.Context, requ
 
 	reqLogger.Info("OK, return result")
 	return ctrl.Result{}, nil
+}
+
+//for testing
+func (r *ActiveMQArtemisScaledownReconciler) GetDrainController(namespace string) *draincontroller.Controller {
+	if inst, ok := controllers[namespace]; ok {
+		return inst
+	}
+	return nil
 }
 
 func (r *ActiveMQArtemisScaledownReconciler) getDrainController(localOnly bool, namespace string, kubeClient *kubernetes.Clientset, instance *brokerv1beta1.ActiveMQArtemisScaledown) (kubeinformers.SharedInformerFactory, *draincontroller.Controller, bool) {
