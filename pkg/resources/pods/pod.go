@@ -28,3 +28,12 @@ func MakePodTemplateSpec(current *corev1.PodTemplateSpec, namespacedName types.N
 
 	return desired
 }
+
+// MakeImagePullSecretRefs takes an incoming slice of imagePullSecrets and converts them to a slice of corev1.LocalObjectReference
+func MakeImagePullSecretRefs(imagePullSecrets []string) []corev1.LocalObjectReference {
+	var objectRefs []corev1.LocalObjectReference
+	for _, s := range imagePullSecrets {
+		objectRefs = append(objectRefs, corev1.LocalObjectReference{Name: s})
+	}
+	return objectRefs
+}

@@ -1510,6 +1510,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		podSpec = &corev1.PodSpec{}
 	}
 
+	// Configure ImagePullSecrets if set on the DeploymentPlan
+	imagePullSecretRefs := pods.MakeImagePullSecretRefs(customResource.Spec.DeploymentPlan.ImagePullSecrets)
+	podSpec.ImagePullSecrets = imagePullSecretRefs
+
 	container := containers.MakeContainer(podSpec, customResource.Name, resolveImage(customResource, BrokerImageKey), MakeEnvVarArrayForCR(customResource, namer))
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
