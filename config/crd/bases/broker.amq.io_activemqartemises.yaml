@@ -1442,6 +1442,12 @@ spec:
                     description: The image used for the broker, all upgrades are disabled.
                       Needs a corresponding initImage
                     type: string
+                  imagePullSecrets:
+                    description: The image pull secrets name used to retrieve secrets
+                      for image pulls.
+                    items:
+                      type: string
+                    type: array
                   initImage:
                     description: The init container image used to configure broker,
                       all upgrades are disabled. Needs a corresponding image
