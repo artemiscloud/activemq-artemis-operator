@@ -287,6 +287,15 @@ var _ = Describe("Scale down controller", func() {
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+
+			//clean up taint
+			nodes := &corev1.NodeList{}
+			Expect(k8sClient.List(ctx, nodes, &client.ListOptions{})).Should(Succeed())
+			Expect(len(nodes.Items) > 0).Should(BeTrue())
+
+			node := nodes.Items[0]
+			node.Spec.Taints = nil
+			Expect(k8sClient.Update(ctx, &node)).Should(Succeed())
 		}
 	})
 })
