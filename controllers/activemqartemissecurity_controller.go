@@ -38,6 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var secLog = ctrl.Log.WithName("controller_v1beta1activemqartemissecurity")
+
 // ActiveMQArtemisSecurityReconciler reconciles a ActiveMQArtemisSecurity object
 type ActiveMQArtemisSecurityReconciler struct {
 	client.Client
@@ -228,7 +230,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 			resources.Create(r.SecurityCR, r.owner.Client, r.owner.Scheme, secretDefinition)
 		}
 	} else {
-		slog.Info("Found secret " + secretName)
+		secLog.Info("Found secret " + secretName)
 
 		if elem, ok := secretDefinition.Data[key]; ok {
 			//the value exists
@@ -243,9 +245,9 @@ func (r *ActiveMQArtemisSecurityConfigHandler) getPassword(secretName string, ke
 		secretDefinition.Data = make(map[string][]byte)
 	}
 	secretDefinition.Data[key] = []byte(value)
-	slog.Info("Updating secret", "secret", namespacedName.Name)
+	secLog.Info("Updating secret", "secret", namespacedName.Name)
 	if err := resources.Update(r.owner.Client, secretDefinition); err != nil {
-		slog.Error(err, "failed to update secret", "secret", secretName)
+		secLog.Error(err, "failed to update secret", "secret", secretName)
 	}
 	return &value
 }
@@ -258,10 +260,10 @@ func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Co
 	filePath := outputDir + "/security-config.yaml"
 	cmdPersistCRAsYaml, err := r.persistCR(filePath, result)
 	if err != nil {
-		slog.Error(err, "Error marshalling security CR", "cr", r.SecurityCR)
+		secLog.Error(err, "Error marshalling security CR", "cr", r.SecurityCR)
 		return nil
 	}
-	slog.Info("get the command", "value", cmdPersistCRAsYaml)
+	secLog.Info("get the command", "value", cmdPersistCRAsYaml)
 	configCmds = append(configCmds, cmdPersistCRAsYaml)
 	configCmds = append(configCmds, "/opt/amq-broker/script/cfg/config-security.sh")
 	envVarName := "SECURITY_CFG_YAML"
@@ -288,7 +290,7 @@ func (r *ActiveMQArtemisSecurityConfigHandler) Config(initContainers []corev1.Co
 	}
 	environments.Create(initContainers, &envVar)
 
-	ctrl.Log.Info("returning config cmds", "value", configCmds)
+	secLog.Info("returning config cmds", "value", configCmds)
 	return configCmds
 }
 
