@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -195,4 +196,13 @@ func resolveVersionComponents(desired string) (major, minor, patch *uint64) {
 
 func Int32ToPtr(v int32) *int32 {
 	return &v
+}
+
+func IsJobStatusConditionTrue(jobConditions []batchv1.JobCondition, jobConditionType batchv1.JobConditionType) bool {
+	for _, jc := range jobConditions {
+		if jc.Type == jobConditionType && jc.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }

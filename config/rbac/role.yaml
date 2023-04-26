@@ -42,6 +42,14 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - list
+- apiGroups:
   - broker.amq.io
   resources:
   - activemqartemisaddresses

@@ -28,7 +28,9 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +46,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"encoding/json"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +53,7 @@ import (
 	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -62,9 +64,14 @@ import (
 
 var dlog = ctrl.Log.WithName("controller_v1beta1activemqartemisscaledown")
 
+var DefaultDrainCommand = []string{
+	"/bin/sh",
+	"-c",
+	"echo \"Starting the drainer\" ; /opt/amq/bin/drain.sh ; EXIT_CODE=$? ; echo \"Drain completed! Exit code $?\"; exit $EXIT_CODE",
+}
+
 const controllerAgentName = "statefulset-drain-controller"
-const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner" // TODO: can we replace this with an OwnerReference with the StatefulSet as the owner?
-const AnnotationDrainerPodTemplate = "statefulsets.kubernetes.io/drainer-pod-template"
+const AnnotationStatefulSet = "statefulsets.kubernetes.io/drainer-pod-owner"
 
 const LabelDrainPod = "drain-pod"
 const DrainServiceAccountName = "drain-pod-service-account"
@@ -81,9 +88,6 @@ const (
 	MessageDrainPodDeleted  = "delete Drain Pod %s in StatefulSet %s successful"
 	MessagePVCDeleted       = "delete Claim %s in StatefulSet %s successful"
 )
-
-// TODO: Remove this hack
-var globalPodTemplateJson string = "{\n \"metadata\": {\n    \"labels\": {\n      \"app\": \"CRNAME-amq-drainer\"\n    }\n  },\n  \"spec\": {\n \"serviceAccount\": \"SERVICE_ACCOUNT\",\n \"serviceAccountName\": \"SERVICE_ACCOUNT_NAME\",\n \"terminationGracePeriodSeconds\": 5,\n    \"containers\": [\n {\n        \"env\": [\n          {\n            \"name\": \"AMQ_EXTRA_ARGS\",\n            \"value\": \"--no-autotune\"\n },\n          {\n            \"name\": \"HEADLESS_SVC_NAME\",\n            \"value\": \"HEADLESSSVCNAMEVALUE\"\n },\n          {\n            \"name\": \"PING_SVC_NAME\",\n            \"value\": \"PINGSVCNAMEVALUE\"\n },\n          {\n            \"name\": \"AMQ_USER\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_PASSWORD\",\n            \"value\": \"admin\"\n },\n          {\n            \"name\": \"AMQ_ROLE\",\n \"value\": \"admin\"\n          },\n          {\n            \"name\": \"AMQ_NAME\",\n            \"value\": \"amq-broker\"\n },\n          {\n            \"name\": \"AMQ_TRANSPORTS\",\n \"value\": \"openwire,amqp,stomp,mqtt,hornetq\"\n          },\n {\n            \"name\": \"AMQ_GLOBAL_MAX_SIZE\",\n            \"value\": \"100mb\"\n          },\n          {\n            \"name\": \"AMQ_DATA_DIR\",\n            \"value\": \"/opt/CRNAME/data\"\n          },\n          {\n \"name\": \"AMQ_DATA_DIR_LOGGING\",\n            \"value\": \"true\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTERED\",\n            \"value\": \"true\"\n },\n          {\n            \"name\": \"AMQ_REPLICAS\",\n \"value\": \"1\"\n          },\n          {\n            \"name\": \"AMQ_CLUSTER_USER\",\n            \"value\": \"CLUSTERUSER\"\n },\n          {\n            \"name\": \"AMQ_CLUSTER_PASSWORD\",\n            \"value\": \"CLUSTERPASS\"\n          },\n          {\n            \"name\": \"POD_NAMESPACE\",\n            \"valueFrom\": {\n \"fieldRef\": {\n                \"fieldPath\": \"metadata.namespace\"\n              }\n            }\n },\n          {\n            \"name\": \"OPENSHIFT_DNS_PING_SERVICE_PORT\",\n            \"value\": \"7800\"\n          }\n        ],\n        \"image\": \"SSIMAGE\",\n \"name\": \"drainer-amq\",\n\n        \"command\": [\"/bin/sh\", \"-c\", \"echo \\\"Starting the drainer\\\" ; /opt/amq/bin/drain.sh ; EXIT_CODE=$?  ; echo \\\"Drain completed! Exit code $?\\\"; exit $EXIT_CODE\"],\n        \"volumeMounts\": [\n          {\n            \"name\": \"CRNAME\",\n \"mountPath\": \"/opt/CRNAME/data\"\n          }\n ]\n      }\n    ]\n }\n}"
 
 type Controller struct {
 	name string
@@ -120,6 +124,8 @@ type Controller struct {
 	stopCh chan struct{}
 
 	client client.Client
+
+	drainCommand []string
 }
 
 func eventLog(format string, args ...interface{}) {
@@ -212,7 +218,6 @@ func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledow
 		Namespace: instance.Annotations["CRNAMESPACE"],
 		Name:      namer.CrToSS(instance.Annotations["CRNAME"]),
 	}
-	dlog.Info("adding a new scaledown instance", "key", namespacedName)
 	c.ssNamesMap[namespacedName] = instance.Annotations
 	dlog.Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
 	c.ssToCrMap[namespacedName] = instance
@@ -367,11 +372,6 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 	}
 	dlog.Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))
 
-	//if sts.Annotations[AnnotationDrainerPodTemplate] == "" {
-	//	log.Info("Ignoring StatefulSet '%s' because it does not define a drain pod template.", sts.Name)
-	//	return nil
-	//}
-
 	claimsGroupedByOrdinal, err := c.getClaims(sts)
 	if err != nil {
 		err = fmt.Errorf("error while getting list of PVCs in namespace %s: %s", sts.Namespace, err)
@@ -396,21 +396,27 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 		}
 
 		// TODO check if the number of claims matches the number of StatefulSet's volumeClaimTemplates. What if it doesn't?
+		jobName := "job-" + getPodName(sts, ordinal)
 
-		podName := getPodName(sts, ordinal)
-		dlog.Info("got pod name", "name", podName)
-
-		pod, err := c.podLister.Pods(sts.Namespace).Get(podName)
+		jobs, err := c.kubeclientset.BatchV1().Jobs(sts.Namespace).List(context.TODO(), metav1.ListOptions{})
 
 		if err != nil && !errors.IsNotFound(err) {
-			dlog.Error(err, "Error while getting Pod "+podName)
+			dlog.Error(err, "Error while getting Job "+jobName)
 			return err
 		}
 
+		var job *batchv1.Job = nil
+		for _, j := range jobs.Items {
+			if j.Name == jobName {
+				job = &j
+				break
+			}
+		}
+
 		// Is it a drain pod or a regular stateful pod?
-		if isDrainPod(pod) {
-			dlog.Info("This is a drain pod", "pod name", podName)
-			err = c.cleanUpDrainPodIfNeeded(sts, pod, ordinal)
+		if job != nil {
+			dlog.V(1).Info("This is a drain job", "job name", jobName, "details", job)
+			err = c.cleanUpDrainPodIfNeeded(sts, job, ordinal)
 			if err != nil {
 				return err
 			}
@@ -425,19 +431,19 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 
 		// TODO: scale down to zero? should what happens on such events be configurable? there may or may not be anywhere to drain to
 		if int32(ordinal) >= *sts.Spec.Replicas {
-			dlog.Info("ordinal is greater then replicas", "ordinal", ordinal, "replicas", *sts.Spec.Replicas)
+			dlog.Info("ordinal is greater than replicas", "ordinal", ordinal, "replicas", *sts.Spec.Replicas)
 			// PVC exists, but its ordinal is higher than the current last stateful pod's ordinal;
 			// this means the PVC is an orphan and should be drained & deleted
 
 			// If the Pod doesn't exist, we'll create it
-			if pod == nil { // TODO: what if the PVC doesn't exist here (or what if it's deleted just after we create the pod)
-				dlog.Info("Found orphaned PVC(s) for ordinal " + strconv.Itoa(ordinal) + ". Creating drain pod " + podName)
+			if job == nil { // TODO: what if the PVC doesn't exist here (or what if it's deleted just after we create the pod)
+				dlog.Info("Found orphaned PVC(s) for ordinal " + strconv.Itoa(ordinal) + ". Creating drain pod " + jobName)
 
 				// Check to ensure we have a pod to drain to
 				ordinalZeroPodName := getPodName(sts, 0)
 				ordinalZeroPod, err := c.podLister.Pods(sts.Namespace).Get(ordinalZeroPodName)
 				if err != nil {
-					dlog.Error(err, "Error while getting ordinal zero pod "+podName+": "+err.Error())
+					dlog.Error(err, "Error while getting ordinal zero pod "+ordinalZeroPodName+": "+err.Error())
 					return err
 				}
 
@@ -469,36 +475,32 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 					continue
 				}
 
-				dlog.Info("Creating new drain pod...", "sts", sts)
-				pod, err := c.newPod(sts, ordinal)
+				dlog.V(1).Info("Creating new drain job...", "sts", sts)
+				jobName := "job-" + getPodName(sts, ordinal)
+				job, err := c.NewDrainJob(sts, ordinal, jobName)
 				if err != nil {
-					dlog.Error(err, "error creating drain pod")
-					return fmt.Errorf("can't create drain Pod object: %s", err)
+					dlog.Error(err, "failed to create job spec")
+					return err
 				}
-				dlog.Info("Now creating the drain pod in namespace "+sts.Namespace, "pod", pod)
-				// needs a proper account for the pod to be created/start.
-				_, err = c.kubeclientset.CoreV1().Pods(sts.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				dlog.V(1).Info("Created the drain job", "job", job)
 
-				// If an error occurs during Create, we'll requeue the item so we can
-				// attempt processing again later. This could have been caused by a
-				// temporary network failure, or any other transient reason.
+				jobs := c.kubeclientset.BatchV1().Jobs(sts.Namespace)
+
+				_, err = jobs.Create(context.TODO(), job, metav1.CreateOptions{})
+
 				if err != nil {
-					dlog.Error(err, "Error while creating drain Pod "+podName+": ")
+					dlog.Error(err, "failed to create job", "namespace", sts.Namespace)
 					return err
 				}
 
 				if !c.localOnly {
-					c.recorder.Event(sts, corev1.EventTypeNormal, SuccessCreate, fmt.Sprintf(MessageDrainPodCreated, podName, sts.Name))
+					c.recorder.Event(sts, corev1.EventTypeNormal, SuccessCreate, fmt.Sprintf(MessageDrainPodCreated, jobName, sts.Name))
 				}
 
 				continue
-				//} else {
-				//	log.Info("Pod '%s' exists. Not taking any action.", podName)
 			}
 		}
 	}
-
-	// TODO: add status annotation (what info?)
 	return nil
 }
 
@@ -575,20 +577,14 @@ func (c *Controller) cleanupDrainRBACResources(namespace string) {
 	}
 }
 
-func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev1.Pod, ordinal int) error {
-	// Drain Pod already exists. Check if it's done draining.
-	podName := getPodName(sts, ordinal)
+func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, job *batchv1.Job, ordinal int) error {
 
-	podPhase := pod.Status.Phase
-	if podPhase == corev1.PodSucceeded || podPhase == corev1.PodFailed {
+	if common.IsJobStatusConditionTrue(job.Status.Conditions, batchv1.JobComplete) {
 		defer c.cleanupDrainRBACResources(sts.Namespace)
-	}
 
-	switch podPhase {
-	case (corev1.PodSucceeded):
-		dlog.Info("Drain pod " + podName + " finished.")
+		dlog.Info("Drain job " + job.Name + " finished.")
 		if !c.localOnly {
-			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, podName, sts.Name))
+			c.recorder.Event(sts, corev1.EventTypeNormal, DrainSuccess, fmt.Sprintf(MessageDrainPodFinished, job.Name, sts.Name))
 		}
 
 		for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
@@ -606,29 +602,22 @@ func (c *Controller) cleanUpDrainPodIfNeeded(sts *appsv1.StatefulSet, pod *corev
 		// TODO what if the user scales up the statefulset and the statefulset controller creates the new pod after we delete the pod but before we delete the PVC
 		// TODO what if we crash after we delete the PVC, but before we delete the pod?
 		//
-		dlog.Info("Deleting drain pod " + podName)
-		err := c.kubeclientset.CoreV1().Pods(sts.Namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+		dlog.Info("Deleting drain job " + job.Name)
+		// this delete policy lets the drainer pod to be deleted with the job
+		deletePolicy := metav1.DeletePropagationBackground
+		err := c.kubeclientset.BatchV1().Jobs(sts.Namespace).Delete(context.TODO(), job.Name, metav1.DeleteOptions{PropagationPolicy: &deletePolicy})
 		if err != nil {
 			return err
 		}
+
 		if !c.localOnly {
-			c.recorder.Event(sts, corev1.EventTypeNormal, PodDeleteSuccess, fmt.Sprintf(MessageDrainPodDeleted, podName, sts.Name))
+			c.recorder.Event(sts, corev1.EventTypeNormal, PodDeleteSuccess, fmt.Sprintf(MessageDrainPodDeleted, job.Name, sts.Name))
 		}
-
-	case (corev1.PodFailed):
-		dlog.Info("Drain pod " + podName + " failed.")
-
-	default:
-		str := fmt.Sprintf("Drain pod Phase was %s", pod.Status.Phase)
-		dlog.Info(str)
-
+	} else {
+		dlog.Info("Drain pod "+job.Name+" not complete.", "job status", job.Status)
 	}
 
 	return nil
-}
-
-func isDrainPod(pod *corev1.Pod) bool {
-	return pod != nil && pod.ObjectMeta.Annotations[AnnotationStatefulSet] != ""
 }
 
 // enqueueStatefulSet takes a StatefulSet resource and converts it into a namespace/name
@@ -688,7 +677,7 @@ func (c *Controller) handlePod(obj interface{}) {
 
 	stsNameFromAnnotation := object.GetAnnotations()[AnnotationStatefulSet]
 	if stsNameFromAnnotation != "" {
-		dlog.V(5).Info("Found pod with " + AnnotationStatefulSet + " annotation pointing to StatefulSet " + stsNameFromAnnotation + ". Enqueueing StatefulSet.")
+		dlog.V(5).Info("Found object with " + AnnotationStatefulSet + " annotation pointing to StatefulSet " + stsNameFromAnnotation + ". Enqueueing StatefulSet.")
 		sts, err := c.statefulSetLister.StatefulSets(object.GetNamespace()).Get(stsNameFromAnnotation)
 		if err != nil {
 			dlog.V(4).Info("Error retrieving StatefulSet " + stsNameFromAnnotation + ": " + err.Error())
@@ -759,83 +748,177 @@ func (c *Controller) getClusterCredentials(namespace string, ssNames map[string]
 	}
 }
 
-func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, error) {
+func (c *Controller) GetDrainCommand() []string {
+	if c.drainCommand == nil {
+		return DefaultDrainCommand
+	}
+	return c.drainCommand
+}
+
+func (c *Controller) SetDrainCommand(cmd []string) {
+	c.drainCommand = cmd
+}
+
+func (c *Controller) NewDrainJob(sts *appsv1.StatefulSet, ordinal int, jobName string) (*batchv1.Job, error) {
 
 	ssNamesKey := types.NamespacedName{
 		Namespace: sts.Namespace,
 		Name:      sts.Name,
 	}
-	dlog.Info("Creating newPod for ss", "ss", ssNamesKey)
+	dlog.Info("Creating new job for ss", "ss", ssNamesKey)
 
 	if _, ok := c.ssNamesMap[ssNamesKey]; !ok {
 		dlog.Info("Cannot find drain pod data for statefule set", "namespace", ssNamesKey)
 		return nil, fmt.Errorf("No drain pod data for statefulset " + sts.Name)
 	}
 
-	ssNames := c.ssNamesMap[ssNamesKey]
+	parameters := c.ssNamesMap[ssNamesKey]
 
-	//podTemplateJson := sts.Annotations[AnnotationDrainerPodTemplate]
-	//TODO: Remove this blatant hack
-	podTemplateJson := globalPodTemplateJson
-	clusterUser, clusterPassword := c.getClusterCredentials(sts.Namespace, ssNames)
-	podTemplateJson = strings.Replace(podTemplateJson, "CRNAME", ssNames["CRNAME"], -1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERUSER", clusterUser, 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "CLUSTERPASS", clusterPassword, 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "HEADLESSSVCNAMEVALUE", ssNames["HEADLESSSVCNAMEVALUE"], 1)
-	podTemplateJson = strings.Replace(podTemplateJson, "PINGSVCNAMEVALUE", ssNames["PINGSVCNAMEVALUE"], 1)
+	var backOffLimit int32 = 0
+	var termGracePeriodSecs int64 = 5
+	clusterUser, clusterPassword := c.getClusterCredentials(sts.Namespace, parameters)
 
+	var serviceAccountName string
 	if c.localOnly {
-		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", os.Getenv("SERVICE_ACCOUNT"), 1)
-		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", os.Getenv("SERVICE_ACCOUNT"), 1)
+		serviceAccountName = os.Getenv("SERVICE_ACCOUNT")
 	} else {
 		// the drain pod is in a different namespace, we need set up a service account with proper permission
 		// and should delete it after drain is done.
 		c.createDrainRBACResources(sts.Namespace)
 
 		dlog.Info("Setting drain pod service account", "service account name", DrainServiceAccountName)
-		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT", DrainServiceAccountName, 1)
-		podTemplateJson = strings.Replace(podTemplateJson, "SERVICE_ACCOUNT_NAME", DrainServiceAccountName, 1)
+		serviceAccountName = DrainServiceAccountName
 	}
 	image := sts.Spec.Template.Spec.Containers[0].Image
-	//sts.Spec.Template.Spec.Containers[0].Resources = c.resources
 	if image == "" {
 		return nil, fmt.Errorf("No drain pod image configured for StatefulSet " + sts.Name)
 	}
-	podTemplateJson = strings.Replace(podTemplateJson, "SSIMAGE", image, 1)
-	if podTemplateJson == "" {
-		return nil, fmt.Errorf("No drain pod template configured for StatefulSet " + sts.Name)
-	}
-	pod := corev1.Pod{}
-	err := json.Unmarshal([]byte(podTemplateJson), &pod)
-	if err != nil {
-		return nil, fmt.Errorf("Can't unmarshal DrainerPodTemplate JSON from annotation: " + err.Error())
-	}
 
-	pod.Name = getPodName(sts, ordinal)
-	pod.Namespace = sts.Namespace
+	podName := getPodName(sts, ordinal)
+	jobLabels := map[string]string{}
+	jobLabels["app"] = parameters["CRNAME"] + "-amq-drainer"
+	jobLabels[LabelDrainPod] = podName
 
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
-	}
-	pod.Labels[LabelDrainPod] = pod.Name
-	if pod.Annotations == nil {
-		pod.Annotations = map[string]string{}
-	}
-	pod.Annotations[AnnotationStatefulSet] = sts.Name
+	jobAnnotations := map[string]string{}
+	jobAnnotations[AnnotationStatefulSet] = sts.Name
 
-	// TODO: cannot set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on: User "system:serviceaccount:kube-system:statefulset-drain-controller" cannot update statefulsets/finalizers.apps
-	if pod.OwnerReferences == nil {
-		pod.OwnerReferences = []metav1.OwnerReference{}
-	}
+	jobOwnerReferences := []metav1.OwnerReference{}
 	ownerCr := c.ssToCrMap[ssNamesKey]
-	pod.OwnerReferences = append(pod.OwnerReferences, *metav1.NewControllerRef(ownerCr, ownerCr.GroupVersionKind()))
+	jobOwnerReferences = append(jobOwnerReferences, *metav1.NewControllerRef(ownerCr, ownerCr.GroupVersionKind()))
 
-	pod.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
-	pod.Spec.Containers[0].Resources = c.resources
-	pod.Spec.Tolerations = sts.Spec.Template.Spec.Tolerations
+	jobSpec := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            jobName,
+			Namespace:       sts.Namespace,
+			Labels:          jobLabels,
+			Annotations:     jobAnnotations,
+			OwnerReferences: jobOwnerReferences,
+		},
+		Spec: batchv1.JobSpec{
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: jobName,
+				},
+				Spec: v1.PodSpec{
+					ServiceAccountName:            serviceAccountName,
+					TerminationGracePeriodSeconds: &termGracePeriodSecs,
+					Tolerations:                   sts.Spec.Template.Spec.Tolerations,
+					Containers: []v1.Container{
+						{
+							Name:      "drainer-amq",
+							Image:     image,
+							Resources: c.resources,
+							Env: []v1.EnvVar{
+								{
+									Name:  "AMQ_EXTRA_ARGS",
+									Value: "--no-autotune",
+								},
+								{
+									Name:  "HEADLESS_SVC_NAME",
+									Value: parameters["HEADLESSSVCNAMEVALUE"],
+								},
+								{
+									Name:  "PING_SVC_NAME",
+									Value: parameters["PINGSVCNAMEVALUE"],
+								},
+								{
+									Name:  "AMQ_USER",
+									Value: "admin",
+								},
+								{
+									Name:  "AMQ_PASSWORD",
+									Value: "admin",
+								},
+								{
+									Name:  "AMQ_ROLE",
+									Value: "admin",
+								},
+								{
+									Name:  "AMQ_NAME",
+									Value: "amq-broker",
+								},
+								{
+									Name:  "AMQ_TRANSPORTS",
+									Value: "openwire,amqp,stomp,mqtt,hornetq",
+								},
+								{
+									Name:  "AMQ_GLOBAL_MAX_SIZE",
+									Value: "100mb",
+								},
+								{
+									Name:  "AMQ_DATA_DIR",
+									Value: "/opt/" + parameters["CRNAME"] + "/data",
+								},
+								{
+									Name:  "AMQ_CLUSTERED",
+									Value: "true",
+								},
+								{
+									Name:  "AMQ_REPLICAS",
+									Value: "1",
+								},
+								{
+									Name:  "AMQ_CLUSTER_USER",
+									Value: clusterUser,
+								},
+								{
+									Name:  "AMQ_CLUSTER_PASSWORD",
+									Value: clusterPassword,
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &v1.EnvVarSource{
+										FieldRef: &v1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+								{
+									Name:  "OPENSHIFT_DNS_PING_SERVICE_PORT",
+									Value: "7800",
+								},
+							},
+							Command: c.GetDrainCommand(),
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      parameters["CRNAME"],
+									MountPath: "/opt/" + parameters["CRNAME"] + "/data",
+								},
+							},
+						},
+					},
+					// only "Never" or "OnFailure" is allowed
+					// the difference is that "Never" will cause a new Pod started in case of failure
+					// while with "onFailure" only the container is restarted.
+					RestartPolicy: v1.RestartPolicyNever,
+				},
+			},
+			BackoffLimit: &backOffLimit,
+		},
+	}
 
 	for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{ // TODO: override existing volumes with the same name
+		jobSpec.Spec.Template.Spec.Volumes = append(jobSpec.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: pvcTemplate.Name,
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
@@ -845,7 +928,8 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 		})
 	}
 
-	return &pod, nil
+	return jobSpec, nil
+
 }
 
 func getPodName(sts *appsv1.StatefulSet, ordinal int) string {

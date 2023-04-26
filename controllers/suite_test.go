@@ -42,6 +42,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -91,14 +92,15 @@ const (
 )
 
 var (
-	resCount   int64
-	specCount  int64
-	currentDir string
-	k8sClient  client.Client
-	restConfig *rest.Config
-	testEnv    *envtest.Environment
-	ctx        context.Context
-	cancel     context.CancelFunc
+	resCount     int64
+	specCount    int64
+	currentDir   string
+	k8sClient    client.Client
+	k8sClientSet *kubernetes.Clientset
+	restConfig   *rest.Config
+	testEnv      *envtest.Environment
+	ctx          context.Context
+	cancel       context.CancelFunc
 
 	// the cluster url
 	clusterUrl *url.URL
@@ -112,6 +114,7 @@ var (
 
 	brokerReconciler   *ActiveMQArtemisReconciler
 	securityReconciler *ActiveMQArtemisSecurityReconciler
+	scaleDownRconciler *ActiveMQArtemisScaledownReconciler
 
 	oprRes = []string{
 		"../deploy/service_account.yaml",
@@ -373,7 +376,7 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
 
-	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
+	scaleDownRconciler = &ActiveMQArtemisScaledownReconciler{
 		Client: k8Manager.GetClient(),
 		Scheme: k8Manager.GetScheme(),
 		Config: k8Manager.GetConfig(),
@@ -580,6 +583,9 @@ func setUpK8sClient() {
 	k8sClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	k8sClientSet, err = kubernetes.NewForConfig(restConfig)
+	Expect(err).To(BeNil())
 }
 
 var _ = BeforeSuite(func() {
