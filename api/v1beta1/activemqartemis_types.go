@@ -364,6 +364,9 @@ type DeploymentPlanType struct {
 	// Specifies the pod disruption budget
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Pod Disruption Budget"
 	PodDisruptionBudget *policyv1.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	// Specifies the Revision History Limit of the statefulset
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Revision History Limit"
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 }
 
 // Affinity is a group of affinity scheduling rules.

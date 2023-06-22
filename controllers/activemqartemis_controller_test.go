@@ -360,6 +360,29 @@ var _ = Describe("artemis controller", func() {
 		})
 	})
 
+	Context("Statefulset options", Label("statefulset-options"), func() {
+		It("revision history limit", func() {
+			//Deploy a broker cr
+			var limit int32 = 1000
+			brokerCr, _ := DeployCustomBroker(defaultNamespace, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+				candidate.Spec.DeploymentPlan.RevisionHistoryLimit = &limit
+			})
+
+			//retrieve statefylset
+			createdSs := &appsv1.StatefulSet{}
+			ssKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name), Namespace: defaultNamespace}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, ssKey, createdSs)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			//checking the limits
+			Expect(createdSs.Spec.RevisionHistoryLimit).To(Not(BeNil()))
+			Expect(*createdSs.Spec.RevisionHistoryLimit).To(Equal(limit))
+
+			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
+		})
+	})
+
 	Context("pod disruption budget", Label("pod-disruption-budget"), func() {
 		It("pod disruption budget validation", func() {
 			minOne := intstr.FromInt(1)

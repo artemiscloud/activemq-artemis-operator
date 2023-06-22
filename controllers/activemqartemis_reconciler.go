@@ -238,6 +238,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 	}
 	reconciler.trackDesired(headlessServiceDefinition)
 
+	if customResource.Spec.DeploymentPlan.RevisionHistoryLimit != nil {
+		currentStatefulSet.Spec.RevisionHistoryLimit = customResource.Spec.DeploymentPlan.RevisionHistoryLimit
+	}
 	return currentStatefulSet, nil
 }
 
