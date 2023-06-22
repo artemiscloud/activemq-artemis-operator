@@ -2143,6 +2143,10 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  revisionHistoryLimit:
+                    description: Specifies the Revision History Limit of the statefulset
+                    format: int32
+                    type: integer
                   size:
                     description: The number of broker pods to deploy
                     format: int32

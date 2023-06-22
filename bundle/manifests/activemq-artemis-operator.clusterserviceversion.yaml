@@ -1266,6 +1266,9 @@ spec:
         path: deploymentPlan.resources
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: Specifies the Revision History Limit of the statefulset
+        displayName: Revision History Limit
+        path: deploymentPlan.revisionHistoryLimit
       - description: The number of broker pods to deploy
         displayName: Size
         path: deploymentPlan.size
