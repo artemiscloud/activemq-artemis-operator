@@ -2067,11 +2067,6 @@ spec:
                 resources: {}
                 securityContext:
                   allowPrivilegeEscalation: false
-                  capabilities:
-                    drop:
-                    - ALL
-                  seccompProfile:
-                    type: RuntimeDefault
               securityContext:
                 runAsNonRoot: true
               serviceAccountName: activemq-artemis-controller-manager
