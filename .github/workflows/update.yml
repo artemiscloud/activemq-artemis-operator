@@ -57,7 +57,6 @@ jobs:
           VERSION_PATCH=${VERSION_PATCH/\*/${CURRENT_VERSION_PATCH}} && VERSION_PATCH=${VERSION_PATCH/+/$((CURRENT_VERSION_PATCH+1))}
           VERSION="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
           sed -i "s~Version = \"${CURRENT_VERSION}\"~Version = \"${VERSION}\"~" version/version.go
-          sed -i "s~PriorVersion =.*~PriorVersion = \"${CURRENT_VERSION}\"~" version/version.go
           sed -i "s~^VERSION ?=.*~VERSION ?= ${VERSION}~" Makefile
           sed -i "s~^OPERATOR_VERSION :=.*~OPERATOR_VERSION := ${VERSION}~" Makefile
           sed -i "s~^LABEL version=.*~LABEL version=\"${VERSION}\"~g" Dockerfile
