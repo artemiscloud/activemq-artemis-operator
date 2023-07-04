@@ -23,7 +23,7 @@ jobs:
       - name: Create release tag
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          git fetch --tags
+          git fetch --tags --force
           HEAD_COMMIT="$(git rev-parse HEAD)"
           RELEASE_TAG="v$(grep -m 1 -oP '(?<=Version = ")[^"]+' version/version.go)"
           RELEASE_TAG_COMMIT="$(git rev-list -n 1 ${RELEASE_TAG} || true)"
