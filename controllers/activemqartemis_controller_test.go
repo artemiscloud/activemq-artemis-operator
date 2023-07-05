@@ -5088,6 +5088,7 @@ var _ = Describe("artemis controller", func() {
 
 					g.Expect(condition.Reason).Should(Equal(brokerv1beta1.ConfigAppliedConditionSynchedWithErrorReason))
 					g.Expect(condition.Message).Should(ContainSubstring("bla"))
+					g.Expect(condition.Message).Should(ContainSubstring("ss-0"))
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 			}
@@ -7898,20 +7899,6 @@ var _ = Describe("artemis controller", func() {
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
 
-			loggingConfigMapName := "my-logging-config-y"
-			loggingData := make(map[string]string)
-			loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
-		appender.stdout.type = Console
-		rootLogger = info, STDOUT
-		logger.activemq.name=org.apache.activemq.artemis.spi.core.security.jaas
-        logger.activemq.level=TRACE
-`
-
-			loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Create(ctx, loggingConfigMap, &client.CreateOptions{})).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
 			secret := &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Secret",
@@ -7956,7 +7943,6 @@ var _ = Describe("artemis controller", func() {
 				{Name: "JAVA_ARGS_APPEND", Value: "-Dhawtio.realm=console"},
 			}
 
-			crd.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
 			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
 
 			By("Deploying the jaas secret " + secret.ObjectMeta.Name)
@@ -7983,7 +7969,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
 
 					ConfigAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)
-					g.Expect(ConfigAppliedCondition.Message).To(ContainSubstring("missing"))
+					g.Expect(ConfigAppliedCondition.Message).To(ContainSubstring("not visible"))
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -8023,7 +8009,6 @@ var _ = Describe("artemis controller", func() {
 
 			}
 
-			Expect(k8sClient.Delete(ctx, loggingConfigMap)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
@@ -8209,6 +8194,130 @@ var _ = Describe("artemis controller", func() {
 			By("deleting the logging configmap")
 			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, createdCrd)).Should(Succeed())
+		})
+
+		It("ordinal status - jaas-config", func() {
+
+			ctx := context.Background()
+			crd := generateArtemisSpec(defaultNamespace)
+
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "k8s.io.api.core.v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "x-jaas-config",
+					Namespace: crd.ObjectMeta.Namespace,
+				},
+			}
+
+			secret.StringData = map[string]string{JaasConfigKey: `
+		    // a full login.config
+		    activemq {
+
+				// ensure the operator can connect to the mgmt console by referencing the existing properties config
+				org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient
+					reload=true
+					debug=true
+					org.apache.activemq.jaas.properties.user="artemis-users.properties"
+					org.apache.activemq.jaas.properties.role="artemis-roles.properties"
+					baseDir="/home/jboss/amq-broker/etc";
+
+				// app specific users and roles
+				org.apache.activemq.artemis.spi.core.security.jaas.PropertiesLoginModule sufficient
+					reload=true
+					debug=true
+					org.apache.activemq.jaas.properties.user="users.properties"
+					org.apache.activemq.jaas.properties.role="roles.properties";
+
+			};`,
+				"users.properties": `tom=tom`,
+				"roles.properties": `toms=tom`,
+			}
+
+			crd.Spec.BrokerProperties = []string{
+				"# create tom's work queue",
+				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.routingType=ANYCAST",
+				"addressConfigurations.TOMS_WORK_QUEUE.queueConfigs.TOMS_WORK_QUEUE.durable=true",
+
+				"# rbac, give tom's role send access",
+				"securityRoles.TOMS_WORK_QUEUE.toms.send=true",
+			}
+
+			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+			crd.Spec.DeploymentPlan.ExtraMounts.Secrets = []string{secret.Name}
+
+			By("Deploying the jaas secret " + secret.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+
+			By("Deploying the CRD " + crd.ObjectMeta.Name)
+			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				createdCrd := &brokerv1beta1.ActiveMQArtemis{}
+				brokerKey := types.NamespacedName{Name: crd.Name, Namespace: crd.Namespace}
+				Eventually(func(g Gomega) {
+
+					By("verifying ready, jaas out of sync status")
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+					// user/role custom properties won't yet be in memory on the broker
+					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+
+					jaasAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)
+					g.Expect(jaasAppliedCondition).ShouldNot(BeNil())
+					g.Expect(jaasAppliedCondition.Message).Should(ContainSubstring("-ss-0"))
+					g.Expect(jaasAppliedCondition.Message).Should(ContainSubstring("LoginModule"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("tom doing his thing on 0")
+
+				podWithOrdinal := namer.CrToSS(crd.Name) + "-0"
+				command := []string{"amq-broker/bin/artemis", "producer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
+
+				By("producing to 0")
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+
+					By("verifying out of sync status on 1")
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+					// user/role custom properties won't yet be in memory on the broker
+					g.Expect(meta.IsStatusConditionPresentAndEqual(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType, metav1.ConditionUnknown)).Should(BeTrue())
+					jaasAppliedCondition := meta.FindStatusCondition(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)
+					g.Expect(jaasAppliedCondition).ShouldNot(BeNil())
+					g.Expect(jaasAppliedCondition.Message).Should(ContainSubstring("-ss-1"))
+					g.Expect(jaasAppliedCondition.Message).Should(ContainSubstring("LoginModule"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				podWithOrdinal = namer.CrToSS(crd.Name) + "-1"
+				command = []string{"amq-broker/bin/artemis", "producer", "--user", "tom", "--password", "tom", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://TOMS_WORK_QUEUE", "--verbose"}
+
+				By("producing to 1")
+				Eventually(func(g Gomega) {
+					stdOutContent := ExecOnPod(podWithOrdinal, crd.Name, defaultNamespace, command, g)
+					g.Expect(stdOutContent).Should(ContainSubstring("Produced: 1 messages"))
+				}, existingClusterTimeout, existingClusterInterval*2).Should(Succeed())
+
+				Eventually(func(g Gomega) {
+					By("verifying jaas status")
+					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+					// user/role custom properties have been loaded
+					g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.JaasConfigAppliedConditionType)).Should(BeTrue())
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
+
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})
 
 		It("extraMount.configMap logging config manually", func() {

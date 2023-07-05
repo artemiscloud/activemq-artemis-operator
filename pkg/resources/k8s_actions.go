@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,42 +51,10 @@ func SetOwnerAndController(owner v1.Object, clientObject client.Object) {
 	reqLogger.V(1).Info("set owner-controller reference", "target", clientObject.GetObjectKind().GroupVersionKind().String(), "owner", ref)
 }
 
-func RetrieveWithRetry(namespacedName types.NamespacedName, theClient client.Client, clientObject client.Object, retry bool) error {
-	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
-	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
-	reqLogger.Info("Retrieving " + objectTypeString)
-
-	var err error = nil
-	if err = theClient.Get(context.TODO(), namespacedName, clientObject); err != nil {
-		if errors.IsNotFound(err) {
-			if retry {
-				reqLogger.Info(objectTypeString+" IsNotFound after retry", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
-			} else {
-				//retry once using the non-cache client
-				reqLogger.V(1).Info("Retry retrieving object using new non-cached client")
-				// check to avoid a nil manager that may occur in test
-				if common.GetManager() != nil {
-					newClient, err := client.New(common.GetManager().GetConfig(), client.Options{})
-					if err == nil {
-						return RetrieveWithRetry(namespacedName, newClient, clientObject, true)
-					}
-				}
-			}
-		} else if runtime.IsNotRegisteredError(err) {
-			reqLogger.Info(objectTypeString+" IsNotRegistered", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
-		} else {
-			reqLogger.Info(objectTypeString+" Found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
-		}
-	}
-
-	return err
-}
-
 func Retrieve(namespacedName types.NamespacedName, client client.Client, objectDefinition client.Object) error {
 	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
 	objectTypeString := reflect.TypeOf(objectDefinition.(runtime.Object)).String()
-	reqLogger.Info("Retrieving " + objectTypeString)
+	reqLogger.V(1).Info("Retrieving " + objectTypeString)
 
 	return client.Get(context.TODO(), namespacedName, objectDefinition)
 }
@@ -140,7 +107,7 @@ func Delete(client client.Client, clientObject client.Object) error {
 
 	reqLogger := log.WithValues("ActiveMQArtemis Name", clientObject.GetName(), "Namespace", clientObject.GetNamespace())
 	objectTypeString := reflect.TypeOf(clientObject.(runtime.Object)).String()
-	reqLogger.Info("Deleting " + objectTypeString)
+	reqLogger.V(2).Info("Deleting " + objectTypeString)
 
 	var err error = nil
 	if err = client.Delete(context.TODO(), clientObject); err != nil {
