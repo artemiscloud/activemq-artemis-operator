@@ -131,11 +131,10 @@ func GetValueFromSecret(namespace string,
 
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("No secret found", "name", secretName)
 			return nil
 		}
 	} else {
-		log.Info("Found secret " + secretName)
+		log.V(2).Info("Found secret " + secretName)
 		if elem, ok := secretDefinition.Data[key]; ok {
 			//the value exists
 			value := string(elem)

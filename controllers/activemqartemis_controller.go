@@ -670,12 +670,6 @@ func (e jolokiaClientNotFoundError) Requeue() bool {
 	return true
 }
 
-func NewStatusOutOfSyncErrorWith(brokerPropertiesName, expected, current string) statusOutOfSyncError {
-	return statusOutOfSyncError{
-		fmt.Sprintf("%s status out of sync, expected: %s, current: %s", brokerPropertiesName, expected, current),
-	}
-}
-
 func NewStatusOutOfSyncError(err error) statusOutOfSyncError {
 	return statusOutOfSyncError{err.Error()}
 }
@@ -705,11 +699,11 @@ type inSyncApplyError struct {
 	detail map[string]string
 }
 
-const inSyncWithErrorCause = "some properties resulted in error on ordinal %s"
+const inSyncWithErrorCause = "some properties resulted in error on pod %s"
 
-func NewInSyncWithError(ordinal string) *inSyncApplyError {
+func NewInSyncWithError(pod string) *inSyncApplyError {
 	return &inSyncApplyError{
-		cause:  errors.Errorf(inSyncWithErrorCause, ordinal),
+		cause:  errors.Errorf(inSyncWithErrorCause, pod),
 		detail: map[string]string{},
 	}
 }

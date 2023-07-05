@@ -308,12 +308,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 
 	deploymentPlan := &customResource.Spec.DeploymentPlan
 
-	clog.Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", customResource.Name)
+	clog.V(3).Info("Processing deployment plan", "plan", deploymentPlan, "broker cr", customResource.Name)
 	// Ensure the StatefulSet size is the same as the spec
 	replicas := getDeploymentSize(customResource)
 	currentStatefulSet.Spec.Replicas = &replicas
 
-	clog.Info("Now sync Message migration", "for cr", customResource.Name)
+	clog.V(3).Info("Now sync Message migration", "for cr", customResource.Name)
 	syncMessageMigration(customResource, namer, client, scheme)
 
 	if customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
@@ -439,13 +439,13 @@ func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer N
 
 	if *customResource.Spec.DeploymentPlan.MessageMigration && clustered {
 		if !customResource.Spec.DeploymentPlan.PersistenceEnabled {
-			clog.Info("Won't set up scaledown for non persistent deployment")
+			clog.V(2).Info("Won't set up scaledown for non persistent deployment")
 			return
 		}
-		clog.Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
+		clog.V(3).Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
 		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
 			// err means not found so create
-			clog.Info("Creating builtin drainer CR ", "scaledown", scaledown)
+			clog.V(2).Info("Creating builtin drainer CR ", "scaledown", scaledown)
 			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {
 				clog.Info("drainer created successfully", "drainer", scaledown)
 			} else {
@@ -492,7 +492,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 	desired := false
 	if err := resources.Retrieve(namespacedName, client, secretDefinition); err != nil {
 		if k8serrors.IsNotFound(err) {
-			log.V(1).Info("Did not find secret", "key", namespacedName)
+			log.V(2).Info("Did not find secret", "key", namespacedName)
 		} else {
 			log.Error(err, "Error while retrieving secret", "key", namespacedName)
 		}
@@ -509,7 +509,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 			}
 			elem, exists := secretDefinition.Data[k]
 			if strings.Compare(string(elem), (*envVars)[k].Value) != 0 || !exists {
-				log.V(1).Info("key value not equals or does not exist", "key", k, "exists", exists)
+				log.V(2).Info("key value not equals or does not exist", "key", k, "exists", exists)
 				if !(*envVars)[k].AutoGen || string(elem) == "" {
 					secretDefinition.Data[k] = []byte((*envVars)[k].Value)
 				}
@@ -536,7 +536,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 		var internalSecretDefinition *corev1.Secret
 		obj := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Secret{}), internalSecretName)
 		if obj != nil {
-			log.V(1).Info("updating from " + internalSecretName)
+			log.V(2).Info("updating from " + internalSecretName)
 			internalSecretDefinition = obj.(*corev1.Secret)
 		} else {
 			internalSecretDefinition = secrets.NewSecret(namespacedName, internalSecretName, internalStringDataMap, namer.LabelBuilder.Labels())
@@ -550,7 +550,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 		reconciler.trackDesired(internalSecretDefinition)
 	}
 
-	log.Info("Populating env vars references, in order, from secret " + secretName)
+	log.V(2).Info("Populating env vars references, in order, from secret " + secretName)
 
 	// sort the keys for consistency of reconcilitation as iteration source is a map
 	sortedKeys := make([]string, 0, len(*envVars))
@@ -1724,14 +1724,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		environments.Create(podSpec.InitContainers, &tuneFile)
 
 	} else {
-		clog.Info("No addressetings")
-
 		podSpec.InitContainers = []corev1.Container{
 			*initContainer,
 		}
 	}
 	//now make volumes mount available to init image
-	clog.Info("making volume mounts")
 
 	//setup volumeMounts from scratch
 	podSpec.InitContainers[0].VolumeMounts = []corev1.VolumeMount{}
@@ -1745,7 +1742,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeForCfg = volumes.MakeVolumeForCfg("tool-dir")
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
-	clog.Info("Total volumes ", "volumes", podSpec.Volumes)
+	clog.V(1).Info("Total volumes ", "volumes", podSpec.Volumes)
 
 	// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
 	// not getting munged on the way. We CreateOrAppend to any value from spec.Env
@@ -1763,7 +1760,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	//provide a way to configuration after launch.sh
 	var brokerHandlerCmds []string = []string{}
-	clog.Info("Checking if there are any config handlers", "main cr", namespacedName)
 	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
 	if brokerConfigHandler != nil {
 		clog.Info("there is a config handler")
@@ -1792,13 +1788,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	}
 	initArgs = append(initArgs, strBuilder.String())
 
-	clog.Info("The final init cmds to init ", "the cmd array", initArgs)
+	clog.V(2).Info("The final init cmds to init ", "the cmd array", initArgs)
 
 	podSpec.InitContainers[0].Args = initArgs
 
 	if len(extraVolumeMounts) > 0 {
 		podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, extraVolumeMounts...)
-		clog.Info("Added some extra mounts to init", "total mounts: ", podSpec.InitContainers[0].VolumeMounts)
+		clog.V(1).Info("Added some extra mounts to init", "total mounts: ", podSpec.InitContainers[0].VolumeMounts)
 	}
 
 	dontRun := corev1.EnvVar{
@@ -2832,6 +2828,8 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 			return NewUnknownJolokiaError(err)
 		}
 
+		reqLogger.V(2).Info("raw json status", "IP", jk.IP, "ordinal", jk.Ordinal, "status json", currentJson)
+
 		brokerStatus, err := unmarshallStatus(currentJson)
 		if err != nil {
 			reqLogger.Error(err, "unable to unmarshall broker status", "json", currentJson)
@@ -2858,22 +2856,29 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 			}
 
 			if current.Alder32 == "" {
-				message := "Status out of sync - empty Alder32 for " + name
-				err = errors.New(message)
-				reqLogger.Info(message, "status", brokerStatus, "tracked", Projection)
+				err = errors.Errorf("out of sync on pod %s-%s, property file %s has an empty checksum",
+					namer.CrToSS(cr.Name), jk.Ordinal, name)
+				reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
 				return NewStatusOutOfSyncError(err)
 			}
 
 			if file.Alder32 != current.Alder32 {
-				reqLogger.Info("status out of sync for "+name, "expected", file, "current", current)
-				return NewStatusOutOfSyncErrorWith(name, file.Alder32, current.Alder32)
+				err = errors.Errorf("out of sync on pod %s-%s, mismatched checksum on property file %s, expected: %s, current: %s. A delay can occur before a volume mount projection is refreshed.",
+					namer.CrToSS(cr.Name), jk.Ordinal, name, file.Alder32, current.Alder32)
+				reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
+				return NewStatusOutOfSyncError(err)
 			}
 		}
 
 		if len(missingKeys) > 0 {
-			message := fmt.Sprintf("Status out of sync - missing status entry for keys: %v", missingKeys)
-			err = errors.New(message)
-			reqLogger.Info(message, "status", brokerStatus, "tracked", Projection)
+			if strings.HasSuffix(Projection.Name, jaasConfigSuffix) {
+				err = errors.Errorf("out of sync on pod %s-%s, property files are not visible on the broker: %v. Reloadable JAAS LoginModule property files are only visible after the first login attempt that references them. If the property files are for by a third party LoginModule or not reloadable, prefix the property file names with an underscore to exclude them from this condition",
+					namer.CrToSS(cr.Name), jk.Ordinal, missingKeys)
+			} else {
+				err = errors.Errorf("out of sync on pod %s-%s, configuration property files are not visible on the broker: %v. A delay can occur before a volume mount projection is refreshed.",
+					namer.CrToSS(cr.Name), jk.Ordinal, missingKeys)
+			}
+			reqLogger.Info(err.Error(), "status", brokerStatus, "tracked", Projection)
 			return NewStatusOutOfSyncMissingKeyError(err)
 		}
 
@@ -2883,7 +2888,7 @@ func checkStatus(cr *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, Proj
 			if len(v.ApplyErrors) > 0 {
 				// some props did not apply for k
 				if applyError == nil {
-					applyError = NewInSyncWithError(jk.Ordinal)
+					applyError = NewInSyncWithError(fmt.Sprintf("%s-%s", namer.CrToSS(cr.Name), jk.Ordinal))
 				}
 				applyError.ErrorApplyDetail(k, marshallApplyErrors(v.ApplyErrors))
 			}
