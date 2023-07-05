@@ -1,0 +1,19 @@
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  acceptors:
+  - name: ssl
+    port: 61618
+    protocols: all
+    sslEnabled: true
+    sslSecret: ssl-acceptor-ssl-secret
+    verifyHost: true
+    needClientAuth: true
+  deploymentPlan:
+    extraMounts:
+      secrets:
+      - amq-ssl-secret
+      configMaps:
+      - ca-bundle
