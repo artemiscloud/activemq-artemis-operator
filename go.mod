@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Azure/go-amqp v0.17.4
-	github.com/RHsyseng/operator-utils v1.4.12
+	github.com/RHsyseng/operator-utils v1.4.10
 	github.com/go-logr/logr v1.2.3
 	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo/v2 v2.6.0
