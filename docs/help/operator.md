@@ -962,3 +962,64 @@ When deploying the above custom resource the operator will create a PodDisruptio
 object with the **minAvailable** set to 1. The operator also sets the proper selector
 so that the PodDisruptionBudget matches the broker statefulset.
 
+## Using Cert-Manager certificates to configure brokers
+
+[cert-manager](https://cert-manager.io/) adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
+
+The operator provides options in the custom resource that utilizes cert-manager x509 certificates to configure SSL/TLS transports for brokers.
+
+### Configuring SSL/TLS for management consoles
+
+For a certificate to be used by broker, it has to have the keystore configured in it(either `pkcs12` or `jks`). For example:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: console-server-cert-pkcs12
+spec:
+  commonName: "artemiscloud.io"
+  dnsNames:
+    - "artemis-broker-ss-0"
+  secretName: console-server-cert-secret
+  subject:
+    organizations:
+    - "www.artemiscloud.io"
+  keystores:
+    pkcs12:
+      create: true
+      passwordSecretRef:
+        name: keystore-password-secret
+        key: pkcs12-password
+  issuerRef:
+    name: test-selfsign-issuer
+    kind: Issuer
+```
+In the above certificate the pkcs12 keystore is configured and its password is stored in a secret named `keystore-password-secret` and the key is `pkcs12-password`. This secret must exists in order for the certificate to be successfully created, and password secret should be in the same namespace as the certificate's.
+
+Once you have the certificate ready you can configure the management console of the broker to used it:
+
+```yaml
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: artemis-broker
+spec:
+  console:
+    expose: true
+    sslEnabled: true
+    serverCert: console-server-cert-pkcs12
+  deploymentPlan:
+    size: 1
+```
+
+The above broker cr configures a broker that has a SSL/TLS secured management console whose keystore and truststore are generated from certificate `console-server-cert-pkcs12` in the same namespace as the broker cr.
+
+If the certificate is in a different namespace from the broker cr it needs to be specified in the `serverCert` option, using a colon to separate it from the cert name:
+
+```yaml
+  serverCert: console-server-cert-pkcs12:[certnamespace]
+```
+
+For details on how to use cert-manager to manage your certificates please refer to its [documentation](https://cert-manager.io/docs/).
+

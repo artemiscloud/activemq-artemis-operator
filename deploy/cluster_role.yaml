@@ -150,6 +150,13 @@ rules:
   - get
   - list
 - apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors

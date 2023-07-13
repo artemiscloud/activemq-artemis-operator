@@ -59,6 +59,7 @@ import (
 	brokerv2alpha4 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha4"
 	brokerv2alpha5 "github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5"
 	"github.com/artemiscloud/activemq-artemis-operator/controllers"
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -85,6 +86,7 @@ func printVersion() {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
+	utilruntime.Must(cmv1.AddToScheme(scheme))
 
 	utilruntime.Must(brokerv2alpha1.AddToScheme(scheme))
 	utilruntime.Must(brokerv2alpha2.AddToScheme(scheme))
@@ -163,11 +165,16 @@ func main() {
 		setupLog.Info("setting up operator to watch local namespace")
 		mgrOptions.Namespace = oprNamespace
 	} else {
-		mgrOptions.Namespace = ""
 		if watchList != nil {
-			setupLog.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
-			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			if len(watchList) == 1 {
+				setupLog.Info("setting up operator to watch single namespace")
+				mgrOptions.Namespace = watchList[0]
+			} else {
+				setupLog.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
+				mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			}
 		} else {
+			mgrOptions.Namespace = ""
 			setupLog.Info("setting up operator to watch all namespaces")
 		}
 	}

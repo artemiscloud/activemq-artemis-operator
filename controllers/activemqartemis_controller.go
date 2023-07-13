@@ -122,6 +122,7 @@ type ActiveMQArtemisReconciler struct {
 //+kubebuilder:rbac:groups=apps,namespace=activemq-artemis-operator,resources=deployments/finalizers,verbs=update
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,namespace=activemq-artemis-operator,resources=roles;rolebindings,verbs=create;get;delete
 //+kubebuilder:rbac:groups=policy,namespace=activemq-artemis-operator,resources=poddisruptionbudgets,verbs=create;get;delete;list;update;watch
+//+kubebuilder:rbac:groups=cert-manager.io,namespace=activemq-artemis-operator,resources=certificates,verbs=list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -255,7 +256,7 @@ func validateAcceptorPorts(customResource *brokerv1beta1.ActiveMQArtemis, client
 func validateSSLEnabledSecrets(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, namer Namers) (*metav1.Condition, bool) {
 
 	var retry = true
-	if customResource.Spec.Console.SSLEnabled {
+	if customResource.Spec.Console.SSLEnabled && customResource.Spec.Console.BrokerCert == nil {
 
 		secretName := namer.SecretsConsoleNameBuilder.Name()
 

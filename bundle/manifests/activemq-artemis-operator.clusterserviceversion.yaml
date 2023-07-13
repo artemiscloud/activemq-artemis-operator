@@ -1102,6 +1102,12 @@ spec:
       - description: Specifies the console configuration
         displayName: Console Configurations
         path: console
+      - description: The name and namespace of the certificate from cert-manager.
+          It should be a string separated by a colon
+        displayName: Broker Certificate
+        path: console.brokerCert
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       - description: Whether or not to expose this port
         displayName: Expose
         path: console.expose
@@ -2250,6 +2256,13 @@ spec:
           verbs:
           - get
           - list
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - certificates
+          verbs:
+          - list
+          - watch
         - apiGroups:
           - monitoring.coreos.com
           resources:

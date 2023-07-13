@@ -544,6 +544,10 @@ spec:
               console:
                 description: Specifies the console configuration
                 properties:
+                  brokerCert:
+                    description: The name and namespace of the certificate from cert-manager.
+                      It should be a string separated by a colon
+                    type: string
                   expose:
                     description: Whether or not to expose this port
                     type: boolean
@@ -1523,8 +1527,6 @@ spec:
                         type: integer
                       grpc:
                         description: GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe
-                          feature gate.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -1556,7 +1558,9 @@ spec:
                                 be used in HTTP probes
                               properties:
                                 name:
-                                  description: The header field name
+                                  description: The header field name. This will be
+                                    canonicalized upon output, so case-variant names
+                                    will be understood as the same header.
                                   type: string
                                 value:
                                   description: The header field value
@@ -1752,9 +1756,9 @@ spec:
                           the PDB for eviction. \n Additional policies may be added
                           in the future. Clients making eviction decisions should
                           disallow eviction of unhealthy pods if they encounter an
-                          unrecognized policy in this field. \n This field is alpha-level.
+                          unrecognized policy in this field. \n This field is beta-level.
                           The eviction API uses this field when the feature gate PDBUnhealthyPodEvictionPolicy
-                          is enabled (disabled by default)."
+                          is enabled (enabled by default)."
                         type: string
                     type: object
                   podSecurity:
@@ -1970,8 +1974,6 @@ spec:
                         type: integer
                       grpc:
                         description: GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe
-                          feature gate.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -2003,7 +2005,9 @@ spec:
                                 be used in HTTP probes
                               properties:
                                 name:
-                                  description: The header field name
+                                  description: The header field name. This will be
+                                    canonicalized upon output, so case-variant names
+                                    will be understood as the same header.
                                   type: string
                                 value:
                                   description: The header field value
@@ -2103,7 +2107,8 @@ spec:
                         description: "Claims lists the names of resources, defined
                           in spec.resourceClaims, that are used by this container.
                           \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                          feature gate. \n This field is immutable."
+                          feature gate. \n This field is immutable. It can only be
+                          set for containers."
                         items:
                           description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                           properties:
@@ -2140,7 +2145,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   revisionHistoryLimit:
@@ -2178,8 +2184,6 @@ spec:
                         type: integer
                       grpc:
                         description: GRPC specifies an action involving a GRPC port.
-                          This is a beta field and requires enabling GRPCContainerProbe
-                          feature gate.
                         properties:
                           port:
                             description: Port number of the gRPC service. Number must
@@ -2211,7 +2215,9 @@ spec:
                                 be used in HTTP probes
                               properties:
                                 name:
-                                  description: The header field name
+                                  description: The header field name. This will be
+                                    canonicalized upon output, so case-variant names
+                                    will be understood as the same header.
                                   type: string
                                 value:
                                   description: The header field value
@@ -3261,7 +3267,8 @@ spec:
                         description: "Claims lists the names of resources, defined
                           in spec.resourceClaims, that are used by this container.
                           \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                          feature gate. \n This field is immutable."
+                          feature gate. \n This field is immutable. It can only be
+                          set for containers."
                         items:
                           description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                           properties:
@@ -3298,7 +3305,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   size:
@@ -3653,7 +3661,8 @@ spec:
                         description: "Claims lists the names of resources, defined
                           in spec.resourceClaims, that are used by this container.
                           \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                          feature gate. \n This field is immutable."
+                          feature gate. \n This field is immutable. It can only be
+                          set for containers."
                         items:
                           description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                           properties:
@@ -3690,7 +3699,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   size:
@@ -4090,7 +4100,8 @@ spec:
                         description: "Claims lists the names of resources, defined
                           in spec.resourceClaims, that are used by this container.
                           \n This is an alpha field and requires enabling the DynamicResourceAllocation
-                          feature gate. \n This field is immutable."
+                          feature gate. \n This field is immutable. It can only be
+                          set for containers."
                         items:
                           description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                           properties:
@@ -4127,7 +4138,8 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          to an implementation-defined value. Requests cannot exceed
+                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   size:

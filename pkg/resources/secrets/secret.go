@@ -36,6 +36,24 @@ func MakeStringDataMap(keyName string, valueName string, key string, value strin
 	return stringDataMap
 }
 
+func MakeSecretWithData(namespacedName types.NamespacedName, secretName string, data map[string][]byte, labels map[string]string) *corev1.Secret {
+
+	secretDefinition := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    labels,
+			Name:      secretName,
+			Namespace: namespacedName.Namespace,
+		},
+		Data: data,
+	}
+
+	return &secretDefinition
+}
+
 func MakeSecret(namespacedName types.NamespacedName, secretName string, stringData map[string]string, labels map[string]string) corev1.Secret {
 
 	secretDefinition := corev1.Secret{

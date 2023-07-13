@@ -26,6 +26,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/serviceports"
 	ss "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/statefulsets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/certutil"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/channels"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
@@ -65,6 +66,7 @@ import (
 
 	"os"
 
+	cm "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	policyv1 "k8s.io/api/policy/v1"
 )
 
@@ -113,8 +115,8 @@ type ValueInfo struct {
 }
 
 type ActiveMQArtemisIReconciler interface {
-	Process(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, firstTime bool) uint32
-	ProcessStatefulSet(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, log logr.Logger, firstTime bool) (*appsv1.StatefulSet, bool)
+	Process(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) error
+	ProcessStatefulSet(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, log logr.Logger) (*appsv1.StatefulSet, error)
 	ProcessCredentials(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
 	ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet, firstTime bool) uint32
 	ProcessAcceptorsAndConnectors(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) uint32
@@ -146,7 +148,12 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 
 	reconciler.ProcessAcceptorsAndConnectors(customResource, namer, client, scheme, desiredStatefulSet)
 
-	reconciler.ProcessConsole(customResource, namer, client, scheme, desiredStatefulSet)
+	err = reconciler.ProcessConsole(customResource, namer, client, scheme, desiredStatefulSet)
+
+	if err != nil {
+		log.Error(err, "Error processing console")
+		return err
+	}
 
 	// mods to env var values sourced from secrets are not detected by process resources
 	// track updates in trigger env var that has a total checksum
@@ -224,7 +231,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessStatefulSet(customResour
 		currentStatefulSet = obj.(*appsv1.StatefulSet)
 	}
 
-	log.V(3).Info("Reconciling desired statefulset", "name", ssNamespacedName, "current", currentStatefulSet)
 	currentStatefulSet, err = reconciler.NewStatefulSetForCR(customResource, namer, currentStatefulSet, client)
 	if err != nil {
 		reqLogger.Error(err, "Error creating new stafulset")
@@ -302,7 +308,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessCredentials(customResour
 		AutoGen: true,
 	}
 
-	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme, false)
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
@@ -372,17 +378,49 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessAcceptorsAndConnectors(c
 	}
 
 	secretName := namer.SecretsNettyNameBuilder.Name()
-	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme, false)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme, currentStatefulSet *appsv1.StatefulSet) error {
 
 	reconciler.configureConsoleExposure(customResource, namer, client, scheme)
 	if !customResource.Spec.Console.SSLEnabled {
-		return
+		return nil
 	}
 
 	secretName := namer.SecretsConsoleNameBuilder.Name()
+	if customResource.Spec.Console.SSLSecret != "" {
+		secretName = customResource.Spec.Console.SSLSecret
+	}
+
+	tracked := false
+	if customResource.Spec.Console.BrokerCert != nil {
+		// cert manager
+		cert, err := certutil.GetCertificate(customResource.Spec.Console.BrokerCert, customResource, client)
+
+		if err != nil {
+			return err
+		}
+
+		newSecret, err := reconciler.MakeSecretFromCertTlsSecret(cert, secretName, customResource.Namespace, client)
+
+		if err != nil {
+			clog.Error(err, "failed to make console secret")
+			return err
+		}
+
+		trackedSecret := &corev1.Secret{}
+		sslSecret := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Secret{}), secretName)
+		if sslSecret == nil {
+			trackedSecret = newSecret
+		} else {
+			trackedSecret = sslSecret.(*corev1.Secret)
+			trackedSecret.StringData = nil
+			trackedSecret.Data = newSecret.Data
+		}
+		reconciler.trackDesired(trackedSecret)
+		tracked = true
+	}
 
 	envVars := map[string]ValueInfo{"AMQ_CONSOLE_ARGS": {
 		Value:    generateConsoleSSLFlags(customResource, namer, client, secretName),
@@ -390,7 +428,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessConsole(customResource *
 		Internal: true,
 	}}
 
-	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme)
+	reconciler.sourceEnvVarFromSecret(customResource, namer, currentStatefulSet, &envVars, secretName, client, scheme, tracked)
+
+	return nil
 }
 
 func syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, client rtclient.Client, scheme *runtime.Scheme) {
@@ -468,7 +508,7 @@ func isLocalOnly() bool {
 	return oprNamespace == watchNamespace
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client, scheme *runtime.Scheme, alreadyTracked bool) {
 
 	var log = ctrl.Log.WithName("controller_v1beta1activemqartemis").WithName("sourceEnvVarFromSecret")
 
@@ -526,7 +566,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 		}
 	}
 
-	if desired {
+	if desired && !alreadyTracked {
 		// ensure processResources sees it
 		reconciler.trackDesired(secretDefinition)
 	}
@@ -2084,7 +2124,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) addResourceForBrokerProperties(
 	}
 
 	data := brokerPropertiesData(customResource.Spec.BrokerProperties)
+
 	if desired == nil {
+		clog.Info("xxx desired brokerprop secret nil, create new one", "name", resourceName.Name)
 		secret := secrets.MakeSecret(resourceName, resourceName.Name, data, namer.LabelBuilder.Labels())
 		desired = &secret
 	} else {
@@ -3055,4 +3097,63 @@ func getDeploymentSize(cr *brokerv1beta1.ActiveMQArtemis) int32 {
 		return DefaultDeploymentSize
 	}
 	return *cr.Spec.DeploymentPlan.Size
+}
+
+// The cert should have keystores configured(jks/pkcs12)
+func (reconciler *ActiveMQArtemisReconcilerImpl) MakeSecretFromCertTlsSecret(cert *cm.Certificate, targetSecretName string, targetSecretNamespace string, client rtclient.Client) (*corev1.Secret, error) {
+	var log = ctrl.Log.WithValues("cert", cert.Name, "ns", cert.Namespace)
+	tlsSecret := corev1.Secret{}
+	tlsSecretKey := types.NamespacedName{Name: cert.Spec.SecretName, Namespace: cert.Namespace}
+
+	log.V(1).Info("retrieving tls secret", "secret key", tlsSecretKey)
+	if err := resources.Retrieve(tlsSecretKey, client, &tlsSecret); err != nil {
+		return nil, err
+	}
+
+	dataMap := make(map[string][]byte)
+	targetSecretNamespacedName := types.NamespacedName{Name: targetSecretName, Namespace: targetSecretNamespace}
+
+	// The secret contents depends on what's in the Certificate's spec
+	// the secret will always have 3 entries: ca.crt, tls.crt and tls.key
+	// PCKS12: the secret will have keystore.p12 entry and truststore.p12 entry
+	// JKS: the secret will have keystore.jks entry and truststore.jks entry
+	if cert.Spec.Keystores != nil {
+		if cert.Spec.Keystores.PKCS12 != nil && cert.Spec.Keystores.PKCS12.Create {
+			// if PKCS12 is specified we use it
+			dataMap["broker.ks"] = tlsSecret.Data["keystore.p12"]
+			keyPass, err := certutil.GetPKCS12StorePasswordFromCert(cert, client)
+			if err != nil {
+				log.Error(err, "fail to retrieve keystore password", "secret namespace", cert.Namespace)
+				return nil, err
+			}
+			dataMap["keyStorePassword"] = keyPass
+			dataMap["client.ts"] = tlsSecret.Data["truststore.p12"]
+			dataMap["trustStorePassword"] = keyPass
+		} else if cert.Spec.Keystores.JKS != nil && cert.Spec.Keystores.JKS.Create {
+			// else if JKS is specified we use it
+			dataMap["broker.ks"] = tlsSecret.Data["keystore.jks"]
+			keyPass, err := certutil.GetJKSStorePasswordFromCert(cert, client)
+			if err != nil {
+				log.Error(err, "fail to retrieve keystore password", "secret namespace", cert.Namespace)
+				return nil, err
+			}
+			dataMap["keyStorePassword"] = keyPass
+			dataMap["client.ts"] = tlsSecret.Data["truststore.jks"]
+			dataMap["trustStorePassword"] = keyPass
+		}
+	} else {
+		err := fmt.Errorf("the certificate %s in namespace %s doesn't have keystore options configured", cert.Name, cert.Namespace)
+		log.Error(err, "failed to process certificate")
+		return nil, err
+	}
+
+	secretDef := &corev1.Secret{}
+	deployed := reconciler.cloneOfDeployed(reflect.TypeOf(corev1.Secret{}), targetSecretName)
+	if deployed != nil {
+		secretDef = deployed.(*corev1.Secret)
+		secretDef.Data = dataMap
+	} else {
+		secretDef = secrets.MakeSecretWithData(targetSecretNamespacedName, targetSecretName, dataMap, nil)
+	}
+	return secretDef, nil
 }

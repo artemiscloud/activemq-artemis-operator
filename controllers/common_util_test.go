@@ -29,11 +29,14 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	appsv1 "k8s.io/api/apps/v1"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
@@ -43,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"software.sslmate.com/src/go-pkcs12"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +59,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -88,6 +93,9 @@ var TestLogWrapper = TestLogWriter{}
 func MatchPattern(content string, pattern string) (matched bool, err error) {
 	return regexp.Match(pattern, []byte(content))
 }
+
+var certmanagerVersion = "v1.12.2"
+var certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 
 func randStringWithPrefix(prefix string) string {
 	rand.Seed(time.Now().UnixNano())
@@ -392,7 +400,9 @@ func RunCommandInPod(podName string, containerName string, command []string) (*s
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme), httpClient)
 	Expect(err).To(BeNil())
 	execReq := restClient.
 		Post().
@@ -443,7 +453,9 @@ func LogsOfPod(podWithOrdinal string, brokerName string, namespace string, g Gom
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	readCloser, err := restClient.
@@ -472,7 +484,9 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).To(BeNil())
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme), httpClient)
 	g.Expect(err).To(BeNil())
 
 	execReq := restClient.
@@ -494,6 +508,7 @@ func ExecOnPod(podWithOrdinal string, brokerName string, namespace string, comma
 
 	var outPutbuffer bytes.Buffer
 
+	By("executing " + fmt.Sprintf(" command: %v", command))
 	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: &outPutbuffer,
@@ -717,4 +732,198 @@ func CreateTlsSecret(secretName string, ns string, ksPassword string, nsNames []
 		StringData: stringData,
 	}
 	return &tlsSecret, nil
+}
+
+func InstallCertManager() error {
+	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
+	cmd := exec.Command("kubectl", "apply", "-f", url)
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	// Wait for cert-manager-webhook to be ready, which can take time if cert-manager
+	// was re-installed after uninstalling on a cluster.
+	cmd = exec.Command("kubectl", "wait", "deployment.apps/cert-manager-webhook",
+		"--for", "condition=Available",
+		"--namespace", "cert-manager",
+		"--timeout", "5m",
+	)
+	err = cmd.Run()
+	return err
+}
+
+func UninstallCertManager() error {
+	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
+	cmd := exec.Command("kubectl", "delete", "-f", url)
+	err := cmd.Run()
+	return err
+}
+
+func CertManagerInstalled() bool {
+	cmDeploymentKey := types.NamespacedName{Name: "cert-manager", Namespace: "cert-manager"}
+	cmDeployment := &appsv1.Deployment{}
+	err := k8sClient.Get(ctx, cmDeploymentKey, cmDeployment)
+	return err == nil
+}
+
+func InstallSelfSignIssuer(issuerName string) {
+	issuer := cmv1.Issuer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Issuer",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      issuerName,
+			Namespace: defaultNamespace,
+		},
+		Spec: cmv1.IssuerSpec{
+			IssuerConfig: cmv1.IssuerConfig{
+				SelfSigned: &cmv1.SelfSignedIssuer{},
+			},
+		},
+	}
+	Expect(k8sClient.Create(ctx, &issuer, &client.CreateOptions{})).To(Succeed())
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.Issuer{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+}
+
+func InstallClusteredSelfSignIssuer(issuerName string) {
+	issuer := cmv1.ClusterIssuer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ClusterIssuer",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: issuerName,
+		},
+		Spec: cmv1.IssuerSpec{
+			IssuerConfig: cmv1.IssuerConfig{
+				SelfSigned: &cmv1.SelfSignedIssuer{},
+			},
+		},
+	}
+	Expect(k8sClient.Create(ctx, &issuer, &client.CreateOptions{})).To(Succeed())
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.ClusterIssuer{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+}
+
+func InstallSelfSignedCert(certName string, namespace string, configFunc func(candidate *cmv1.Certificate)) *cmv1.Certificate {
+	cmCert := cmv1.Certificate{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Certificate",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      certName,
+			Namespace: namespace,
+		},
+		Spec: cmv1.CertificateSpec{
+			SecretName: certName + "-secret",
+			DNSNames:   defaultSanDnsNames,
+			Subject: &cmv1.X509Subject{
+				Organizations: []string{"www.artemiscloud.io"},
+			},
+		},
+	}
+	if configFunc != nil {
+		configFunc(&cmCert)
+	}
+
+	Expect(k8sClient.Create(ctx, &cmCert, &client.CreateOptions{})).To(Succeed())
+
+	certKey := types.NamespacedName{Name: certName, Namespace: namespace}
+	cert := &cmv1.Certificate{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, cert)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	secretKey := types.NamespacedName{Name: certName + "-secret", Namespace: namespace}
+	secret := corev1.Secret{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, secretKey, &secret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return &cmCert
+}
+
+func InstallSecret(secretName string, namespace string, configFunc func(candidate *corev1.Secret)) *corev1.Secret {
+	secret := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		StringData: make(map[string]string),
+	}
+	if configFunc != nil {
+		configFunc(&secret)
+	}
+
+	Expect(k8sClient.Create(ctx, &secret, &client.CreateOptions{})).To(Succeed())
+	certKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+	newSecret := &corev1.Secret{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, newSecret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	return &secret
+}
+
+func UninstallSelfSignedCert(certName string, namespace string) {
+	certKey := types.NamespacedName{Name: certName, Namespace: namespace}
+	cert := &cmv1.Certificate{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, certKey, cert)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(cert, certName, namespace)
+
+	certSecret := corev1.Secret{}
+	secretKey := types.NamespacedName{Name: certName + "-secret", Namespace: namespace}
+	Expect(k8sClient.Get(ctx, secretKey, &certSecret)).To(Succeed())
+
+	CleanResource(&certSecret, certSecret.Name, certSecret.Namespace)
+}
+
+func UninstallSecret(secretName string, namespace string) {
+	secretKey := types.NamespacedName{Name: secretName, Namespace: namespace}
+	secret := &corev1.Secret{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, secretKey, secret)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(secret, secretName, namespace)
+}
+
+func UninstallSelfSignIssuer(issuerName string) {
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.Issuer{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(currentIssuer, issuerName, defaultNamespace)
+}
+
+func UninstallClusteredSelfSignIssuer(issuerName string) {
+	issKey := types.NamespacedName{Name: issuerName, Namespace: defaultNamespace}
+	currentIssuer := &cmv1.ClusterIssuer{}
+
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, issKey, currentIssuer)).Should(Succeed())
+	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+	CleanResource(currentIssuer, issuerName, defaultNamespace)
 }

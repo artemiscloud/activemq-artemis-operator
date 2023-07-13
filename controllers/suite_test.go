@@ -35,6 +35,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -319,11 +320,16 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 		logf.Log.Info("setting up operator to watch local namespace")
 		mgrOptions.Namespace = defaultNamespace
 	} else {
-		mgrOptions.Namespace = ""
 		if watchList != nil {
-			logf.Log.Info("setting up operator to watch multiple namespaces", "namespace(s)", watchList)
-			mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			if len(watchList) == 1 {
+				logf.Log.Info("setting up operator to watch single namespace")
+				mgrOptions.Namespace = watchList[0]
+			} else {
+				logf.Log.Info("setting up operator to watch multiple namespaces", "namespaces", watchList)
+				mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(watchList)
+			}
 		} else {
+			mgrOptions.Namespace = ""
 			logf.Log.Info("setting up operator to watch all namespaces")
 		}
 	}
@@ -560,6 +566,9 @@ func setUpK8sClient() {
 	logf.Log.Info("Setting up k8s client")
 
 	err := routev1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cmv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = brokerv2alpha5.AddToScheme(scheme.Scheme)

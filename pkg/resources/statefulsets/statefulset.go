@@ -29,11 +29,11 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
-	logf "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var log = logf.Log.WithName("package statefulsets")
+var log = ctrl.Log.WithName("package statefulsets")
 
 type StatefulSetInfo struct {
 	NamespacedName types.NamespacedName
