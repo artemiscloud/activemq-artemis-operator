@@ -1492,7 +1492,7 @@ func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPor
 	return containerPorts
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec, client rtclient.Client) (*corev1.PodTemplateSpec, error) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, current *corev1.PodTemplateSpec, client rtclient.Client, labels map[string]string) (*corev1.PodTemplateSpec, error) {
 
 	reqLogger := ctrl.Log.WithName(customResource.Name)
 
@@ -1503,29 +1503,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	terminationGracePeriodSeconds := int64(60)
 
-	// custom labels provided in CR applied only to the pod template spec
-	// note: work with a clone of the default labels to not modify defaults
-	labels := make(map[string]string)
-	for key, value := range namer.LabelBuilder.Labels() {
-		labels[key] = value
-	}
-	if customResource.Spec.DeploymentPlan.Labels != nil {
-		for key, value := range customResource.Spec.DeploymentPlan.Labels {
-			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
-			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
-
-				meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
-					Type:    brokerv1beta1.ValidConditionType,
-					Status:  metav1.ConditionFalse,
-					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
-					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Labels", key),
-				})
-				return nil, fmt.Errorf("label key '%s' not allowed because it is reserved", key)
-			} else {
-				labels[key] = value
-			}
-		}
-	}
 	// validation success
 	prevCondition := meta.FindStatusCondition(customResource.Status.Conditions, brokerv1beta1.ValidConditionType)
 	if prevCondition == nil {
@@ -2324,21 +2301,27 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 	replicas := getDeploymentSize(customResource)
 	currentStateFullSet = ss.MakeStatefulSet(currentStateFullSet, namer.SsNameBuilder.Name(), namer.SvcHeadlessNameBuilder.Name(), namespacedName, customResource.Annotations, namer.LabelBuilder.Labels(), &replicas)
 
-	podTemplateSpec, err := reconciler.NewPodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client)
+	labels, err := getLabelsForResource(customResource, namer, reqLogger)
+	if err != nil {
+		reqLogger.Error(err, "Error extracting labels from resource")
+		return nil, err
+	}
+
+	podTemplateSpec, err := reconciler.NewPodTemplateSpecForCR(customResource, namer, &currentStateFullSet.Spec.Template, client, labels)
 	if err != nil {
 		reqLogger.Error(err, "Error creating new pod template")
 		return nil, err
 	}
 
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
-		currentStateFullSet.Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(customResource, namer, 1)
+		currentStateFullSet.Spec.VolumeClaimTemplates = *NewPersistentVolumeClaimArrayForCR(customResource, namer, 1, labels)
 	}
 	currentStateFullSet.Spec.Template = *podTemplateSpec
 
 	return currentStateFullSet, nil
 }
 
-func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, arrayLength int, labels map[string]string) *[]corev1.PersistentVolumeClaim {
 
 	var pvc *corev1.PersistentVolumeClaim = nil
 	capacity := "2Gi"
@@ -2359,7 +2342,7 @@ func NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQAr
 	}
 
 	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName)
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, labels, storageClassName)
 		pvcArray = append(pvcArray, *pvc)
 	}
 
@@ -2568,6 +2551,32 @@ func getSingleStatefulSetStatus(ss *appsv1.StatefulSet, cr *brokerv1beta1.Active
 		Starting: starting,
 		Ready:    ready,
 	}
+}
+
+// getLabelsForResource will return all the labels in the CR under spec.deploymentplan.labels
+func getLabelsForResource(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers, reqLogger logr.Logger) (map[string]string, error) {
+	labels := make(map[string]string)
+	for key, value := range namer.LabelBuilder.Labels() {
+		labels[key] = value
+	}
+	if customResource.Spec.DeploymentPlan.Labels != nil {
+		for key, value := range customResource.Spec.DeploymentPlan.Labels {
+			reqLogger.V(1).Info("Adding CR Label", "key", key, "value", value)
+			if key == selectors.LabelAppKey || key == selectors.LabelResourceKey {
+
+				meta.SetStatusCondition(&customResource.Status.Conditions, metav1.Condition{
+					Type:    brokerv1beta1.ValidConditionType,
+					Status:  metav1.ConditionFalse,
+					Reason:  brokerv1beta1.ValidConditionFailedReservedLabelReason,
+					Message: fmt.Sprintf("'%s' is a reserved label, it is not allowed in Spec.DeploymentPlan.Labels", key),
+				})
+				return nil, fmt.Errorf("label key '%s' not allowed because it is reserved", key)
+			} else {
+				labels[key] = value
+			}
+		}
+	}
+	return labels, nil
 }
 
 func MakeEnvVarArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer Namers) []corev1.EnvVar {

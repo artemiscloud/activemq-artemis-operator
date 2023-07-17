@@ -83,7 +83,7 @@ func NewServiceDefinitionForCR(serviceName string, client client.Client, crNameS
 	return svc
 }
 
-func NewPingServiceDefinitionForCR2(client client.Client, serviceName string, namespace string, labels map[string]string, selectorLabels map[string]string) *corev1.Service {
+func NewPingServiceDefinitionForCR2(client client.Client, serviceName string, namespace string, serviceLabels map[string]string, selectorLabels map[string]string) *corev1.Service {
 
 	port := corev1.ServicePort{
 		Protocol:   "TCP",
@@ -105,7 +105,7 @@ func NewPingServiceDefinitionForCR2(client client.Client, serviceName string, na
 	client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: serviceName}, svc)
 
 	// apply desired
-	svc.ObjectMeta.Labels = labels
+	svc.ObjectMeta.Labels = serviceLabels
 	svc.ObjectMeta.Name = serviceName
 	svc.ObjectMeta.Namespace = namespace
 

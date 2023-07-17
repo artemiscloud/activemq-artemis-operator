@@ -11,6 +11,7 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/stretchr/testify/assert"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -496,7 +497,13 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	namer := MakeNamers(cr)
+
+	log := ctrl.Log.WithName("TestNewPodTemplateSpecForCR_IncludesDebugArgs")
+	labels, err := getLabelsForResource(cr, *namer, log)
+	assert.NoError(t, err)
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, *namer, &v1.PodTemplateSpec{}, k8sClient, labels)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -518,7 +525,13 @@ func TestNewPodTemplateSpecForCR_IncludesLabels(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	namer := MakeNamers(cr)
+
+	log := ctrl.Log.WithName("TestNewPodTemplateSpecForCR_IncludesLabels")
+	labels, err := getLabelsForResource(cr, *namer, log)
+	assert.NoError(t, err)
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, *namer, &v1.PodTemplateSpec{}, k8sClient, labels)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -539,13 +552,19 @@ func TestNewPodTemplateSpecForCR_SecretsIncludeLabels(t *testing.T) {
 		},
 	}
 
-	_, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	namer := MakeNamers(cr)
+
+	log := ctrl.Log.WithName("TestNewPodTemplateSpecForCR_SecretsIncludeLabels")
+	labels, err := getLabelsForResource(cr, *namer, log)
 	assert.NoError(t, err)
+
+	_, err2 := reconciler.NewPodTemplateSpecForCR(cr, *namer, &v1.PodTemplateSpec{}, k8sClient, labels)
+	assert.NoError(t, err2)
 
 	// check that the secret that was created and stored in requestedResources has the expected label
 	for _, resource := range reconciler.requestedResources {
 		if secret, ok := resource.(*corev1.Secret); ok {
-			assert.True(t, len(secret.Labels) == 1)
+			assert.True(t, len(secret.Labels) >= 1)
 			assert.Equal(t, secret.Labels["myKey"], "myValue")
 		}
 	}
@@ -577,7 +596,13 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	namer := MakeNamers(cr)
+
+	log := ctrl.Log.WithName("TestNewPodTemplateSpecForCR_AppendsDebugArgs")
+	labels, err := getLabelsForResource(cr, *namer, log)
+	assert.NoError(t, err)
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, *namer, &v1.PodTemplateSpec{}, k8sClient, labels)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -604,7 +629,13 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	namer := MakeNamers(cr)
+
+	log := ctrl.Log.WithName("TestNewPodTemplateSpecForCR_IncludesImagePullSecret")
+	labels, err := getLabelsForResource(cr, *namer, log)
+	assert.NoError(t, err)
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient, labels)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
