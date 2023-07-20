@@ -80,7 +80,6 @@ const (
 	interval                = time.Millisecond * 500
 	existingClusterTimeout  = time.Second * 180
 	existingClusterInterval = time.Second * 2
-	verbose                 = false
 	namespace1              = "namespace1"
 	namespace2              = "namespace2"
 	namespace3              = "namespace3"
@@ -127,7 +126,16 @@ var (
 
 	isOpenshift                    = false
 	isIngressSSLPassthroughEnabled = false
+	verbose                        = false
 )
+
+func init() {
+	if isVerboseStr, defined := os.LookupEnv("TEST_VERBOSE"); defined {
+		if isVerbose, err := strconv.ParseBool(isVerboseStr); err == nil {
+			verbose = isVerbose
+		}
+	}
+}
 
 func TestAPIs(t *testing.T) {
 
