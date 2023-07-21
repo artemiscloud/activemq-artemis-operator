@@ -59,6 +59,6 @@ spec:
 
         # 2.29.0
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Init_2290
-          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:be9362576aed3cdb5f549b93cad043b2c28eda40d2680fba5651cc445046f7bb
+          value: quay.io/artemiscloud/activemq-artemis-broker-init@sha256:56bae938a6b4cd87f9f5284931f440f9b9d116cda3b63b13f83a4b1c6c641959
         - name: RELATED_IMAGE_ActiveMQ_Artemis_Broker_Kubernetes_2290
-          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:07341ecc6fb5f346579999d7df548e8d2579283e13738a191edb2a9d2dc032bf
+          value: quay.io/artemiscloud/activemq-artemis-broker-kubernetes@sha256:4be60cfa2a300b2eef9b5f10ea756bd3f55d75fbd8890232d907f8d64080449b
