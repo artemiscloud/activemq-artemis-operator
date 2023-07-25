@@ -106,14 +106,14 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 	return ss, err
 }
 
-func GetDeployedStatefulSetNames(client rtclient.Client, filter []types.NamespacedName) []StatefulSetInfo {
+func GetDeployedStatefulSetNames(client rtclient.Client, ns string, filter []types.NamespacedName) []StatefulSetInfo {
 
 	var result []StatefulSetInfo = nil
 
 	var resourceMap map[reflect.Type][]rtclient.Object
 
 	// may need to lock down list result with labels
-	resourceMap, _ = read.New(client).ListAll(
+	resourceMap, _ = read.New(client).WithNamespace(ns).ListAll(
 		&appsv1.StatefulSetList{},
 	)
 
