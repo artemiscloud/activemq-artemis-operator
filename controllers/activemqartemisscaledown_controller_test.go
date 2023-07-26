@@ -61,9 +61,18 @@ var _ = Describe("Scale down controller", func() {
 				brokerCrd.Spec.DeploymentPlan.Clustered = &booleanTrue
 				brokerCrd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
 				brokerCrd.Spec.DeploymentPlan.PersistenceEnabled = true
+				// scale down is very sensitive to dns availability of ordinal 0
 				brokerCrd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
-					InitialDelaySeconds: 1,
+					InitialDelaySeconds: 2,
+					TimeoutSeconds:      2,
 					PeriodSeconds:       5,
+					FailureThreshold:    5,
+				}
+				brokerCrd.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+					InitialDelaySeconds: 2,
+					TimeoutSeconds:      2,
+					PeriodSeconds:       5,
+					FailureThreshold:    5,
 				}
 				Expect(k8sClient.Create(ctx, brokerCrd)).Should(Succeed())
 
@@ -114,6 +123,9 @@ var _ = Describe("Scale down controller", func() {
 					queryCmd := []string{"amq-broker/bin/artemis", "queue", "stat", "--silent", "--url", "tcp://" + podWithOrdinal + ":61616", "--queueName", "DLQ"}
 					stdout, err := RunCommandInPod(podWithOrdinal, brokerName+"-container", queryCmd)
 					g.Expect(err).To(BeNil())
+					if verbose {
+						fmt.Printf("\nQSTAT_OUTPUT: %v\n", *stdout)
+					}
 					fields := strings.Split(*stdout, "|")
 					g.Expect(fields[4]).To(Equal("MESSAGE_COUNT"), *stdout)
 					g.Expect(strings.TrimSpace(fields[14])).To(Equal("1"), *stdout)

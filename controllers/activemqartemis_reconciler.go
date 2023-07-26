@@ -1971,8 +1971,7 @@ var command = []string{
 var betterCommand = []string{
 	"/bin/bash",
 	"-c",
-	"/opt/amq/bin/readinessProbe.sh",
-	"1", // retries/count - so we get fast feedback and can configure via the Probe
+	"/opt/amq/bin/readinessProbe.sh 1", // retries/count - so we get fast feedback and can configure via the Probe
 	// "1", sleep seconds not applicable with 1 retry
 }
 
