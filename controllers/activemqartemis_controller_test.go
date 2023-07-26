@@ -4437,7 +4437,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh 1").Should(BeTrue())
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
@@ -4515,7 +4515,7 @@ var _ = Describe("artemis controller", func() {
 			Expect(len(createdSs.Spec.Template.Spec.Containers) == 1).Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[0] == "/bin/bash").Should(BeTrue())
 			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[1] == "-c").Should(BeTrue())
-			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh").Should(BeTrue())
+			Expect(createdSs.Spec.Template.Spec.Containers[0].ReadinessProbe.ProbeHandler.Exec.Command[2] == "/opt/amq/bin/readinessProbe.sh 1").Should(BeTrue())
 
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
