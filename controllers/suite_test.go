@@ -590,7 +590,7 @@ func setUpK8sClient() {
 var _ = BeforeSuite(func() {
 	opts := zap.Options{
 		Development: true,
-		DestWriter:  GinkgoWriter,
+		DestWriter:  &TestLogWrapper,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 
@@ -644,7 +644,6 @@ var _ = AfterSuite(func() {
 		err := uninstallOperator(true)
 		Expect(err).NotTo(HaveOccurred())
 	} else {
-
 		shutdownControllerManager()
 
 		if stateManager != nil {
@@ -664,6 +663,7 @@ var _ = AfterSuite(func() {
 
 func StartCapturingLog() {
 	testWriter.Buffer = bytes.NewBuffer(nil)
+	TestLogWrapper.StartLogging()
 }
 
 func MatchCapturedLog(pattern string) (matched bool, err error) {
@@ -680,6 +680,7 @@ func FindAllFromCapturedLog(pattern string) []string {
 
 func StopCapturingLog() {
 	testWriter.Buffer = nil
+	TestLogWrapper.StopLogging()
 }
 
 func BeforeEachSpec() {

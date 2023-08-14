@@ -30,6 +30,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -60,6 +61,33 @@ import (
 var chars = []rune("hgjkmnpqrtvwxyzslbcdaefiou")
 var defaultPassword string = "password"
 var defaultSanDnsNames = []string{"*.apps.artemiscloud.io", "*.tests.artemiscloud.io"}
+var okDefaultPwd = "okdefaultpassword"
+
+type TestLogWriter struct {
+	unbufferedWriter bytes.Buffer
+}
+
+func (w *TestLogWriter) Write(p []byte) (n int, err error) {
+	num, err := w.unbufferedWriter.Write(p)
+	if err != nil {
+		return num, err
+	}
+	return GinkgoWriter.Write(p)
+}
+
+func (w *TestLogWriter) StartLogging() {
+	w.unbufferedWriter = *bytes.NewBuffer(nil)
+}
+
+func (w *TestLogWriter) StopLogging() {
+	w.unbufferedWriter.Reset()
+}
+
+var TestLogWrapper = TestLogWriter{}
+
+func MatchPattern(content string, pattern string) (matched bool, err error) {
+	return regexp.Match(pattern, []byte(content))
+}
 
 func randStringWithPrefix(prefix string) string {
 	rand.Seed(time.Now().UnixNano())
@@ -291,7 +319,6 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 	brokerDomainName := "activemq"
 	loginModuleName := "module1"
 	loginModuleFlag := "sufficient"
-	okDefaultPwd := "ok"
 
 	loginModuleList := make([]brokerv1beta1.PropertiesLoginModuleType, 1)
 	propLoginModule := brokerv1beta1.PropertiesLoginModuleType{
@@ -319,7 +346,9 @@ func DeploySecurity(secName string, targetNamespace string, customFunc func(cand
 		},
 	}
 
-	customFunc(secCrd)
+	if customFunc != nil {
+		customFunc(secCrd)
+	}
 
 	Expect(k8sClient.Create(ctx, secCrd)).Should(Succeed())
 
