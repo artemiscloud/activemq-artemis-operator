@@ -8,8 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/adler32"
+	"os"
+	"reflect"
 	osruntime "runtime"
 	"sort"
+	"strconv"
+	"strings"
 	"unicode"
 
 	"github.com/blang/semver/v4"
@@ -17,6 +21,16 @@ import (
 	"github.com/RHsyseng/operator-utils/pkg/olm"
 	"github.com/RHsyseng/operator-utils/pkg/resource/compare"
 	"github.com/RHsyseng/operator-utils/pkg/resource/read"
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/containers"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/ingresses"
@@ -33,23 +47,12 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/equality"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/environments"
 	svc "github.com/artemiscloud/activemq-artemis-operator/pkg/resources/services"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/volumes"
-
-	"reflect"
 
 	routev1 "github.com/openshift/api/route/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -59,11 +62,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
-
-	"strconv"
-	"strings"
-
-	"os"
 
 	policyv1 "k8s.io/api/policy/v1"
 )
@@ -109,7 +107,7 @@ type ActiveMQArtemisReconcilerImpl struct {
 type ValueInfo struct {
 	Value    string
 	AutoGen  bool
-	Internal bool //if true put this value to the internal secret
+	Internal bool // if true put this value to the internal secret
 }
 
 type ActiveMQArtemisIReconciler interface {
@@ -515,7 +513,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 				}
 			}
 		}
-		//if operator doesn't own it, don't track
+		// if operator doesn't own it, don't track
 		if len(secretDefinition.OwnerReferences) > 0 {
 			for _, or := range secretDefinition.OwnerReferences {
 				if or.Kind == "ActiveMQArtemis" && or.Name == customResource.Name {
@@ -585,7 +583,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customRe
 			environments.Create(currentStatefulSet.Spec.Template.Spec.Containers, envVarDefinition)
 		}
 
-		//custom init container
+		// custom init container
 		if len(currentStatefulSet.Spec.Template.Spec.InitContainers) > 0 {
 			if retrievedEnvVar := environments.Retrieve(currentStatefulSet.Spec.Template.Spec.InitContainers, envVarName); nil == retrievedEnvVar {
 				log.V(3).Info("init_containers: failed to retrieve " + envVarName + " creating")
@@ -1164,7 +1162,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 		}
 	}
 
-	//empty the collected objects
+	// empty the collected objects
 	reconciler.requestedResources = nil
 
 	return nil
@@ -1581,7 +1579,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	var cfgVolumeName string = "amq-cfg-dir"
 
-	//tell container don't config
+	// tell container don't config
 	envConfigBroker := corev1.EnvVar{
 		Name:  "CONFIG_BROKER",
 		Value: "false",
@@ -1611,7 +1609,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		environments.CreateOrAppend(podSpec.Containers, &loggerOpts)
 	}
 
-	//add empty-dir volume and volumeMounts to main container
+	// add empty-dir volume and volumeMounts to main container
 	volumeForCfg := volumes.MakeVolumeForCfg(cfgVolumeName)
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
@@ -1633,7 +1631,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	yacfgProfileVersion = version.YacfgProfileVersionFromFullVersion[version.FullVersionFromCompactVersion[compactVersionToUse]]
 	yacfgProfileName := version.YacfgProfileName
 
-	//address settings
+	// address settings
 	addressSettings := customResource.Spec.AddressSettings.AddressSetting
 	if len(addressSettings) > 0 {
 		reqLogger.Info("processing address-settings")
@@ -1666,13 +1664,13 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		clog.V(1).Info("initCmd: " + initCmd)
 		initCmds = append(initCmds, initCmd)
 
-		//populate args of init container
+		// populate args of init container
 
 		podSpec.InitContainers = []corev1.Container{
 			*initContainer,
 		}
 
-		//expose env for address-settings
+		// expose env for address-settings
 		envVarApplyRule := "APPLY_RULE"
 		envVarApplyRuleValue := customResource.Spec.AddressSettings.ApplyRule
 
@@ -1693,7 +1691,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 		}
 		environments.Create(podSpec.InitContainers, &mergeBrokerAs)
 
-		//pass cfg file location and apply rule to init container via env vars
+		// pass cfg file location and apply rule to init container via env vars
 		tuneFile := corev1.EnvVar{
 			Name:  envVarTuneFilePath,
 			Value: outputDir,
@@ -1705,9 +1703,9 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 			*initContainer,
 		}
 	}
-	//now make volumes mount available to init image
+	// now make volumes mount available to init image
 
-	//setup volumeMounts from scratch
+	// setup volumeMounts from scratch
 	podSpec.InitContainers[0].VolumeMounts = []corev1.VolumeMount{}
 	volumeMountForCfgRoot := volumes.MakeRwVolumeMountForCfg(cfgVolumeName, brokerConfigRoot)
 	podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, volumeMountForCfgRoot)
@@ -1715,7 +1713,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	volumeMountForCfg = volumes.MakeRwVolumeMountForCfg("tool-dir", initCfgRootDir)
 	podSpec.InitContainers[0].VolumeMounts = append(podSpec.InitContainers[0].VolumeMounts, volumeMountForCfg)
 
-	//add empty-dir volume
+	// add empty-dir volume
 	volumeForCfg = volumes.MakeVolumeForCfg("tool-dir")
 	podSpec.Volumes = append(podSpec.Volumes, volumeForCfg)
 
@@ -1735,7 +1733,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	var initArgs []string = []string{"-c"}
 
-	//provide a way to configuration after launch.sh
+	// provide a way to configuration after launch.sh
 	var brokerHandlerCmds []string = []string{}
 	brokerConfigHandler := GetBrokerConfigHandler(namespacedName)
 	if brokerConfigHandler != nil {
@@ -1978,7 +1976,7 @@ func configureReadinessProbe(container *corev1.Container, probeFromCr *corev1.Pr
 }
 
 func applyNonDefaultedValues(readinessProbe *corev1.Probe, probeFromCr *corev1.Probe) {
-	//copy the probe, but only for non default (init values)
+	// copy the probe, but only for non default (init values)
 	if probeFromCr.InitialDelaySeconds > 0 {
 		readinessProbe.InitialDelaySeconds = probeFromCr.InitialDelaySeconds
 	}
@@ -2241,7 +2239,7 @@ func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Contain
 			}
 			cfgmapPath := cfgMapPathBase + cfgmap
 			clog.Info("Resolved configMap path", "path", cfgmapPath)
-			//now we have a config map. First create a volume
+			// now we have a config map. First create a volume
 			cfgmapVol := volumes.MakeVolumeForConfigMap(cfgmap)
 			cfgmapVolumeMount := volumes.MakeVolumeMountForCfg(cfgmapVol.Name, cfgmapPath, true)
 			extraVolumes = append(extraVolumes, cfgmapVol)
@@ -2256,7 +2254,7 @@ func createExtraConfigmapsAndSecretsVolumeMounts(brokerContainer *corev1.Contain
 				continue
 			}
 			secretPath := secretPathBase + secret
-			//now we have a secret. First create a volume
+			// now we have a secret. First create a volume
 			secretVol := volumes.MakeVolumeForSecret(secret)
 
 			if secret == brokePropertiesResourceName && len(brokerPropsData) > 1 {
