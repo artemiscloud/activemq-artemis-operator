@@ -2972,7 +2972,7 @@ func getConfigMappedBrokerProperties(cr *brokerv1beta1.ActiveMQArtemis, client r
 	resource := corev1.Secret{}
 	err := client.Get(context.TODO(), cmName, &resource)
 	if err != nil {
-		return nil, NewUnknownJolokiaError(errors.Wrap(err, "unable to retrieve mutable config map"))
+		return nil, NewUnknownJolokiaError(errors.Wrap(err, "unable to retrieve mutable properties resource"))
 	}
 	return newProjectionFromByteValues(resource.ObjectMeta, resource.Data), nil
 }
