@@ -43,6 +43,7 @@ type ActiveMQArtemisAddressStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:path=activemqartemisaddresses,shortName=aaa
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
 // ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses API
 type ActiveMQArtemisAddress struct {

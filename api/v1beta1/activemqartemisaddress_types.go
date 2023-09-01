@@ -145,6 +145,7 @@ type ActiveMQArtemisAddressStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 //+kubebuilder:resource:path=activemqartemisaddresses,shortName=aaa
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
 // Adding and removing addresses using custom resource definitions
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Address"
