@@ -410,7 +410,9 @@ type ActiveMQArtemisSecurity struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ActiveMQArtemisSecuritySpec   `json:"spec,omitempty"`
+	Spec ActiveMQArtemisSecuritySpec `json:"spec,omitempty"`
+	// Specifies the security status modules
+	// +operator-sdk:csv:customresourcedefinitions:type=status,displayName="ActiveMQ Artemis Security Status"
 	Status ActiveMQArtemisSecurityStatus `json:"status,omitempty"`
 }
 

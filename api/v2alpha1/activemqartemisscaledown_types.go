@@ -29,6 +29,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Triggered by main ActiveMQArtemis CRD messageMigration entry
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Local Only",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	LocalOnly bool `json:"localOnly"`
 }
 
