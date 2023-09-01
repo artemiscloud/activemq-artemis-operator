@@ -53,6 +53,16 @@ resources:
   path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha5
   plural: activemqartemises
   version: v2alpha5
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemis
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
+  plural: activemqartemises
+  version: v1beta1
   webhooks:
     conversion: true
     defaulting: true
@@ -91,12 +101,34 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisAddress
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
+  version: v1beta1
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
   controller: true
   domain: amq.io
   group: broker
   kind: ActiveMQArtemisScaledown
   path: github.com/artemiscloud/activemq-artemis-operator/api/v2alpha1
   version: v2alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: amq.io
+  group: broker
+  kind: ActiveMQArtemisScaledown
+  path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
+  version: v1beta1
 - api:
     crdVersion: v1
     namespaced: true
@@ -114,37 +146,9 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  controller: true
-  domain: amq.io
-  group: broker
-  kind: ActiveMQArtemis
-  path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
-  plural: activemqartemises
-  version: v1beta1
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
   domain: amq.io
   group: broker
   kind: ActiveMQArtemisSecurity
-  path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
-  version: v1beta1
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: amq.io
-  group: broker
-  kind: ActiveMQArtemisAddress
   path: github.com/artemiscloud/activemq-artemis-operator/api/v1beta1
   version: v1beta1
   webhooks:
