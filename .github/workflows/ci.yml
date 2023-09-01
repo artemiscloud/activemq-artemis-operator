@@ -54,7 +54,7 @@ jobs:
       - name: Build the image
         run: |
           podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/amd64 --manifest $IMAGE_NAME:dev.latest .
-          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
+          #podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
 
       - name: Push the dev image
         if: ${{ github.event_name == 'push' }}
