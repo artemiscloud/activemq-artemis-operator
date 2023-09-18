@@ -29,7 +29,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Triggered by main ActiveMQArtemis CRD messageMigration entry
-	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Local Only",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Temporary",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	LocalOnly bool `json:"localOnly"`
 }
 
@@ -42,6 +42,7 @@ type ActiveMQArtemisScaledownStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:path=activemqartemisscaledowns,shortName=aad
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
 // ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns API
 type ActiveMQArtemisScaledown struct {

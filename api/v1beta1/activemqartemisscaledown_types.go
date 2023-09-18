@@ -30,7 +30,7 @@ type ActiveMQArtemisScaledownSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Triggered by main ActiveMQArtemis CRD messageMigration entry
-	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Local Only",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Temporary",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	LocalOnly bool `json:"localOnly"`
 	// Specifies the minimum/maximum amount of compute resources required/allowed
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Resource Requirements",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
@@ -47,6 +47,7 @@ type ActiveMQArtemisScaledownStatus struct {
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:path=activemqartemisscaledowns,shortName=aad
+//+operator-sdk:csv:customresourcedefinitions:resources={{"Secret", "v1"}}
 
 // Provides message migration on clustered broker scaledown
 // +operator-sdk:csv:customresourcedefinitions:displayName="ActiveMQ Artemis Scaledown"

@@ -21,6 +21,10 @@ spec:
       displayName: ActiveMQ Artemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       specDescriptors:
       - description: The Address Name
         displayName: Address Name
@@ -199,18 +203,30 @@ spec:
       displayName: Active MQArtemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha3
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
       displayName: Active MQArtemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha2
     - description: ActiveMQArtemisAddress is the Schema for the activemqartemisaddresses
         API
       displayName: Active MQArtemis Address
       kind: ActiveMQArtemisAddress
       name: activemqartemisaddresses.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha1
     - description: A stateful deployment of one or more brokers
       displayName: ActiveMQ Artemis
@@ -1164,35 +1180,59 @@ spec:
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha5
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha4
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha3
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha2
     - description: ActiveMQArtemis is the Schema for the activemqartemises API
       displayName: Active MQArtemis
       kind: ActiveMQArtemis
       name: activemqartemises.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       version: v2alpha1
     - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
         API
       displayName: Active MQArtemis Scaledown
       kind: ActiveMQArtemisScaledown
       name: activemqartemisscaledowns.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       specDescriptors:
       - description: Triggered by main ActiveMQArtemis CRD messageMigration entry
-        displayName: Local Only
+        displayName: Temporary
         path: localOnly
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
@@ -1201,6 +1241,10 @@ spec:
       displayName: ActiveMQ Artemis Security
       kind: ActiveMQArtemisSecurity
       name: activemqartemissecurities.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       specDescriptors:
       - description: Apply this security config to the broker crs in the current namespace.
           A value of * or empty string means applying to all broker crs. Default apply
@@ -1719,6 +1763,10 @@ spec:
       displayName: ActiveMQ Artemis Security
       kind: ActiveMQArtemisSecurity
       name: activemqartemissecurities.broker.amq.io
+      resources:
+      - kind: Secret
+        name: ""
+        version: v1
       specDescriptors:
       - description: Apply this security config to the broker crs in the current namespace.
           A value of * or empty string means applying to all broker crs. Default apply
