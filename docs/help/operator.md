@@ -329,7 +329,6 @@ apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
-  application: ex-aao-app
 spec:
   deploymentPlan:
     image: placeholder
@@ -340,8 +339,7 @@ spec:
 Observe that the sample CR uses a naming convention of **ex-aao**. This naming convention denotes that the CR is an example 
 resource for the ArtemisCloud (based on the ActiveMQ Artemis project) Operator. When you deploy this sample CR, the resulting 
 Stateful Set uses the name **ex-aao-ss**. Furthermore, broker Pods in the deployment are directly based on the Stateful Set name, 
-for example, **ex-aao-ss-0**, **ex-aao-ss-1**, and so on. The application name in the CR appears in the deployment as a label on the Stateful Set. 
-You might use this label in a Pod selector, for example.
+for example, **ex-aao-ss-0**, **ex-aao-ss-1**, and so on. 
 
 The size value specifies the number of brokers to deploy. The default value of 2 specifies a clustered broker deployment 
 of two brokers. However, to deploy a single broker instance, change the value to 1.
@@ -438,7 +436,6 @@ apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
   name: ex-aao
-  application: ex-aao-app
 spec:
     deploymentPlan:
         size: 4
