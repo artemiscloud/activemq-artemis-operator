@@ -54,6 +54,10 @@ var _ = Describe("Address controller DO", Label("do"), func() {
 		BeforeEachSpec()
 	})
 
+	AfterEach(func() {
+		AfterEachSpec()
+	})
+
 	Context("Address test", func() {
 
 		It("Deploy CR with size 5 (pods)", Label("slow"), func() {

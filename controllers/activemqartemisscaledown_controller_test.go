@@ -44,6 +44,10 @@ var _ = Describe("Scale down controller", func() {
 		BeforeEachSpec()
 	})
 
+	AfterEach(func() {
+		AfterEachSpec()
+	})
+
 	Context("Scale down test", func() {
 		It("deploy plan 2 clustered", Label("basic-scaledown-check"), func() {
 

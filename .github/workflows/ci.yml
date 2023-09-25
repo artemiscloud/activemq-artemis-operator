@@ -20,15 +20,38 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '1.19.8'
+          cache: true
 
       - name: Checkout the repo
         uses: actions/checkout@v2
 
+      - name: Start minikube
+        id: minikube
+        uses: medyagh/setup-minikube@master
+        with:
+          cpus: 2
+          memory: 4g
+
       - name: Check generate files
         run: make generate-deploy && make bundle && git status && git diff-index --quiet HEAD --
 
+      - name: Build the image
+        run: |
+          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/amd64 --manifest $IMAGE_NAME:dev.latest .
+
+      - name: Push the image into minikube
+        run: |
+          export SHELL=/bin/bash
+          eval $(minikube -p minikube docker-env)
+          docker image list
+          export OPERATOR_IMAGE=$(grep -Po '(?<=image: ).*' ./deploy/operator.yaml)
+          podman tag $IMAGE_NAME:dev.latest $OPERATOR_IMAGE
+          podman save --output activemq-artemis-operator-image.tar --format docker-archive $OPERATOR_IMAGE
+          docker image load --input activemq-artemis-operator-image.tar
+          docker image list
+
       - name: Execute the tests
-        run: make test
+        run: make test-mk-do-fast-v
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -49,12 +72,13 @@ jobs:
           npm install && npm run build
 
       - name: Set up QEMU
+        if: ${{ github.event_name == 'push' }}
         uses: docker/setup-qemu-action@v1
 
-      - name: Build the image
+      - name: Build the image for arm64
+        if: ${{ github.event_name == 'push' }}
         run: |
-          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=amd64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/amd64 --manifest $IMAGE_NAME:dev.latest .
-          #podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
+          podman build --build-arg TARGETOS=linux --build-arg TARGETARCH=arm64 --label quay.expires-after=90d --label git-sha=$GITHUB_SHA --no-cache --platform linux/arm64 --manifest $IMAGE_NAME:dev.latest .
 
       - name: Push the dev image
         if: ${{ github.event_name == 'push' }}
