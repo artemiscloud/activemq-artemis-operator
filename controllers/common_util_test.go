@@ -186,13 +186,13 @@ func newArtemisSpecWithFastProbes() brokerv1beta1.ActiveMQArtemisSpec {
 	spec := brokerv1beta1.ActiveMQArtemisSpec{}
 
 	// sensible fast defaults for tests against existing cluster
-	spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
-		InitialDelaySeconds: 1,
-		PeriodSeconds:       2,
-	}
 	spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 		InitialDelaySeconds: 1,
-		PeriodSeconds:       2,
+		PeriodSeconds:       3,
+	}
+	spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+		InitialDelaySeconds: 6,
+		PeriodSeconds:       3,
 	}
 
 	return spec
@@ -434,6 +434,23 @@ func RunCommandInPod(podName string, containerName string, command []string) (*s
 	content := consumerCapturedOut.String()
 
 	return &content, nil
+}
+
+func EventsOfPod(podWithOrdinal string, namespace string, g Gomega) *corev1.EventList {
+
+	cfg, err := config.GetConfig()
+	g.Expect(err).To(BeNil())
+
+	clientset, err := kubernetes.NewForConfig(cfg)
+	g.Expect(err).To(BeNil())
+
+	events, err := clientset.CoreV1().Events(namespace).List(context.TODO(), metav1.ListOptions{
+		FieldSelector: "involvedObject.name=" + podWithOrdinal,
+		TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
+	})
+	g.Expect(err).To(BeNil())
+
+	return events
 }
 
 func LogsOfPod(podWithOrdinal string, brokerName string, namespace string, g Gomega) string {

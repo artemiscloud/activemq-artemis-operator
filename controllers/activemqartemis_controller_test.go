@@ -122,6 +122,8 @@ var _ = Describe("artemis controller", func() {
 		for e := wis.Front(); e != nil; e = e.Next() {
 			e.Value.(watch.Interface).Stop()
 		}
+
+		AfterEachSpec()
 	})
 
 	Context("tls secret reuse", Label("tls-secret-reuse"), func() {

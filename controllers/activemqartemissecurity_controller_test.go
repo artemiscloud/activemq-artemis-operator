@@ -61,6 +61,7 @@ var _ = Describe("security controller", func() {
 	})
 
 	AfterEach(func() {
+		AfterEachSpec()
 	})
 
 	Context("broker with security custom resources", Label("broker-security-res"), func() {

@@ -48,6 +48,10 @@ var _ = Describe("pub sub scale", func() {
 		BeforeEachSpec()
 	})
 
+	AfterEach(func() {
+		AfterEachSpec()
+	})
+
 	Context("pub n sub, ha pub, partitioned sub", Label("slow"), func() {
 		It("validation", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {

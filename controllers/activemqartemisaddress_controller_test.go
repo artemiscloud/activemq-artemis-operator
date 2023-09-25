@@ -53,6 +53,10 @@ var _ = Describe("Address controller tests", func() {
 		BeforeEachSpec()
 	})
 
+	AfterEach(func() {
+		AfterEachSpec()
+	})
+
 	Context("address queue config defaults", Label("queue-config-defaults"), func() {
 		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 			queueName := "myqueue"

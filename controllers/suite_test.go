@@ -687,10 +687,15 @@ func BeforeEachSpec() {
 	specCount++
 
 	//Print running spec
-	fmt.Println("\n\033[32mRunning Spec " +
-		strconv.FormatInt(specCount, 10) + ": " +
-		CurrentSpecReport().FullText() + " " +
-		"\033[33m[" + CurrentSpecShortName() + "]\033[0m\n" +
-		CurrentSpecReport().LeafNodeLocation.FileName + ":" +
-		strconv.Itoa(CurrentSpecReport().LeafNodeLocation.LineNumber))
+	currentSpecReport := CurrentSpecReport()
+	fmt.Printf("\n\033[1m\033[32mSpec %d running: %s \033[33m[%s]\033[0m\n%s:%d",
+		specCount, currentSpecReport.FullText(), CurrentSpecShortName(),
+		currentSpecReport.LeafNodeLocation.FileName, currentSpecReport.LeafNodeLocation.LineNumber)
+}
+
+func AfterEachSpec() {
+	//Print ran spec
+	currentSpecReport := CurrentSpecReport()
+	fmt.Printf("\n\033[1m\033[32mSpec %d ran in %f seconds \033[0m\n",
+		specCount, currentSpecReport.RunTime.Seconds())
 }
