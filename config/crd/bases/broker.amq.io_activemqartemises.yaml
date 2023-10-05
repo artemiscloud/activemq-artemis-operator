@@ -2352,7 +2352,7 @@ spec:
                       type: object
                     type: array
                   topologySpreadConstraints:
-                    description: Specifies the topology spread constraints configurations
+                    description: Specifies the topology spread constraints
                     items:
                       description: TopologySpreadConstraint specifies how to spread
                         matching pods among the given topology.
