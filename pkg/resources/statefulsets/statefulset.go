@@ -29,11 +29,9 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
-	logf "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var log = logf.Log.WithName("package statefulsets")
 
 type StatefulSetInfo struct {
 	NamespacedName types.NamespacedName
@@ -77,7 +75,8 @@ var GLOBAL_CRNAME string = ""
 func RetrieveStatefulSet(statefulsetName string, namespacedName types.NamespacedName, labels map[string]string, client client.Client) (*appsv1.StatefulSet, error) {
 
 	// Log where we are and what we're doing
-	reqLogger := log.WithValues("ActiveMQArtemis Name", namespacedName.Name)
+	reqLogger := ctrl.Log.WithName("util_statefulset")
+
 	reqLogger.Info("Retrieving " + "StatefulSet " + statefulsetName)
 
 	var err error = nil
@@ -97,9 +96,9 @@ func RetrieveStatefulSet(statefulsetName string, namespacedName types.Namespaced
 
 	if err = client.Get(context.TODO(), namespacedName, ss); err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.V(1).Info("StatefulSet claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.Info("StatefulSet claim IsNotFound", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		} else {
-			reqLogger.V(1).Info("StatefulSet claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
+			reqLogger.Info("StatefulSet claim found", "Namespace", namespacedName.Namespace, "Name", namespacedName.Name)
 		}
 	}
 

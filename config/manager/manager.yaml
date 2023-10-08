@@ -38,7 +38,7 @@ spec:
         # Valid values are debug, info, and error
         # from most to least.
         # If running entrypoint_debug then use '-- --zap-level debug'
-        - --zap-log-level=info
+        - --zap-log-level=error
         - --zap-encoder=console
         - --zap-time-encoding=iso8601
         - --leader-elect

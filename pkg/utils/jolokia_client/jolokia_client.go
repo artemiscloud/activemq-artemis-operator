@@ -47,7 +47,7 @@ type JkInfo struct {
 // ssInfos: target statefulsets to look for pods in
 // client: the client to access the api server
 func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, client rtclient.Client) []*JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
+	reqLogger := ctrl.Log.WithName("jolokia").WithValues("Request.Namespace", resource.Namespace, "Request.Name", resource.Name)
 
 	var artemisArray []*JkInfo = nil
 
@@ -62,7 +62,7 @@ func GetBrokers(resource types.NamespacedName, ssInfos []ss.StatefulSetInfo, cli
 
 // Get brokers Using DNS names in the namespace
 func GetBrokersFromDNS(crName string, namespace string, size int32, client rtclient.Client) []*JkInfo {
-	reqLogger := ctrl.Log.WithValues("Request.Namespace", namespace, "Request.Name", crName)
+	reqLogger := ctrl.Log.WithName("jolokia").WithValues("Request.Namespace", namespace, "Request.Name", crName)
 
 	var artemisArray []*JkInfo = nil
 	var i int32 = 0
@@ -79,7 +79,7 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 			Namespace: namespace,
 		}
 
-		reqLogger.V(2).Info("Trying finding pod " + podNamespacedName.Name)
+		reqLogger.V(1).Info("Trying finding pod " + podNamespacedName.Name)
 		if err := client.Get(context.TODO(), podNamespacedName, pod); err != nil {
 			if errors.IsNotFound(err) {
 				// The IsNotFound err could point to unrelated pods.
@@ -88,13 +88,13 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 				reqLogger.Error(err, "Pod lookup error", "Namespace", namespace, "Name", pod.Name)
 			}
 		} else {
-			reqLogger.V(2).Info("Pod found", "Namespace", namespace, "Name", crName)
+			reqLogger.V(1).Info("Pod found", "Namespace", namespace, "Name", crName)
 			containers := pod.Spec.Containers //get env from this
 			jolokiaSecretName := crName + "-jolokia-secret"
 
 			jolokiaUser, jolokiaPassword, jolokiaProtocol := resolveJolokiaRequestParams(namespace, client, client.Scheme(), jolokiaSecretName, &containers, podNamespacedName)
 
-			reqLogger.V(2).Info("hostname to use for jolokia ", "hostname", ordinalFqdn)
+			reqLogger.V(1).Info("hostname to use for jolokia ", "hostname", ordinalFqdn)
 
 			artemis := mgmt.GetArtemis(ordinalFqdn, "8161", "amq-broker", jolokiaUser, jolokiaPassword, jolokiaProtocol)
 
@@ -107,7 +107,7 @@ func GetBrokersFromDNS(crName string, namespace string, size int32, client rtcli
 		}
 	}
 
-	reqLogger.V(2).Info("got mgmt array", "size", len(artemisArray))
+	reqLogger.V(1).Info("got mgmt array", "size", len(artemisArray))
 	return artemisArray
 }
 

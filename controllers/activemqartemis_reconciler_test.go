@@ -13,10 +13,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func TestHexShaHashOfMap(t *testing.T) {
@@ -200,7 +202,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.ReadyReplicas = 1
 
 	cr := &brokerv1beta1.ActiveMQArtemis{}
-	statusRunning := getSingleStatefulSetStatus(ss, cr)
+	statusRunning := common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal" + statusRunning.Ready[0])
 	}
@@ -208,7 +210,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 0
 	ss.Status.ReadyReplicas = 0
 
-	statusRunning = getSingleStatefulSetStatus(ss, cr)
+	statusRunning = common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Stopped[0] != "joe" {
 		t.Errorf("not good!, expect ss name in stopped" + statusRunning.Stopped[0])
 	}
@@ -218,7 +220,7 @@ func TestGetSingleStatefulSetStatus(t *testing.T) {
 	ss.Status.Replicas = 2
 	ss.Status.ReadyReplicas = 1
 
-	statusRunning = getSingleStatefulSetStatus(ss, cr)
+	statusRunning = common.GetSingleStatefulSetStatus(ss, cr)
 	if statusRunning.Ready[0] != "joe-0" {
 		t.Errorf("not good!, expect correct 0 ordinal ready" + statusRunning.Ready[0])
 	}
@@ -477,7 +479,9 @@ func TestGetJaasConfigExtraMountPathNotPresent(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -495,7 +499,7 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -508,7 +512,9 @@ func TestNewPodTemplateSpecForCR_IncludesDebugArgs(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -532,7 +538,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -545,7 +551,9 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 
 func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 	// client := fake.NewClientBuilder().Build()
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
@@ -559,7 +567,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)
@@ -572,7 +580,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 }
 
 func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T) {
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := NewActiveMQArtemisReconcilerImpl(ctrl.Log)
 	matchLabels := make(map[string]string)
 	matchLabels["my-label"] = "my-value"
 
@@ -595,7 +603,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 		},
 	}
 
-	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, newSpec)

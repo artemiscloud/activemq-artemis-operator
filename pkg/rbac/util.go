@@ -23,12 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	logf "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var log = logf.Log.WithName("util_rbac")
-
 func CreateServiceAccount(name string, namespace string, kubeclientset kubernetes.Interface) (*corev1.ServiceAccount, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
@@ -58,6 +57,7 @@ func CreateServiceAccount(name string, namespace string, kubeclientset kubernete
 }
 
 func DeleteServiceAccount(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {
@@ -80,6 +80,7 @@ func DeleteServiceAccount(name string, namespace string, kubeclientset kubernete
 }
 
 func CreateRole(name string, namespace string, rules []rbacv1.PolicyRule, kubeclientset kubernetes.Interface) (*rbacv1.Role, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.RbacV1().Roles(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
@@ -110,6 +111,7 @@ func CreateRole(name string, namespace string, rules []rbacv1.PolicyRule, kubecl
 }
 
 func DeleteRole(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.RbacV1().Roles(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {
@@ -132,6 +134,7 @@ func DeleteRole(name string, namespace string, kubeclientset kubernetes.Interfac
 }
 
 func CreateServiceAccountRoleBinding(serviceAccountName string, roleName string, name string, namespace string, kubeclientset kubernetes.Interface) (*rbacv1.RoleBinding, error) {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	result, err := kubeclientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, getOps)
 	if err == nil {
@@ -171,6 +174,7 @@ func CreateServiceAccountRoleBinding(serviceAccountName string, roleName string,
 }
 
 func DeleteRoleBinding(name string, namespace string, kubeclientset kubernetes.Interface) error {
+	log := ctrl.Log.WithName("rbac")
 	getOps := metav1.GetOptions{}
 	_, err := kubeclientset.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, getOps)
 	if err != nil {

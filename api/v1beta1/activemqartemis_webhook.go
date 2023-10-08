@@ -40,7 +40,7 @@ var _ webhook.Defaulter = &ActiveMQArtemis{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ActiveMQArtemis) Default() {
-	activemqartemislog.V(1).Info("default", "name", r.Name)
+	activemqartemislog.Info("default", "name", r.Name)
 
 	// TODO(user): fill in your defaulting logic.
 }
@@ -52,7 +52,7 @@ var _ webhook.Validator = &ActiveMQArtemis{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ActiveMQArtemis) ValidateCreate() error {
-	activemqartemislog.V(1).Info("validate create", "name", r.Name)
+	activemqartemislog.Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
 	return nil
