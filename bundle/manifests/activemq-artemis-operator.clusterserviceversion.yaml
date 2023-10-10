@@ -1295,6 +1295,9 @@ spec:
       - description: Specifies the Revision History Limit of the statefulset
         displayName: Revision History Limit
         path: deploymentPlan.revisionHistoryLimit
+      - description: Specifies the container security context
+        displayName: Security Context
+        path: deploymentPlan.securityContext
       - description: The number of broker pods to deploy
         displayName: Size
         path: deploymentPlan.size
