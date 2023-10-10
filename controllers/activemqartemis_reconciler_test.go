@@ -17,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilpointer "k8s.io/utils/pointer"
 )
 
 func TestHexShaHashOfMap(t *testing.T) {
@@ -608,6 +609,29 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 		},
 	}
 	assert.Equal(t, newSpec.Spec.TopologySpreadConstraints, expectedTopologySpreadConstraints)
+}
+
+func TestNewPodTemplateSpecForCR_IncludesContainerSecurityContext(t *testing.T) {
+	reconciler := &ActiveMQArtemisReconcilerImpl{}
+
+	securityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
+
+	cr := &brokerv1beta1.ActiveMQArtemis{
+		Spec: brokerv1beta1.ActiveMQArtemisSpec{
+			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
+				SecurityContext: securityContext,
+			},
+		},
+	}
+
+	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, Namers{}, &v1.PodTemplateSpec{}, k8sClient)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, newSpec)
+	expectedSecurityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
+
+	assert.Equal(t, newSpec.Spec.Containers[0].SecurityContext, expectedSecurityContext)
+	assert.Equal(t, newSpec.Spec.InitContainers[0].SecurityContext, expectedSecurityContext)
 }
 
 func TestLoginConfigSyntaxCheck(t *testing.T) {

@@ -1567,6 +1567,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
+	configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.SecurityContext)
+
 	containerPorts := MakeContainerPorts(customResource)
 	if len(containerPorts) > 0 {
 		reqLogger.V(1).Info("Adding new ports to main", "len", len(containerPorts))
@@ -1664,6 +1666,8 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	clog.Info("Creating init container for broker configuration")
 	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, resolveImage(customResource, InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
+
+	configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.SecurityContext)
 
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
@@ -2180,6 +2184,18 @@ func configurePodSecurityContext(podSpec *corev1.PodSpec, podSecurityContext *co
 	} else {
 		clog.V(5).Info("Incoming podSecurityContext is nil, creating with default values")
 		podSpec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+}
+
+func configureContianerSecurityContext(container *corev1.Container, securityContext *corev1.SecurityContext) {
+	clog.V(1).Info("Configuring Container SecurityContext")
+
+	if nil != securityContext {
+		clog.V(5).Info("Incoming Container SecurityContext is NOT nil, assigning")
+		container.SecurityContext = securityContext
+	} else {
+		clog.V(5).Info("Incoming Container SecurityContext is nil, creating with default values")
+		container.SecurityContext = &corev1.SecurityContext{}
 	}
 }
 
