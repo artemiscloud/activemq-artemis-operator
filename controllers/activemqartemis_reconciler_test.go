@@ -618,6 +618,15 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 		SampleLoginModule requisite;
 		SampleLoginModule sufficient;
 	   };`),
+		"equalsSpace": []byte(`a {
+		SampleLoginModule Required  a = b b= d c = 4;
+		SampleLoginModule Optional
+		a =2
+		b= 3
+		c = 4
+		;
+	   };`),
+
 		"quotex": []byte(` aaa {
 		SampleLoginModule Required  a=b b=d;
 		SampleLoginModule Required
@@ -690,6 +699,23 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 			 baseDir="/home/jboss/amq-broker/etc";
 
 	 };`),
+
+		"full-ldap-quoted-val": []byte(`
+	 activemq	{ org.apache.activemq.artemis.spi.core.security.jaas.LDAPLoginModule sufficient 
+		debug=true 
+		initialContextFactory=com.sun.jndi.ldap.LdapCtxFactory 
+		connectionURL="ldap://blabla"
+		connectionTimeout="5000"
+		connectionProtocol="simple"
+		readTimeout="5000"
+		authentication="simple"
+		userBase="DC=aa,DC=aaa,DC=aaaaa,DC=aa,DC=aa"
+		userSearchMatching="(&(objectCategory=user)(SAMAccountName=\\{0}))"
+		roleBase="DC=aa,DC=aaa,DC=aaaaa,DC=aa,DC=aa"
+		roleName=sAMAccountName
+		roleSearchMatching="(&(objectCategory=group)(groupType:1.1.111.111111.1.1.111:=1111111111)(member:1.1.111.111111.1.1.1111:=\{0})(sAMAccountName=AAA AAA AAA*))"
+		referral=follow;	
+	 };`),
 	}
 
 	for k, v := range good {
@@ -713,6 +739,21 @@ func TestLoginConfigSyntaxCheck(t *testing.T) {
 		"no_flags": []byte(`aa 
 	 {
 	     SampleLoginModule a=b b=d;
+	 };`),
+
+		"dual_munged_opt": []byte(`aa 
+	 {
+	     SampleLoginModule sufficientRequired a=b;
+	 };`),
+
+		"dual_or_opt": []byte(`aa 
+	 {
+	     SampleLoginModule Sufficient|Required a=b;
+	 };`),
+
+		"dual_space_opt": []byte(`aa 
+	 {
+	     SampleLoginModule Sufficient Required a=b;
 	 };`),
 
 		"no_semi_on_module": []byte(`aa 

@@ -7773,6 +7773,21 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeTrue())
 			}, timeout, interval).Should(Succeed())
 
+			By("Invalidating again to verify status update to false")
+			Eventually(func(g Gomega) {
+
+				g.Expect(k8sClient.Get(ctx, secretName, createdSecret)).Should(Succeed())
+				createdSecret.Data[JaasConfigKey] = []byte(`a_realm { a_login_module_missing_val sufficient noOp=; };`)
+				g.Expect(k8sClient.Update(ctx, createdSecret)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
+
+			By("verifying now in valid again")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
+				g.Expect(meta.IsStatusConditionTrue(createdCrd.Status.Conditions, brokerv1beta1.ValidConditionType)).Should(BeFalse())
+			}, timeout, interval).Should(Succeed())
+
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, &crd)).To(Succeed())
 		})

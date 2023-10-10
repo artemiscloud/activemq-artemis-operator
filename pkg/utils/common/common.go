@@ -21,7 +21,7 @@ const (
 	DEFAULT_RESYNC_PERIOD  = 30 * time.Second
 	// comments push this over the edge a little when dealing with white space
 	// as en env var it can be disabled by setting to "" or can be improved!
-	JaasConfigSyntaxMatchRegExDefault = `^(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s*{(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s+(?i:required|optional|sufficient|requisite)+(?:\s*\S+=\S+\s*)*\s*;)+(\s*|(?://.*)|(?s:/\*.*\*/))*}\s*;)+\s*\z`
+	JaasConfigSyntaxMatchRegExDefault = `^(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s*{(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s+(?i:required|optional|sufficient|requisite)(?:\s*\S+\s*=((\s*\S+\s*)|("[^"]*")))*\s*;)+(\s*|(?://.*)|(?s:/\*.*\*/))*}\s*;)+\s*\z`
 )
 
 var theManager manager.Manager
