@@ -1721,17 +1721,29 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	reqLogger.V(2).Info("Total volumes ", "volumes", podSpec.Volumes)
 
-	// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
-	// not getting munged on the way. We CreateOrAppend to any value from spec.Env
 	var mountPoint = secretPathBase
 	if !isSecret {
 		mountPoint = cfgMapPathBase
 	}
-	javaOpts := corev1.EnvVar{
-		Name:  "JAVA_OPTS",
-		Value: brokerPropertiesConfigSystemPropValue(mountPoint, brokerPropertiesResourceName, brokerPropertiesMapData),
+	brokerPropsValue := brokerPropertiesConfigSystemPropValue(mountPoint, brokerPropertiesResourceName, brokerPropertiesMapData)
+
+	// only use init container JAVA_OPTS on existing deployments and migrate to JDK_JAVA_OPTIONS for independence
+	// from init containers and broker run scripts
+	if environments.Retrieve(podSpec.InitContainers, "JAVA_OPTS") != nil {
+		// this depends on init container passing --java-opts to artemis create via launch.sh *and* it
+		// not getting munged on the way. We CreateOrAppend to any value from spec.Env
+		javaOpts := corev1.EnvVar{
+			Name:  "JAVA_OPTS",
+			Value: brokerPropsValue,
+		}
+		environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
+	} else {
+		jdkJavaOpts := corev1.EnvVar{
+			Name:  "JDK_JAVA_OPTIONS",
+			Value: brokerPropsValue,
+		}
+		environments.CreateOrAppend(podSpec.Containers, &jdkJavaOpts)
 	}
-	environments.CreateOrAppend(podSpec.InitContainers, &javaOpts)
 
 	var initArgs []string = []string{"-c"}
 
