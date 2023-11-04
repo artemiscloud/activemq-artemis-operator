@@ -1026,7 +1026,6 @@ For example when you have a broker cr named **amq** like this:
 apiVersion: broker.amq.io/v1beta1
 kind: ActiveMQArtemis
 metadata:
-  name: broker
   name: amq
   namespace: default
 spec:
