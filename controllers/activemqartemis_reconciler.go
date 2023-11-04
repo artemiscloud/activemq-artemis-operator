@@ -1520,7 +1520,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
-	configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.SecurityContext)
+	reconciler.configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.SecurityContext)
 
 	containerPorts := MakeContainerPorts(customResource)
 	if len(containerPorts) > 0 {
@@ -1620,7 +1620,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, common.ResolveImage(customResource, common.InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
-	configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.SecurityContext)
+	reconciler.configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.SecurityContext)
 
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
@@ -2135,14 +2135,14 @@ func (r *ActiveMQArtemisReconcilerImpl) configurePodSecurityContext(podSpec *cor
 	}
 }
 
-func configureContianerSecurityContext(container *corev1.Container, securityContext *corev1.SecurityContext) {
-	clog.V(1).Info("Configuring Container SecurityContext")
+func (r *ActiveMQArtemisReconcilerImpl) configureContianerSecurityContext(container *corev1.Container, securityContext *corev1.SecurityContext) {
+	r.log.V(1).Info("Configuring Container SecurityContext")
 
 	if nil != securityContext {
-		clog.V(5).Info("Incoming Container SecurityContext is NOT nil, assigning")
+		r.log.V(5).Info("Incoming Container SecurityContext is NOT nil, assigning")
 		container.SecurityContext = securityContext
 	} else {
-		clog.V(5).Info("Incoming Container SecurityContext is nil, creating with default values")
+		r.log.V(5).Info("Incoming Container SecurityContext is nil, creating with default values")
 		container.SecurityContext = &corev1.SecurityContext{}
 	}
 }
