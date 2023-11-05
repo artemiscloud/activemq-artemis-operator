@@ -620,7 +620,9 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 }
 
 func TestNewPodTemplateSpecForCR_IncludesContainerSecurityContext(t *testing.T) {
-	reconciler := &ActiveMQArtemisReconcilerImpl{}
+	reconciler := &ActiveMQArtemisReconcilerImpl{
+		log: ctrl.Log.WithName("test"),
+	}
 
 	securityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
 
