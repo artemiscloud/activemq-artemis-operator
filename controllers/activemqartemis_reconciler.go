@@ -164,6 +164,10 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 	// this will apply any deltas/updates
 	err = reconciler.ProcessResources(customResource, client, scheme)
 
+	if err != nil {
+		reconciler.log.Error(err, "error processing resources")
+	}
+
 	//empty the collected objects
 	reconciler.requestedResources = nil
 
@@ -1568,6 +1572,13 @@ func (r *ActiveMQArtemisReconcilerImpl) MakeVolumes(customResource *brokerv1beta
 		volumeDefinitions = append(volumeDefinitions, basicCRVolume...)
 	}
 
+	volumeDefinitions = append(volumeDefinitions, customResource.Spec.DeploymentPlan.ExtraVolumes...)
+
+	for _, epvc := range customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates {
+		epvcVolume := volumes.MakePersistentVolume(epvc.Name)
+		volumeDefinitions = append(volumeDefinitions, epvcVolume...)
+	}
+
 	secretVolumes := make(map[string]string)
 	// Scan acceptors for any with sslEnabled
 	for _, acceptor := range customResource.Spec.Acceptors {
@@ -1613,12 +1624,47 @@ func addNewVolumeMounts(existingNames map[string]string, existing *[]corev1.Volu
 	}
 }
 
-func (r *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) []corev1.VolumeMount {
+func (r *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers) ([]corev1.VolumeMount, error) {
 
 	volumeMounts := []corev1.VolumeMount{}
 	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
 		persistentCRVlMnt := volumes.MakePersistentVolumeMount(customResource.Name, namer.GLOBAL_DATA_PATH)
 		volumeMounts = append(volumeMounts, persistentCRVlMnt...)
+	}
+
+	for _, volume := range customResource.Spec.DeploymentPlan.ExtraVolumes {
+		var volumeMount corev1.VolumeMount
+		found := false
+		for _, vm := range customResource.Spec.DeploymentPlan.ExtraVolumeMounts {
+			if vm.Name == volume.Name {
+				volumeMount = vm
+				if volumeMount.MountPath == "" {
+					volumeMount.MountPath = volumes.GetDefaultMountPath(&volume)
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			volumeMount = *volumes.MakeVolumeMountForVolume(&volume)
+		}
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	for _, epvc := range customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates {
+		var vMount corev1.VolumeMount
+		found := false
+		for _, mount := range customResource.Spec.DeploymentPlan.ExtraVolumeMounts {
+			if epvc.Name == mount.Name {
+				vMount = mount
+				found = true
+				break
+			}
+		}
+		if !found {
+			vMount = *volumes.NewVolumeMountForPVC(epvc.Name)
+		}
+		volumeMounts = append(volumeMounts, vMount)
 	}
 
 	// Scan acceptors for any with sslEnabled
@@ -1655,7 +1701,7 @@ func (r *ActiveMQArtemisReconcilerImpl) MakeVolumeMounts(customResource *brokerv
 		addNewVolumeMounts(secretVolumeMounts, &volumeMounts, &volumeMountName)
 	}
 
-	return volumeMounts
+	return volumeMounts, nil
 }
 
 func MakeContainerPorts(cr *brokerv1beta1.ActiveMQArtemis) []corev1.ContainerPort {
@@ -1733,7 +1779,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	reqLogger.V(2).Info("Extra volumes", "volumes", extraVolumes)
 	reqLogger.V(2).Info("Extra mounts", "mounts", extraVolumeMounts)
-	container.VolumeMounts = reconciler.MakeVolumeMounts(customResource, namer)
+	var err error
+	container.VolumeMounts, err = reconciler.MakeVolumeMounts(customResource, namer)
+	if err != nil {
+		return nil, err
+	}
 	if len(extraVolumeMounts) > 0 {
 		container.VolumeMounts = append(container.VolumeMounts, extraVolumeMounts...)
 	}
@@ -2482,7 +2532,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 		return nil, err
 	}
 
-	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
+	if customResource.Spec.DeploymentPlan.PersistenceEnabled || len(customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates) > 0 {
 		currentStateFullSet.Spec.VolumeClaimTemplates = *reconciler.NewPersistentVolumeClaimArrayForCR(customResource, namer, 1)
 	}
 	currentStateFullSet.Spec.Template = *podTemplateSpec
@@ -2493,26 +2543,35 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewStatefulSetForCR(customResou
 func (reconciler *ActiveMQArtemisReconcilerImpl) NewPersistentVolumeClaimArrayForCR(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, arrayLength int) *[]corev1.PersistentVolumeClaim {
 
 	var pvc *corev1.PersistentVolumeClaim = nil
+
 	capacity := "2Gi"
 	pvcArray := make([]corev1.PersistentVolumeClaim, 0, arrayLength)
 	storageClassName := ""
 
-	namespacedName := types.NamespacedName{
-		Name:      customResource.Name,
-		Namespace: customResource.Namespace,
+	if customResource.Spec.DeploymentPlan.PersistenceEnabled {
+
+		namespacedName := types.NamespacedName{
+			Name:      customResource.Name,
+			Namespace: customResource.Namespace,
+		}
+
+		if customResource.Spec.DeploymentPlan.Storage.Size != "" {
+			capacity = customResource.Spec.DeploymentPlan.Storage.Size
+		}
+
+		if customResource.Spec.DeploymentPlan.Storage.StorageClassName != "" {
+			storageClassName = customResource.Spec.DeploymentPlan.Storage.StorageClassName
+		}
+
+		for i := 0; i < arrayLength; i++ {
+			pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName, []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"})
+			reconciler.applyTemplates(pvc)
+			pvcArray = append(pvcArray, *pvc)
+		}
 	}
 
-	if customResource.Spec.DeploymentPlan.Storage.Size != "" {
-		capacity = customResource.Spec.DeploymentPlan.Storage.Size
-	}
-
-	if customResource.Spec.DeploymentPlan.Storage.StorageClassName != "" {
-		storageClassName = customResource.Spec.DeploymentPlan.Storage.StorageClassName
-	}
-
-	for i := 0; i < arrayLength; i++ {
-		pvc = persistentvolumeclaims.NewPersistentVolumeClaimWithCapacityAndStorageClassName(namespacedName, capacity, namer.LabelBuilder.Labels(), storageClassName)
-		reconciler.applyTemplates(pvc)
+	for _, epvc := range customResource.Spec.DeploymentPlan.ExtraVolumeClaimTemplates {
+		pvc = persistentvolumeclaims.NewPersistentVolumeClaim(customResource.Namespace, &epvc)
 		pvcArray = append(pvcArray, *pvc)
 	}
 
