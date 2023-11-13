@@ -624,12 +624,12 @@ func TestNewPodTemplateSpecForCR_IncludesContainerSecurityContext(t *testing.T) 
 		log: ctrl.Log.WithName("test"),
 	}
 
-	securityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
+	containerSecurityContext := &v1.SecurityContext{RunAsNonRoot: utilpointer.Bool(false)}
 
 	cr := &brokerv1beta1.ActiveMQArtemis{
 		Spec: brokerv1beta1.ActiveMQArtemisSpec{
 			DeploymentPlan: brokerv1beta1.DeploymentPlanType{
-				SecurityContext: securityContext,
+				ContainerSecurityContext: containerSecurityContext,
 			},
 		},
 	}

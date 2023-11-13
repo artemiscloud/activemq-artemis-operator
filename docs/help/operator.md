@@ -1001,7 +1001,7 @@ metadata:
   namespace: activemq-artemis-operator
 spec:
   deploymentPlan:
-    securityContext:
+    containerSecurityContext:
       runAsNonRoot: true
 ```
 

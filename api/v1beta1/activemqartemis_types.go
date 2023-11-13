@@ -371,8 +371,8 @@ type DeploymentPlanType struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Revision History Limit"
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 	// Specifies the container security context
-	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Security Context"
-	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Container Security Context"
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 }
 
 // Affinity is a group of affinity scheduling rules.

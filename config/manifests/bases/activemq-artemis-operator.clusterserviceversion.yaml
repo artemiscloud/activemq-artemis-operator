@@ -959,6 +959,9 @@ spec:
         path: deploymentPlan.clustered
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Specifies the container security context
+        displayName: Container Security Context
+        path: deploymentPlan.containerSecurityContext
       - description: Whether or not to install the artemis metrics plugin
         displayName: Enable Metrics Plugin
         path: deploymentPlan.enableMetricsPlugin
@@ -1063,9 +1066,6 @@ spec:
       - description: Specifies the Revision History Limit of the statefulset
         displayName: Revision History Limit
         path: deploymentPlan.revisionHistoryLimit
-      - description: Specifies the container security context
-        displayName: Security Context
-        path: deploymentPlan.securityContext
       - description: The number of broker pods to deploy
         displayName: Size
         path: deploymentPlan.size

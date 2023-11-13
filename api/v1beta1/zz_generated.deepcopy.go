@@ -1261,8 +1261,8 @@ func (in *DeploymentPlanType) DeepCopyInto(out *DeploymentPlanType) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.SecurityContext != nil {
-		in, out := &in.SecurityContext, &out.SecurityContext
+	if in.ContainerSecurityContext != nil {
+		in, out := &in.ContainerSecurityContext, &out.ContainerSecurityContext
 		*out = new(v1.SecurityContext)
 		(*in).DeepCopyInto(*out)
 	}

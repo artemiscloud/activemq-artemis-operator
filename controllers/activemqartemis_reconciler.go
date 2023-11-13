@@ -1520,7 +1520,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 
 	container.Resources = customResource.Spec.DeploymentPlan.Resources
 
-	reconciler.configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.SecurityContext)
+	reconciler.configureContianerSecurityContext(container, customResource.Spec.DeploymentPlan.ContainerSecurityContext)
 
 	containerPorts := MakeContainerPorts(customResource)
 	if len(containerPorts) > 0 {
@@ -1620,7 +1620,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) NewPodTemplateSpecForCR(customR
 	initContainer := containers.MakeInitContainer(podSpec, customResource.Name, common.ResolveImage(customResource, common.InitImageKey), MakeEnvVarArrayForCR(customResource, namer))
 	initContainer.Resources = customResource.Spec.DeploymentPlan.Resources
 
-	reconciler.configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.SecurityContext)
+	reconciler.configureContianerSecurityContext(initContainer, customResource.Spec.DeploymentPlan.ContainerSecurityContext)
 
 	var initCmds []string
 	var initCfgRootDir = "/init_cfg_root"
@@ -2135,15 +2135,12 @@ func (r *ActiveMQArtemisReconcilerImpl) configurePodSecurityContext(podSpec *cor
 	}
 }
 
-func (r *ActiveMQArtemisReconcilerImpl) configureContianerSecurityContext(container *corev1.Container, securityContext *corev1.SecurityContext) {
+func (r *ActiveMQArtemisReconcilerImpl) configureContianerSecurityContext(container *corev1.Container, containerSecurityContext *corev1.SecurityContext) {
 	r.log.V(1).Info("Configuring Container SecurityContext")
 
-	if nil != securityContext {
+	if nil != containerSecurityContext {
 		r.log.V(5).Info("Incoming Container SecurityContext is NOT nil, assigning")
-		container.SecurityContext = securityContext
-	} else {
-		r.log.V(5).Info("Incoming Container SecurityContext is nil, creating with default values")
-		container.SecurityContext = &corev1.SecurityContext{}
+		container.SecurityContext = containerSecurityContext
 	}
 }
 
