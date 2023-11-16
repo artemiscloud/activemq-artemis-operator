@@ -27,8 +27,10 @@ import (
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
@@ -104,8 +106,8 @@ var _ = Describe("artemis controller", Label("do"), func() {
 		It("test operator with env var", func() {
 			if os.Getenv("DEPLOY_OPERATOR") == "true" {
 				// re-install a new operator to have a fresh log
-				uninstallOperator(false)
-				installOperator(nil)
+				uninstallOperator(false, defaultNamespace)
+				installOperator(nil, defaultNamespace)
 				By("checking default operator should have INFO logs")
 				Eventually(func(g Gomega) {
 					oprLog, err := GetOperatorLog(defaultNamespace)
@@ -116,12 +118,12 @@ var _ = Describe("artemis controller", Label("do"), func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("Uninstall existing operator")
-				uninstallOperator(false)
+				uninstallOperator(false, defaultNamespace)
 
 				By("install the operator again with logging env var")
 				envMap := make(map[string]string)
 				envMap["ARGS"] = "--zap-log-level=error"
-				installOperator(envMap)
+				installOperator(envMap, defaultNamespace)
 				By("delploy a basic broker to produce some more log")
 				brokerCr, createdCr := DeployCustomBroker(defaultNamespace, nil)
 
@@ -163,4 +165,81 @@ var _ = Describe("artemis controller", Label("do"), func() {
 			}
 		})
 	})
+
+	Context("operator deployment in restricted namespace", Label("do-operator-restricted"), func() {
+		It("test in a restricted namespace", func() {
+			if os.Getenv("DEPLOY_OPERATOR") == "true" {
+				restrictedNs := NextSpecResourceName()
+				labels := map[string]string{
+					"pod-security.kubernetes.io/audit-version":   "v1.24",
+					"pod-security.kubernetes.io/audit":           "restricted",
+					"pod-security.kubernetes.io/enforce":         "restricted",
+					"pod-security.kubernetes.io/enforce-version": "v1.24",
+					"pod-security.kubernetes.io/warn":            "restricted",
+					"pod-security.kubernetes.io/warn-version":    "v1.24",
+				}
+
+				uninstallOperator(false, defaultNamespace)
+				By("creating a restricted namespace " + restrictedNs)
+				createNamespace(restrictedNs, labels)
+				Expect(installOperator(nil, restrictedNs)).To(Succeed())
+
+				By("checking operator deployment")
+				deployment := appsv1.Deployment{}
+				deploymentKey := types.NamespacedName{Name: "activemq-artemis-controller-manager", Namespace: restrictedNs}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, deploymentKey, &deployment)).Should(Succeed())
+					g.Expect(deployment.Status.ReadyReplicas).Should(Equal(int32(1)))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("delploy a basic broker")
+				brokerCr, createdCr := DeployCustomBroker(restrictedNs, func(candidate *brokerv1beta1.ActiveMQArtemis) {
+					candidate.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
+					candidate.Spec.DeploymentPlan.PersistenceEnabled = true
+					candidate.Spec.DeploymentPlan.MessageMigration = &boolTrue
+				})
+
+				By("verifying started in stricted namespace")
+				crdNsName := types.NamespacedName{
+					Name:      brokerCr.Name,
+					Namespace: restrictedNs,
+				}
+				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, crdNsName, deployedCrd)).Should(Succeed())
+					g.Expect(len(deployedCrd.Status.PodStatus.Ready)).Should(BeEquivalentTo(2))
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.DeployedConditionType)).Should(BeTrue())
+					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("sending message to pod for scale down")
+				podWithOrdinal := namer.CrToSS(brokerCr.Name) + "-1"
+				sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "TEST", "--verbose"}
+
+				content, err := RunCommandInPod(podWithOrdinal, restrictedNs, brokerCr.Name+"-container", sendCmd)
+				Expect(err).To(BeNil())
+				Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
+
+				By("Scaling down to pod 0")
+				podWithOrdinal = namer.CrToSS(brokerCr.Name) + "-0"
+				Eventually(func(g Gomega) {
+					getPersistedVersionedCrd(brokerCr.Name, restrictedNs, createdCr)
+					createdCr.Spec.DeploymentPlan.Size = common.Int32ToPtr(1)
+					k8sClient.Update(ctx, createdCr)
+					g.Expect(len(createdCr.Status.PodStatus.Ready)).Should(BeEquivalentTo(1))
+					By("Checking messsage count on broker 0")
+					curlUrl := "http://" + podWithOrdinal + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"TEST\",broker=\"amq-broker\",component=addresses,queue=\"TEST\",routing-type=\"anycast\",subcomponent=queues/MessageCount"
+					queryCmd := []string{"curl", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
+					reply, err := RunCommandInPod(podWithOrdinal, restrictedNs, brokerCr.Name+"-container", queryCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*reply).To(ContainSubstring("\"value\":1"))
+
+				}, existingClusterTimeout, interval*2).Should(Succeed())
+
+				CleanResource(createdCr, createdCr.Name, restrictedNs)
+				uninstallOperator(false, restrictedNs)
+			}
+		})
+	})
+
 })

@@ -34,6 +34,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -124,6 +125,7 @@ var (
 	isOpenshift                    = false
 	isIngressSSLPassthroughEnabled = false
 	verbose                        = false
+	defaultOperatorInstalled       = true
 )
 
 func init() {
@@ -419,28 +421,37 @@ func setUpRealOperator() {
 	_, err = envtest.InstallCRDs(restConfig, options)
 	Expect(err).To(Succeed())
 
-	err = installOperator(nil)
+	err = installOperator(nil, defaultNamespace)
 	Expect(err).To(Succeed(), "failed to install operator")
 }
 
 // Deploy operator resources
 // TODO: provide 'watch all namespaces' option
-func installOperator(envMap map[string]string) error {
-	ctrl.Log.Info("#### Installing Operator ####")
+func installOperator(envMap map[string]string, namespace string) error {
+	ctrl.Log.Info("#### Installing Operator ####", "ns", namespace)
 	for _, res := range oprRes {
-		if err := installYamlResource(res, envMap); err != nil {
+		if err := installYamlResource(res, envMap, namespace); err != nil {
 			return err
 		}
 	}
 
-	return waitForOperator()
+	if namespace == defaultNamespace {
+		defaultOperatorInstalled = true
+	}
+
+	return waitForOperator(namespace)
 }
 
-func uninstallOperator(deleteCrds bool) error {
-	ctrl.Log.Info("#### Uninstalling Operator ####")
-	for _, res := range oprRes {
-		if err := uninstallYamlResource(res); err != nil {
-			return err
+func uninstallOperator(deleteCrds bool, namespace string) error {
+	ctrl.Log.Info("#### Uninstalling Operator ####", "ns", namespace)
+	if namespace != defaultNamespace || defaultOperatorInstalled {
+		for _, res := range oprRes {
+			if err := uninstallYamlResource(res, namespace); err != nil {
+				return err
+			}
+		}
+		if namespace == defaultNamespace {
+			defaultOperatorInstalled = false
 		}
 	}
 
@@ -454,18 +465,21 @@ func uninstallOperator(deleteCrds bool) error {
 		}
 		return envtest.UninstallCRDs(restConfig, options)
 	}
+
 	return nil
 }
 
-func waitForOperator() error {
+func waitForOperator(namespace string) error {
 	podList := &corev1.PodList{}
+	labelSelector, err := labels.Parse("name=activemq-artemis-operator")
+	Expect(err).To(BeNil())
 	opts := &client.ListOptions{
-		Namespace: defaultNamespace,
+		Namespace:     namespace,
+		LabelSelector: labelSelector,
 	}
 
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.List(ctx, podList, opts)).Should(Succeed())
-
 		g.Expect(len(podList.Items)).Should(BeEquivalentTo(1))
 		oprPod := podList.Items[0]
 		g.Expect(len(oprPod.Status.ContainerStatuses)).Should(BeEquivalentTo(1))
@@ -497,14 +511,14 @@ func loadYamlResource(yamlFile string) (runtime.Object, *schema.GroupVersionKind
 	return robj, gKV, nil
 }
 
-func uninstallYamlResource(resPath string) error {
+func uninstallYamlResource(resPath string, namespace string) error {
 	ctrl.Log.Info("Uninstalling yaml resource", "yaml", resPath)
 	robj, _, err := loadYamlResource(resPath)
 	if err != nil {
 		return err
 	}
 	cobj := robj.(client.Object)
-	cobj.SetNamespace(defaultNamespace)
+	cobj.SetNamespace(namespace)
 
 	err = k8sClient.Delete(ctx, cobj)
 	if err != nil {
@@ -515,14 +529,14 @@ func uninstallYamlResource(resPath string) error {
 	return nil
 }
 
-func installYamlResource(resPath string, envMap map[string]string) error {
+func installYamlResource(resPath string, envMap map[string]string, namespace string) error {
 	ctrl.Log.Info("Installing yaml resource", "yaml", resPath)
 	robj, gkv, err := loadYamlResource(resPath)
 	if err != nil {
 		return err
 	}
 	cobj := robj.(client.Object)
-	cobj.SetNamespace(defaultNamespace)
+	cobj.SetNamespace(namespace)
 
 	if gkv.Kind == "Deployment" {
 		oprObj := cobj.(*appsv1.Deployment)
@@ -547,7 +561,7 @@ func installYamlResource(resPath string, envMap map[string]string) error {
 
 	//make sure the create ok
 	Eventually(func() bool {
-		key := types.NamespacedName{Name: cobj.GetName(), Namespace: defaultNamespace}
+		key := types.NamespacedName{Name: cobj.GetName(), Namespace: namespace}
 		err := k8sClient.Get(ctx, key, cobj)
 		return err == nil
 	}, timeout, interval).Should(Equal(true))
@@ -642,7 +656,7 @@ var _ = AfterSuite(func() {
 	os.Unsetenv("OPERATOR_WATCH_NAMESPACE")
 
 	if os.Getenv("DEPLOY_OPERATOR") == "true" {
-		err := uninstallOperator(true)
+		err := uninstallOperator(true, defaultNamespace)
 		Expect(err).NotTo(HaveOccurred())
 	} else {
 		shutdownControllerManager()

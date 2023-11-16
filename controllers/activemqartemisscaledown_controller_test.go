@@ -102,7 +102,7 @@ var _ = Describe("Scale down controller", func() {
 
 				sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--verbose"}
 
-				content, err := RunCommandInPod(podWithOrdinal, brokerName+"-container", sendCmd)
+				content, err := RunCommandInPod(podWithOrdinal, defaultNamespace, brokerName+"-container", sendCmd)
 				Expect(err).To(BeNil())
 				Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
 
@@ -124,7 +124,7 @@ var _ = Describe("Scale down controller", func() {
 					By("Checking messsage count on broker 0")
 					//./artemis queue stat --silent --url tcp://artemis-broker-ss-0:61616 --queueName DLQ
 					queryCmd := []string{"amq-broker/bin/artemis", "queue", "stat", "--silent", "--url", "tcp://" + podWithOrdinal + ":61616", "--queueName", "DLQ"}
-					stdout, err := RunCommandInPod(podWithOrdinal, brokerName+"-container", queryCmd)
+					stdout, err := RunCommandInPod(podWithOrdinal, defaultNamespace, brokerName+"-container", queryCmd)
 					g.Expect(err).To(BeNil())
 					if verbose {
 						fmt.Printf("\nQSTAT_OUTPUT: %v\n", *stdout)
@@ -138,7 +138,7 @@ var _ = Describe("Scale down controller", func() {
 				By("Receiving a message from 0")
 
 				rcvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--destination", "queue://DLQ", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
-				content, err = RunCommandInPod(podWithOrdinal, brokerName+"-container", rcvCmd)
+				content, err = RunCommandInPod(podWithOrdinal, defaultNamespace, brokerName+"-container", rcvCmd)
 
 				Expect(err).To(BeNil())
 
@@ -220,7 +220,7 @@ var _ = Describe("Scale down controller", func() {
 			By("Sending a message to Host: " + podWithOrdinal)
 
 			sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1"}
-			content, err := RunCommandInPod(podWithOrdinal, brokerKey.Name+"-container", sendCmd)
+			content, err := RunCommandInPod(podWithOrdinal, defaultNamespace, brokerKey.Name+"-container", sendCmd)
 
 			Expect(err).To(BeNil())
 
@@ -245,7 +245,7 @@ var _ = Describe("Scale down controller", func() {
 
 			recvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal + ":61616", "--message-count", "1", "--receive-timeout", "10000", "--break-on-null", "--verbose"}
 
-			content, err = RunCommandInPod(podWithOrdinal, brokerKey.Name+"-container", recvCmd)
+			content, err = RunCommandInPod(podWithOrdinal, defaultNamespace, brokerKey.Name+"-container", recvCmd)
 
 			Expect(err).To(BeNil())
 
@@ -333,7 +333,7 @@ var _ = Describe("Scale down controller", func() {
 			By("sending a message to Host: " + podWithOrdinal2)
 
 			sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal2 + ":61616", "--message-count", "2", "--destination", "DLQ"}
-			content, err := RunCommandInPod(podWithOrdinal2, brokerName+"-container", sendCmd)
+			content, err := RunCommandInPod(podWithOrdinal2, defaultNamespace, brokerName+"-container", sendCmd)
 
 			Expect(err).To(BeNil())
 			Expect(*content).Should(ContainSubstring("Produced: 2 messages"))
@@ -344,7 +344,7 @@ var _ = Describe("Scale down controller", func() {
 				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/exec/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/block()"
 
 				blockCmd := []string{"curl", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
-				reply, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", blockCmd)
+				reply, err := RunCommandInPod(podWithOrdinal0, defaultNamespace, brokerName+"-container", blockCmd)
 				g.Expect(err).To(BeNil())
 				g.Expect(*reply).To(ContainSubstring("\"value\":true"))
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -368,7 +368,7 @@ var _ = Describe("Scale down controller", func() {
 				curlUrl := "http://" + podWithOrdinal0 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/MessageCount"
 
 				blockCmd := []string{"curl", "-s", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
-				result, err := RunCommandInPod(podWithOrdinal0, brokerName+"-container", blockCmd)
+				result, err := RunCommandInPod(podWithOrdinal0, defaultNamespace, brokerName+"-container", blockCmd)
 				g.Expect(err).To(BeNil())
 
 				g.Expect(*result).To(ContainSubstring("\"value\":0"))
@@ -381,7 +381,7 @@ var _ = Describe("Scale down controller", func() {
 				curlUrl := "http://" + podWithOrdinal1 + ":8161/console/jolokia/read/org.apache.activemq.artemis:address=\"DLQ\",broker=\"amq-broker\",component=addresses/MessageCount"
 
 				blockCmd := []string{"curl", "-s", "-k", "-H", "Origin: http://localhost:8161", "-u", "user:password", curlUrl}
-				result, err := RunCommandInPod(podWithOrdinal1, brokerName+"-container", blockCmd)
+				result, err := RunCommandInPod(podWithOrdinal1, defaultNamespace, brokerName+"-container", blockCmd)
 				g.Expect(err).To(BeNil())
 
 				g.Expect(*result).To(ContainSubstring("\"value\":2"))
@@ -390,7 +390,7 @@ var _ = Describe("Scale down controller", func() {
 
 			By("Receiving a message from Host: " + podWithOrdinal1)
 			recvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", "tcp://" + podWithOrdinal1 + ":61616", "--message-count", "2", "--destination", "DLQ", "--receive-timeout", "10000"}
-			content, err = RunCommandInPod(podWithOrdinal1, brokerKey.Name+"-container", recvCmd)
+			content, err = RunCommandInPod(podWithOrdinal1, defaultNamespace, brokerKey.Name+"-container", recvCmd)
 
 			Expect(err).To(BeNil())
 			Expect(*content).Should(ContainSubstring("Consumed: 2 messages"))

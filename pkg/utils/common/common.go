@@ -637,3 +637,35 @@ func DetectOpenshift() (bool, error) {
 	}
 	return false, errors.New("environment not yet determined")
 }
+
+func ApplyContainerSecurityContextRestricted(containers ...*corev1.Container) {
+	privEsc := false
+	runAsNonRoot := true
+	uid := int64(185)
+	runAsUser := &uid
+	isOpenshift, _ := DetectOpenshift()
+	if isOpenshift {
+		runAsUser = nil
+	}
+	for _, container := range containers {
+
+		if container.SecurityContext == nil {
+			container.SecurityContext = &corev1.SecurityContext{}
+		}
+		container.SecurityContext.AllowPrivilegeEscalation = &privEsc
+		if container.SecurityContext.Capabilities == nil {
+			container.SecurityContext.Capabilities = &corev1.Capabilities{}
+		}
+		container.SecurityContext.Capabilities.Drop = []corev1.Capability{
+			"ALL",
+		}
+		container.SecurityContext.RunAsNonRoot = &runAsNonRoot
+		if container.SecurityContext.RunAsUser == nil {
+			container.SecurityContext.RunAsUser = runAsUser
+		}
+		if container.SecurityContext.SeccompProfile == nil {
+			container.SecurityContext.SeccompProfile = &corev1.SeccompProfile{}
+		}
+		container.SecurityContext.SeccompProfile.Type = corev1.SeccompProfileTypeRuntimeDefault
+	}
+}

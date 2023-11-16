@@ -386,17 +386,17 @@ func generateSecuritySpec(secName string, targetNamespace string) *brokerv1beta1
 	return &toCreate
 }
 
-func RunCommandInPod(podName string, containerName string, command []string) (*string, error) {
+func RunCommandInPod(podName string, namespace string, containerName string, command []string) (*string, error) {
 	gvk := schema.GroupVersionKind{
 		Group:   "",
 		Version: "v1",
 		Kind:    "Pod",
 	}
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, testEnv.Config, serializer.NewCodecFactory(testEnv.Scheme))
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, restConfig, serializer.NewCodecFactory(scheme.Scheme))
 	Expect(err).To(BeNil())
 	execReq := restClient.
 		Post().
-		Namespace(defaultNamespace).
+		Namespace(namespace).
 		Resource("pods").
 		Name(podName).
 		SubResource("exec").
@@ -406,9 +406,9 @@ func RunCommandInPod(podName string, containerName string, command []string) (*s
 			Stdin:     true,
 			Stdout:    true,
 			Stderr:    true,
-		}, runtime.NewParameterCodec(testEnv.Scheme))
+		}, runtime.NewParameterCodec(scheme.Scheme))
 
-	exec, err := remotecommand.NewSPDYExecutor(testEnv.Config, "POST", execReq.URL())
+	exec, err := remotecommand.NewSPDYExecutor(restConfig, "POST", execReq.URL())
 
 	if err != nil {
 		return nil, err

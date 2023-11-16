@@ -53,6 +53,7 @@ import (
 	rbacutil "github.com/artemiscloud/activemq-artemis-operator/pkg/rbac"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/secrets"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/namer"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/selectors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -835,6 +836,8 @@ func (c *Controller) newPod(sts *appsv1.StatefulSet, ordinal int) (*corev1.Pod, 
 	pod.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
 	pod.Spec.Containers[0].Resources = c.resources
 	pod.Spec.Tolerations = sts.Spec.Template.Spec.Tolerations
+
+	common.ApplyContainerSecurityContextRestricted(&pod.Spec.Containers[0])
 
 	for _, pvcTemplate := range sts.Spec.VolumeClaimTemplates {
 		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{ // TODO: override existing volumes with the same name

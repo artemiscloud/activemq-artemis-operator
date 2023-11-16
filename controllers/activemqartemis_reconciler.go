@@ -2266,6 +2266,7 @@ func (r *ActiveMQArtemisReconcilerImpl) configurePodSecurityContext(podSpec *cor
 		r.log.V(2).Info("Incoming podSecurityContext is nil, creating with default values")
 		podSpec.SecurityContext = &corev1.PodSecurityContext{}
 	}
+	common.ApplyContainerSecurityContextRestricted(&podSpec.InitContainers[0], &podSpec.Containers[0])
 }
 
 func sortedKeys(props map[string]string) []string {

@@ -123,7 +123,12 @@ spec:
           periodSeconds: 10
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       securityContext:
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: activemq-artemis-controller-manager
       terminationGracePeriodSeconds: 10
