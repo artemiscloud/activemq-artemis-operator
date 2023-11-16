@@ -274,14 +274,15 @@ var _ = Describe("tests regarding controller manager", func() {
 	})
 })
 
-func createNamespace(namespace string) error {
+func createNamespace(namespace string, labels map[string]string) error {
 	ns := corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
+			Name:   namespace,
+			Labels: labels,
 		},
 	}
 
@@ -341,9 +342,9 @@ func testWatchNamespace(kind string, g Gomega, testFunc func(g Gomega)) {
 
 	shutdownControllerManager()
 
-	g.Expect(createNamespace(namespace1)).To(Succeed())
-	g.Expect(createNamespace(namespace2)).To(Succeed())
-	g.Expect(createNamespace(namespace3)).To(Succeed())
+	g.Expect(createNamespace(namespace1, nil)).To(Succeed())
+	g.Expect(createNamespace(namespace2, nil)).To(Succeed())
+	g.Expect(createNamespace(namespace3, nil)).To(Succeed())
 
 	if kind == "single" {
 		createControllerManager(true, defaultNamespace)
