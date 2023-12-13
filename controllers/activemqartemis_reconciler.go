@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -101,12 +102,14 @@ type ActiveMQArtemisReconcilerImpl struct {
 	deployed           map[reflect.Type][]rtclient.Object
 	log                logr.Logger
 	customResource     *brokerv1beta1.ActiveMQArtemis
+	scheme             *runtime.Scheme
 }
 
-func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArtemis, logger logr.Logger) *ActiveMQArtemisReconcilerImpl {
+func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArtemis, logger logr.Logger, schemeArg *runtime.Scheme) *ActiveMQArtemisReconcilerImpl {
 	return &ActiveMQArtemisReconcilerImpl{
 		log:            logger,
 		customResource: customResource,
+		scheme:         schemeArg,
 	}
 }
 
@@ -157,8 +160,11 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) Process(customResource *brokerv
 
 	reconciler.trackDesired(desiredStatefulSet)
 
-	// this should apply any deltas/updates
+	// this will apply any deltas/updates
 	err = reconciler.ProcessResources(customResource, client, scheme)
+
+	//empty the collected objects
+	reconciler.requestedResources = nil
 
 	reconciler.log.V(1).Info("Reconciler Processing... complete", "CRD ver:", customResource.ObjectMeta.ResourceVersion, "CRD Gen:", customResource.ObjectMeta.Generation)
 
@@ -801,17 +807,19 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ExposureDefinitionForCR(customR
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) trackDesired(desired rtclient.Object) {
-	reconciler.applyTemplates(desired)
 	reconciler.requestedResources = append(reconciler.requestedResources, desired)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplates(desired rtclient.Object) {
-	for _, template := range reconciler.customResource.Spec.ResourceTemplates {
-		reconciler.applyTemplate(template, desired)
+func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplates(desired rtclient.Object) (err error) {
+	for index, template := range reconciler.customResource.Spec.ResourceTemplates {
+		if err = reconciler.applyTemplate(index, template, desired); err != nil {
+			break
+		}
 	}
+	return err
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(template brokerv1beta1.ResourceTemplate, target rtclient.Object) {
+func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(index int, template brokerv1beta1.ResourceTemplate, target rtclient.Object) error {
 	if match(template, target) {
 		ordinal := extractOrdinal(target)
 		itemName := extractItemName(target)
@@ -836,7 +844,32 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) applyTemplate(template brokerv1
 			}
 			target.SetLabels(modified)
 		}
+
+		if template.Patch != nil {
+
+			// apply any patch
+			converter := runtime.DefaultUnstructuredConverter
+
+			var err error
+			var targetAsUnstructured map[string]interface{}
+
+			if targetAsUnstructured, err = converter.ToUnstructured(target); err == nil {
+				// patch, part of our CR, needs to be mutable
+				patch := make(map[string]interface{})
+				for k, v := range template.Patch.Object {
+					patch[k] = v
+				}
+				var patched strategicpatch.JSONMap
+				if patched, err = strategicpatch.StrategicMergeMapPatch(targetAsUnstructured, patch, target); err == nil {
+					err = converter.FromUnstructuredWithValidation(patched, target, true)
+				}
+			}
+			if err != nil {
+				return fmt.Errorf("error applying strategic merge patch from template[%d] to %s, got %v", index, target.GetName(), err)
+			}
+		}
 	}
+	return nil
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) applyFormattedKeyValue(collection map[string]string, ordinal string, itemName string, resType string, key string, value string) {
@@ -1256,12 +1289,15 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) CurrentDeployedResources(custom
 	}
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) error {
+func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource *brokerv1beta1.ActiveMQArtemis, client rtclient.Client, scheme *runtime.Scheme) (err error) {
 
 	reqLogger := reconciler.log.WithValues("ActiveMQArtemis Name", customResource.Name)
 
 	for index := range reconciler.requestedResources {
 		reconciler.requestedResources[index].SetNamespace(customResource.Namespace)
+		if err = reconciler.applyTemplates(reconciler.requestedResources[index]); err != nil {
+			return err
+		}
 	}
 
 	var currenCount int
@@ -1335,9 +1371,6 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessResources(customResource
 			trackError(&compositeError, reconciler.deleteResource(customResource, client, scheme, resourceToRemove, resourceType))
 		}
 	}
-
-	//empty the collected objects
-	reconciler.requestedResources = nil
 
 	if len(compositeError) == 0 {
 		return nil
