@@ -66,7 +66,7 @@ jobs:
           git add --all && git commit --all --allow-empty --message 'Update docs to ${{ github.ref_name }}' && git push
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Build the image
         run: |
