@@ -73,7 +73,7 @@ jobs:
 
       - name: Set up QEMU
         if: ${{ github.event_name == 'push' }}
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Build the image for arm64
         if: ${{ github.event_name == 'push' }}
