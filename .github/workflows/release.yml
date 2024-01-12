@@ -20,7 +20,7 @@ jobs:
           sudo apt-get install pass
 
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create release tag
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -45,7 +45,7 @@ jobs:
         run: for i in {1..30}; do curl "https://doc.crds.dev/github.com/${{ github.repository }}@${{ github.ref_name }}" | grep 'ActiveMQArtemis' && break; sleep 1; done
 
       - name: Checkout artemiscloud.github.io
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/artemiscloud.github.io
           path: artemiscloud.github.io
