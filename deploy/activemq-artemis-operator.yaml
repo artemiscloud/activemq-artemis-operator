@@ -4972,6 +4972,7 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
+    name: activemq-artemis-operator
   name: activemq-artemis-controller-manager
   namespace: activemq-artemis-operator
 spec:
