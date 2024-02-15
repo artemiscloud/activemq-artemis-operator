@@ -169,18 +169,10 @@ var _ = Describe("artemis controller", Label("do"), func() {
 		It("test in a restricted namespace", func() {
 			if os.Getenv("DEPLOY_OPERATOR") == "true" {
 				restrictedNs := NextSpecResourceName()
-				labels := map[string]string{
-					"pod-security.kubernetes.io/audit-version":   "v1.24",
-					"pod-security.kubernetes.io/audit":           "restricted",
-					"pod-security.kubernetes.io/enforce":         "restricted",
-					"pod-security.kubernetes.io/enforce-version": "v1.24",
-					"pod-security.kubernetes.io/warn":            "restricted",
-					"pod-security.kubernetes.io/warn-version":    "v1.24",
-				}
-
+				restrictedSecurityPolicy := "restricted"
 				uninstallOperator(false, defaultNamespace)
 				By("creating a restricted namespace " + restrictedNs)
-				createNamespace(restrictedNs, labels)
+				createNamespace(restrictedNs, &restrictedSecurityPolicy)
 				Expect(installOperator(nil, restrictedNs)).To(Succeed())
 
 				By("checking operator deployment")

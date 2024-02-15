@@ -2334,7 +2334,12 @@ func (r *ActiveMQArtemisReconcilerImpl) configurePodSecurityContext(podSpec *cor
 		podSpec.SecurityContext = podSecurityContext
 	} else {
 		r.log.V(2).Info("Incoming podSecurityContext is nil, creating with default values")
-		podSpec.SecurityContext = &corev1.PodSecurityContext{}
+		runAsNonRoot := true
+		seccompProfile := corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}
+		podSpec.SecurityContext = &corev1.PodSecurityContext{
+			RunAsNonRoot:   &runAsNonRoot,
+			SeccompProfile: &seccompProfile,
+		}
 	}
 }
 
@@ -2344,6 +2349,19 @@ func (r *ActiveMQArtemisReconcilerImpl) configureContianerSecurityContext(contai
 	if nil != containerSecurityContext {
 		r.log.V(2).Info("Incoming Container SecurityContext is NOT nil, assigning")
 		container.SecurityContext = containerSecurityContext
+	} else {
+		r.log.V(2).Info("Incoming Container SecurityContext is nil, creating with default values")
+		runAsNonRoot := true
+		allowPrivilegeEscalation := false
+		capabilities := corev1.Capabilities{Drop: []corev1.Capability{"ALL"}}
+		seccompProfile := corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}
+		securityContext := corev1.SecurityContext{
+			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			Capabilities:             &capabilities,
+			SeccompProfile:           &seccompProfile,
+			RunAsNonRoot:             &runAsNonRoot,
+		}
+		container.SecurityContext = &securityContext
 	}
 }
 
@@ -2374,8 +2392,12 @@ func (r *ActiveMQArtemisReconcilerImpl) configPodSecurity(podSpec *corev1.PodSpe
 	if podSecurity.RunAsUser != nil {
 		r.log.V(2).Info("Pod runAsUser specified", "runAsUser", *podSecurity.RunAsUser)
 		if podSpec.SecurityContext == nil {
+			runAsNonRoot := true
+			seccompProfile := corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}
 			secCtxt := corev1.PodSecurityContext{
-				RunAsUser: podSecurity.RunAsUser,
+				RunAsUser:      podSecurity.RunAsUser,
+				RunAsNonRoot:   &runAsNonRoot,
+				SeccompProfile: &seccompProfile,
 			}
 			podSpec.SecurityContext = &secCtxt
 		} else {

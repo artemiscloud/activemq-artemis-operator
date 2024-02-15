@@ -75,6 +75,7 @@ import (
 const (
 	defaultNamespace        = "default"
 	otherNamespace          = "other"
+	restrictedNamespace     = "restricted"
 	timeout                 = time.Second * 30
 	duration                = time.Second * 10
 	interval                = time.Millisecond * 500
