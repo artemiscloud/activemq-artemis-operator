@@ -1949,7 +1949,7 @@ var _ = Describe("artemis controller", func() {
 					httpClient := http.Client{
 						Transport: &http.Transport{
 							DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-								return (&net.Dialer{}).DialContext(ctx, network, clusterUrl.Hostname()+":443")
+								return (&net.Dialer{}).DialContext(ctx, network, clusterIngressHost+":443")
 							},
 							TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 						},
