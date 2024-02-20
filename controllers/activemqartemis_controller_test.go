@@ -26,7 +26,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"reflect"
 	"sort"
@@ -2892,10 +2891,11 @@ var _ = Describe("artemis controller", func() {
 
 	Context("ClientId autoshard Test", func() {
 
-		produceMessage := func(url string, clientId string, linkAddress string, messageId int, g Gomega) {
+		produceMessage := func(serverName string, clientId string, linkAddress string, messageId int, g Gomega) {
 
-			client, err := amqp.Dial(url, amqp.ConnContainerID(clientId), amqp.ConnSASLPlain("dummy-user", "dummy-pass"))
-
+			url := "amqps://" + clusterIngressHost + ":443"
+			connTLSConfig := amqp.ConnTLSConfig(&tls.Config{ServerName: serverName, InsecureSkipVerify: true})
+			client, err := amqp.Dial(url, amqp.ConnContainerID(clientId), amqp.ConnSASLPlain("dummy-user", "dummy-pass"), amqp.ConnTLS(true), connTLSConfig)
 			g.Expect(err).Should(BeNil())
 			g.Expect(client).ShouldNot(BeNil())
 			defer client.Close()
@@ -2923,9 +2923,11 @@ var _ = Describe("artemis controller", func() {
 			g.Expect(err).Should(BeNil())
 		}
 
-		consumeMatchingMessage := func(url string, linkAddress string, receivedTracker map[string]*list.List, g Gomega) {
+		consumeMatchingMessage := func(serverName string, linkAddress string, receivedTracker map[string]*list.List, g Gomega) {
 
-			client, err := amqp.Dial(url, amqp.ConnSASLPlain("dummy-user", "dummy-pass"))
+			url := "amqps://" + clusterIngressHost + ":443"
+			connTLSConfig := amqp.ConnTLSConfig(&tls.Config{ServerName: serverName, InsecureSkipVerify: true})
+			client, err := amqp.Dial(url, amqp.ConnContainerID("$.artemis.internal.router.client.dummy"), amqp.ConnSASLPlain("dummy-user", "dummy-pass"), amqp.ConnTLS(true), connTLSConfig)
 			g.Expect(err).Should(BeNil())
 			g.Expect(client).ShouldNot(BeNil())
 
@@ -2972,6 +2974,13 @@ var _ = Describe("artemis controller", func() {
 			isClusteredBoolean := false
 			NOT := false
 			crd := generateArtemisSpec(defaultNamespace)
+
+			By("deploying ssl secret")
+			sslSecretName := crd.Name + "-ssl-secret"
+			sslSecret, sslSecretErr := CreateTlsSecret(sslSecretName, defaultNamespace, defaultPassword, defaultSanDnsNames)
+			Expect(sslSecretErr).To(BeNil())
+			Expect(k8sClient.Create(ctx, sslSecret)).Should(Succeed())
+
 			crd.Spec.DeploymentPlan.ReadinessProbe = &corev1.Probe{
 				InitialDelaySeconds: 1,
 				PeriodSeconds:       5,
@@ -2988,7 +2997,10 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Acceptors = []brokerv1beta1.AcceptorType{{
 				Name:                "tcp",
 				Port:                62616,
-				Expose:              false,
+				Expose:              true,
+				IngressHost:         "$(CR_NAME)-$(BROKER_ORDINAL)-tcp." + defaultTestIngressDomain,
+				SSLEnabled:          true,
+				SSLSecret:           sslSecretName,
 				BindToAllInterfaces: &NOT,
 			}}
 
@@ -3015,14 +3027,6 @@ var _ = Describe("artemis controller", func() {
 
 				deployedCrd := &brokerv1beta1.ActiveMQArtemis{}
 
-				By("Finding cluster host")
-				baseUrl, err := url.Parse(testEnv.Config.Host)
-				Expect(err).Should(BeNil())
-
-				ipAddressNet, err := net.LookupIP(baseUrl.Hostname())
-				Expect(err).Should(BeNil())
-				ipAddress := ipAddressNet[0].String()
-
 				By("verifying started")
 				Eventually(func(g Gomega) {
 
@@ -3032,47 +3036,10 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				By("exposing ss-0 via NodePort")
-				ss0Service := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: crd.Name + "-nodeport-0", Namespace: defaultNamespace},
-					Spec: corev1.ServiceSpec{
-						Selector: map[string]string{
-							"ActiveMQArtemis":                    crd.Name,
-							"statefulset.kubernetes.io/pod-name": namer.CrToSS(crd.Name) + "-0",
-						},
-						Type: "NodePort",
-						Ports: []corev1.ServicePort{
-							{
-								Port:       61617,
-								TargetPort: intstr.FromInt(62616),
-							},
-						},
-						ExternalIPs: []string{ipAddress},
-					},
+				var ingressHosts [2]string
+				for i := 0; i < len(ingressHosts); i++ {
+					ingressHosts[i] = fmt.Sprintf("%s-%d-tcp.%s", crd.Name, i, defaultTestIngressDomain)
 				}
-				Expect(k8sClient.Create(ctx, ss0Service)).Should(Succeed())
-
-				By("exposing ss-1 via NodePort")
-				ss1Service := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: crd.Name + "-nodeport-1", Namespace: defaultNamespace},
-					Spec: corev1.ServiceSpec{
-						Selector: map[string]string{
-							"ActiveMQArtemis":                    crd.Name,
-							"statefulset.kubernetes.io/pod-name": namer.CrToSS(crd.Name) + "-1",
-						},
-						Type: "NodePort",
-						Ports: []corev1.ServicePort{
-							{
-								Port:       61618,
-								TargetPort: intstr.FromInt(62616),
-							},
-						},
-						ExternalIPs: []string{string(ipAddress)},
-					},
-				}
-				Expect(k8sClient.Create(ctx, ss1Service)).Should(Succeed())
-
-				urls := []string{"amqp://" + baseUrl.Hostname() + ":61617", "amqp://" + baseUrl.Hostname() + ":61618"}
 
 				By("verify partition by sending eventually... expect auto-shard error if we get the wrong broker")
 				numberOfMessagesToSendPerClientId := 5
@@ -3084,7 +3051,7 @@ var _ = Describe("artemis controller", func() {
 					for i := 0; i < numberOfMessagesToSendPerClientId; i++ {
 						Eventually(func(g Gomega) {
 							urlBalancerCounter++
-							produceMessage(urls[urlBalancerCounter%len(urls)], id, linkAddress, sentMessageSequenceId+1, g)
+							produceMessage(ingressHosts[urlBalancerCounter%len(ingressHosts)], id, linkAddress, sentMessageSequenceId+1, g)
 							sentMessageSequenceId++ // on success
 						}, timeout*4, interval).Should(Succeed())
 					}
@@ -3097,7 +3064,7 @@ var _ = Describe("artemis controller", func() {
 				for _, id := range clientIds {
 					receivedIdTracker[id] = list.New()
 				}
-				for _, url := range urls {
+				for _, url := range ingressHosts {
 					Eventually(func(g Gomega) {
 						consumeMatchingMessage(url, linkAddress, receivedIdTracker, g)
 					}).Should(Succeed())
@@ -3119,8 +3086,7 @@ var _ = Describe("artemis controller", func() {
 				}
 
 				Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
-				Expect(k8sClient.Delete(ctx, ss0Service)).Should(Succeed())
-				Expect(k8sClient.Delete(ctx, ss1Service)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, sslSecret)).Should(Succeed())
 			}
 
 		})
