@@ -25,6 +25,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -73,7 +74,7 @@ import (
 
 // Define utility constants for object names and testing timeouts/durations and intervals.
 const (
-	defaultNamespace        = "default"
+	defaultNamespace        = "test"
 	otherNamespace          = "other"
 	restrictedNamespace     = "restricted"
 	timeout                 = time.Second * 30
@@ -132,6 +133,7 @@ var (
 	verbose                        = false
 	kubeTool                       = "kubectl"
 	defaultOperatorInstalled       = true
+	defaultUid                     = int64(185)
 )
 
 func init() {
@@ -173,11 +175,35 @@ func setUpEnvTest() {
 
 	setUpIngressSSLPassthrough()
 
+	setUpNamespace()
+
 	setUpTestProxy()
 
 	stateManager = common.GetStateManager()
 
 	createControllerManagerForSuite()
+}
+
+func setUpNamespace() {
+	testNamespace := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultNamespace,
+			Namespace: defaultNamespace,
+		},
+		Spec: corev1.NamespaceSpec{},
+	}
+
+	err := k8sClient.Create(ctx, &testNamespace)
+	Expect(err == nil || errors.IsConflict(err))
+
+	if isOpenshift {
+		testNamespaceKey := types.NamespacedName{Name: defaultNamespace}
+		Expect(k8sClient.Get(ctx, testNamespaceKey, &testNamespace)).Should(Succeed())
+		uidRange := testNamespace.Annotations["openshift.io/sa.scc.uid-range"]
+		uidRangeTokens := strings.Split(uidRange, "/")
+		defaultUid, err = strconv.ParseInt(uidRangeTokens[0], 10, 64)
+		Expect(err).Should(Succeed())
+	}
 }
 
 func setUpIngressSSLPassthrough() {
@@ -188,9 +214,11 @@ func setUpIngressSSLPassthrough() {
 	ingressConfigErr := k8sClient.Get(ctx, ingressConfigKey, ingressConfig)
 
 	if ingressConfigErr == nil {
+		isOpenshift = true
 		isIngressSSLPassthroughEnabled = true
 		clusterIngressHost = "ingress." + ingressConfig.Spec.Domain
 	} else {
+		isOpenshift = false
 		isIngressSSLPassthroughEnabled = false
 		ingressNginxControllerDeployment := &appsv1.Deployment{}
 		ingressNginxControllerDeploymentKey := types.NamespacedName{Name: "ingress-nginx-controller", Namespace: "ingress-nginx"}
@@ -436,6 +464,8 @@ func setUpRealOperator() {
 	Expect(err).ShouldNot(HaveOccurred(), "failed to get the config")
 
 	setUpK8sClient()
+
+	setUpNamespace()
 
 	ctrl.Log.Info("Installing CRDs")
 	crds := []string{"../deploy/crds"}
