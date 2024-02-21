@@ -2083,7 +2083,7 @@ var _ = Describe("artemis controller", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, connectorRouteKey, &connectorRoute)).To(Succeed())
 
-						g.Expect(acceptorRoute.Spec.Host).To(Equal(connectorHost))
+						g.Expect(connectorRoute.Spec.Host).To(Equal(connectorHost))
 					}).Should(Succeed())
 
 					By("check console route is created")
