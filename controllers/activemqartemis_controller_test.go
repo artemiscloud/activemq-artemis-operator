@@ -52,6 +52,7 @@ import (
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	utilpointer "k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -6407,6 +6408,14 @@ var _ = Describe("artemis controller", func() {
 			}
 			crd.Spec.DeploymentPlan.Size = common.Int32ToPtr(2)
 			crd.Spec.Version = previousVersion.String()
+
+			// the broker init images before 2.32.0 has root user
+			// that doesn't work in namespaces with the restricted policy
+			crd.Spec.DeploymentPlan.PodSecurityContext = &corev1.PodSecurityContext{
+				RunAsUser:      utilpointer.Int64(defaultUid),
+				RunAsNonRoot:   utilpointer.Bool(true),
+				SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+			}
 
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
