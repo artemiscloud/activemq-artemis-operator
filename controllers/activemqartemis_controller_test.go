@@ -529,9 +529,11 @@ var _ = Describe("artemis controller", func() {
 			prevResourceVersion := pdbObject.ResourceVersion
 
 			brokerKey := types.NamespacedName{Name: createdCr.Name, Namespace: createdCr.Namespace}
-			Expect(k8sClient.Get(ctx, brokerKey, createdCr)).Should(Succeed())
-			createdCr.Spec.DeploymentPlan.PodDisruptionBudget.MinAvailable = &minTwo
-			Expect(k8sClient.Update(ctx, createdCr)).Should(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, brokerKey, createdCr)).Should(Succeed())
+				createdCr.Spec.DeploymentPlan.PodDisruptionBudget.MinAvailable = &minTwo
+				g.Expect(k8sClient.Update(ctx, createdCr)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, pdbKey, &pdbObject)).Should(Succeed())
@@ -3145,11 +3147,14 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(currentSS.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds).Should(BeEquivalentTo(1))
 				}, timeout, interval).Should(Succeed())
 
-				Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 				crdVer := deployedCrd.ResourceVersion
-				deployedCrd.Spec.DeploymentPlan.MessageMigration = &boolFalseVal
-				By("force reconcile via CR update of Ver:" + crdVer)
-				Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					crdVer = deployedCrd.ResourceVersion
+					deployedCrd.Spec.DeploymentPlan.MessageMigration = &boolFalseVal
+					By("force reconcile via CR update of Ver:" + crdVer)
+					g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
 
 				By("verify no change in ssVersion but change in brokerCr")
 				Eventually(func(g Gomega) {
@@ -3169,9 +3174,11 @@ var _ = Describe("artemis controller", func() {
 				}, timeout, interval).Should(Succeed())
 
 				By("Force SS update via CR update to Probe")
-				Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
-				deployedCrd.Spec.DeploymentPlan.ReadinessProbe.InitialDelaySeconds = 2
-				Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
+					deployedCrd.Spec.DeploymentPlan.ReadinessProbe.InitialDelaySeconds = 2
+					g.Expect(k8sClient.Update(ctx, deployedCrd)).Should(Succeed())
+				}, timeout, interval).Should(Succeed())
 
 				By("verifying update to SS")
 				Eventually(func(g Gomega) {
@@ -4274,15 +4281,19 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.NodeSelector["type"] == "foo").Should(BeTrue())
 
 			By("Updating the CR")
-			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd) }, timeout, interval).Should(BeTrue())
-			original := createdCrd
+			Eventually(func(g Gomega) {
 
-			nodeSelector = map[string]string{
-				"type": "foo",
-			}
-			original.Spec.DeploymentPlan.NodeSelector = nodeSelector
-			By("Redeploying the CRD")
-			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)).Should(BeTrue())
+				original := createdCrd
+
+				nodeSelector = map[string]string{
+					"type": "foo",
+				}
+				original.Spec.DeploymentPlan.NodeSelector = nodeSelector
+				By("Redeploying the CRD")
+				g.Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
 
 			Eventually(func() int {
 				key := types.NamespacedName{Name: namer.CrToSS(createdCrd.Name), Namespace: defaultNamespace}
@@ -4691,21 +4702,25 @@ var _ = Describe("artemis controller", func() {
 			Expect(createdSs.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold == 9).Should(BeTrue())
 
 			By("Updating the CR")
-			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd) }, timeout, interval).Should(BeTrue())
-			original := createdCrd
+			Eventually(func(g Gomega) {
 
-			original.Spec.DeploymentPlan.LivenessProbe.PeriodSeconds = 15
-			original.Spec.DeploymentPlan.LivenessProbe.InitialDelaySeconds = 16
-			original.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds = 17
-			original.Spec.DeploymentPlan.LivenessProbe.SuccessThreshold = 18
-			original.Spec.DeploymentPlan.LivenessProbe.FailureThreshold = 19
-			exec := corev1.ExecAction{
-				Command: []string{"/broker/bin/artemis check node"},
-			}
-			original.Spec.DeploymentPlan.LivenessProbe.Exec = &exec
-			By("Redeploying the CRD")
-			By("Redeploying the modified CRD")
-			Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+				g.Expect(getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd)).Should(BeTrue())
+
+				original := createdCrd
+
+				original.Spec.DeploymentPlan.LivenessProbe.PeriodSeconds = 15
+				original.Spec.DeploymentPlan.LivenessProbe.InitialDelaySeconds = 16
+				original.Spec.DeploymentPlan.LivenessProbe.TimeoutSeconds = 17
+				original.Spec.DeploymentPlan.LivenessProbe.SuccessThreshold = 18
+				original.Spec.DeploymentPlan.LivenessProbe.FailureThreshold = 19
+				exec := corev1.ExecAction{
+					Command: []string{"/broker/bin/artemis check node"},
+				}
+				original.Spec.DeploymentPlan.LivenessProbe.Exec = &exec
+				By("Redeploying the modified CRD")
+				g.Expect(k8sClient.Update(ctx, original)).Should(Succeed())
+
+			}, timeout, interval).Should(Succeed())
 
 			By("Retrieving the new SS to find the modification")
 			Eventually(func() bool {
