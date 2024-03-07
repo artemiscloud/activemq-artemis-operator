@@ -157,8 +157,6 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		return result, err
 	}
 
-	        reqLogger.Info("ActiveMQArtemis resource retrieved")
-
         // Check for the annotation. If it exists, return without reconciling.
         if val, ok := customResource.Annotations["artemis.broker.amq.io/block-reconcile"]; ok && val == "true" {
                 reqLogger.Info("Reconcile blocked by annotation")
