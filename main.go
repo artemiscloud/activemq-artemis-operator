@@ -157,7 +157,7 @@ func main() {
 	if err := os.Setenv("OPERATOR_NAMESPACE", oprNamespace); err != nil {
 		setupLog.Error(err, "failed to set operator's namespace to env")
 	}
-	if err := os.Setenv("OPERATOR_WATCH_NAMESPACE", watchNamespace); err != nil {
+	if err := os.Setenv("WATCH_NAMESPACE", watchNamespace); err != nil {
 		setupLog.Error(err, "failed to set operator's watch namespace to env")
 	}
 

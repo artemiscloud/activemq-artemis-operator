@@ -729,7 +729,7 @@ var _ = BeforeSuite(func() {
 
 	// force isLocalOnly=false check from artemis reconciler such that scale down controller will create
 	// role binding to service account for the drainer pod
-	os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
+	os.Setenv("WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 
 	var err error
 	currentDir, err = os.Getwd()
@@ -761,7 +761,7 @@ var _ = AfterSuite(func() {
 		cleanUpTestProxy()
 	}
 
-	os.Unsetenv("OPERATOR_WATCH_NAMESPACE")
+	os.Unsetenv("WATCH_NAMESPACE")
 
 	if os.Getenv("DEPLOY_OPERATOR") == "true" {
 		err := uninstallOperator(true, defaultNamespace)

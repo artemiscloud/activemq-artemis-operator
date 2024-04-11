@@ -546,7 +546,7 @@ func (r *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customResource *bro
 
 func isLocalOnly() bool {
 	oprNamespace := os.Getenv("OPERATOR_NAMESPACE")
-	watchNamespace := os.Getenv("OPERATOR_WATCH_NAMESPACE")
+	watchNamespace := os.Getenv("WATCH_NAMESPACE")
 	return oprNamespace == watchNamespace
 }
 

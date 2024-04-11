@@ -52,7 +52,7 @@ var _ = Describe("Scale down controller", func() {
 
 			// note: we force a non local scaledown cr to exercise creds generation
 			// hense only valid with DEPLOY_OPERATOR = false
-			// 	see suite_test.go: os.Setenv("OPERATOR_WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
+			// 	see suite_test.go: os.Setenv("WATCH_NAMESPACE", "SomeValueToCauesEqualitytoFailInIsLocalSoDrainControllerSortsCreds")
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
 				brokerName := NextSpecResourceName()
