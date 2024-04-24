@@ -1415,3 +1415,31 @@ spec:
 ```
 
 For details on how to use cert-manager to manage your certificates please refer to its [documentation](https://cert-manager.io/docs/).
+
+##### Configuring Reconcile Period
+
+After a successful reconciliation of a broker CR, the operator will perform regular reconciliation periodically
+to make sure the resouces assicated with a broker (services, secrets etc) are not changed. (for example some get
+deleted by accident). By default the periodic reconcile is disabled.
+
+If you need to change period you can configure an environment variable called RECONCILE_REGULAR_RESYNC_PERIOD with
+a proper value in the operator deployment yaml, for example to set the period to 6 minutes:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+  labels:
+    control-plane: controller-manager
+spec:
+  template:
+    spec:
+      containers:
+        env:
+        - name: RECONCILE_REGULAR_RESYNC_PERIOD
+          value: 6m # h: hours s: seconds
+...
+```
+

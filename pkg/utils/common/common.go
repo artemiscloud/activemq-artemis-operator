@@ -39,13 +39,14 @@ import (
 
 // extra kinds
 const (
-	ImageNamePrefix        = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
-	BrokerImageKey         = "Kubernetes"
-	InitImageKey           = "Init"
-	DefaultDeploymentSize  = int32(1)
-	RouteKind              = "Route"
-	OpenShiftAPIServerKind = "OpenShiftAPIServer"
-	DEFAULT_RESYNC_PERIOD  = 30 * time.Second
+	ImageNamePrefix               = "RELATED_IMAGE_ActiveMQ_Artemis_Broker_"
+	BrokerImageKey                = "Kubernetes"
+	InitImageKey                  = "Init"
+	DefaultDeploymentSize         = int32(1)
+	RouteKind                     = "Route"
+	OpenShiftAPIServerKind        = "OpenShiftAPIServer"
+	DEFAULT_RESYNC_PERIOD         = 30 * time.Second
+	DEFAULT_REGULAR_RESYNC_PERIOD = -1 * time.Second
 	// comments push this over the edge a little when dealing with white space
 	// as en env var it can be disabled by setting to "" or can be improved!
 	JaasConfigSyntaxMatchRegExDefault = `^(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s*{(?:(\s*|(?://.*)|(?s:/\*.*\*/))*\S+\s+(?i:required|optional|sufficient|requisite)(?:\s*\S+\s*=((\s*\S+\s*)|("[^"]*")))*\s*;)+(\s*|(?://.*)|(?s:/\*.*\*/))*}\s*;)+\s*\z`
@@ -56,6 +57,8 @@ var lastStatusMap map[types.NamespacedName]olm.DeploymentStatus = make(map[types
 var theManager manager.Manager
 
 var resyncPeriod time.Duration = DEFAULT_RESYNC_PERIOD
+
+var regularResyncPeriod time.Duration = DEFAULT_REGULAR_RESYNC_PERIOD
 
 var jaasConfigSyntaxMatchRegEx = JaasConfigSyntaxMatchRegExDefault
 
@@ -84,6 +87,15 @@ func init() {
 		resyncPeriod = DEFAULT_RESYNC_PERIOD
 	}
 
+	if period, defined := os.LookupEnv("RECONCILE_REGULAR_RESYNC_PERIOD"); defined {
+		var err error
+		if regularResyncPeriod, err = time.ParseDuration(period); err != nil {
+			regularResyncPeriod = DEFAULT_REGULAR_RESYNC_PERIOD
+		}
+	} else {
+		regularResyncPeriod = DEFAULT_REGULAR_RESYNC_PERIOD
+	}
+
 	if regEx, defined := os.LookupEnv("JAAS_CONFIG_SYNTAX_MATCH_REGEX"); defined {
 		jaasConfigSyntaxMatchRegEx = regEx
 	} else {
@@ -97,6 +109,15 @@ func GetJaasConfigSyntaxMatchRegEx() string {
 
 func GetReconcileResyncPeriod() time.Duration {
 	return resyncPeriod
+}
+
+func GetRegularReconcileResyncPeriod() time.Duration {
+	return regularResyncPeriod
+}
+
+// test
+func SetRegularReconcileResyncPeriod(value time.Duration) {
+	regularResyncPeriod = value
 }
 
 type ActiveMQArtemisConfigHandler interface {

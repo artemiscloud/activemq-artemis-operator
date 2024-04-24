@@ -192,6 +192,13 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 		result = ctrl.Result{RequeueAfter: common.GetReconcileResyncPeriod()}
 	}
 
+	reconPeriod := common.GetRegularReconcileResyncPeriod()
+	if reconPeriod > 0 {
+		reqLogger.V(1).Info("setting peroid", "period", reconPeriod)
+		result.RequeueAfter = reconPeriod
+	} else {
+		reqLogger.V(1).Info("periodic reconcile disabled")
+	}
 	return result, err
 }
 
