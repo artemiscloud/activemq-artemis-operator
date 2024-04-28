@@ -437,7 +437,14 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 	k8Manager, err = ctrl.NewManager(restConfig, mgrOptions)
 	Expect(err).ToNot(HaveOccurred())
 
-	brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+	messageMigrationControl := NewActiveMQArtemisMessageMigrationControl(
+		k8Manager.GetClient(),
+		k8Manager.GetScheme(),
+		k8Manager.GetConfig(),
+		ctrl.Log.WithName("ActiveMQArtemisMessageMigration"),
+		isLocal)
+
+	brokerReconciler = NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, messageMigrationControl)
 
 	if err = brokerReconciler.SetupWithManager(k8Manager); err != nil {
 		ctrl.Log.Error(err, "unable to create controller", "controller", "ActiveMQArtemisReconciler")
@@ -461,16 +468,6 @@ func createControllerManager(disableMetrics bool, watchNamespace string) {
 
 	err = addressReconciler.SetupWithManager(k8Manager, managerCtx)
 	Expect(err).ToNot(HaveOccurred(), "failed to create address reconciler")
-
-	scaleDownRconciler := &ActiveMQArtemisScaledownReconciler{
-		Client: k8Manager.GetClient(),
-		Scheme: k8Manager.GetScheme(),
-		Config: k8Manager.GetConfig(),
-		log:    ctrl.Log,
-	}
-
-	err = scaleDownRconciler.SetupWithManager(k8Manager)
-	Expect(err).ShouldNot(HaveOccurred(), "failed to create scale down reconciler")
 
 	managerChannel = make(chan struct{}, 1)
 	go func() {

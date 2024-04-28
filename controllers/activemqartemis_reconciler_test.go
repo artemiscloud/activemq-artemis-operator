@@ -539,7 +539,7 @@ func TestProcess_TemplateIncludesLabelsServiceAndSecret(t *testing.T) {
 				}},
 		},
 	}
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -616,7 +616,7 @@ func TestProcess_TemplateIncludesLabelsSecretRegexp(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateIncludesLabelsServiceAndSecret"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -668,7 +668,7 @@ func TestProcess_TemplateDuplicateKeyReplacesOk(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateDuplicateKeyReplacesOk"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("TestProcess_TemplateDuplicateKeyReplacesOk"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -728,7 +728,7 @@ func TestProcess_TemplateKeyValue(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -817,7 +817,7 @@ func TestProcess_TemplateCustomAttributeIngress(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -878,7 +878,7 @@ func TestProcess_TemplateCustomAttributeMisSpellingIngress(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -928,7 +928,7 @@ func TestProcess_TemplateCustomAttributeContainerSecurityContext(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -981,7 +981,7 @@ func TestProcess_TemplateCustomAttributePriorityClassName(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	namer := MakeNamers(cr)
@@ -1029,7 +1029,7 @@ func TestNewPodTemplateSpecForCR_AppendsDebugArgs(t *testing.T) {
 		},
 	}
 
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log.WithName("test"), isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
@@ -1056,7 +1056,7 @@ func TestNewPodTemplateSpecForCR_IncludesImagePullSecret(t *testing.T) {
 			},
 		},
 	}
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)
@@ -1092,7 +1092,7 @@ func TestNewPodTemplateSpecForCR_IncludesTopologySpreadConstraints(t *testing.T)
 			},
 		},
 	}
-	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	outer := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	reconciler := NewActiveMQArtemisReconcilerImpl(cr, outer)
 
 	newSpec, err := reconciler.NewPodTemplateSpecForCR(cr, common.Namers{}, &v1.PodTemplateSpec{}, k8sClient)

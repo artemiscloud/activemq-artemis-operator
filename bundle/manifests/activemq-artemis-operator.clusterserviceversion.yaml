@@ -81,19 +81,6 @@ metadata:
         },
         {
           "apiVersion": "broker.amq.io/v1beta1",
-          "kind": "ActiveMQArtemisScaledown",
-          "metadata": {
-            "name": "ex-aaoscaledown"
-          },
-          "spec": {
-            "localOnly": true
-          },
-          "status": {
-            "conditions": []
-          }
-        },
-        {
-          "apiVersion": "broker.amq.io/v1beta1",
           "kind": "ActiveMQArtemisSecurity",
           "metadata": {
             "name": "ex-prop"
@@ -156,19 +143,6 @@ metadata:
             "addressName": "myAddress0",
             "queueName": "myQueue0",
             "routingType": "anycast"
-          },
-          "status": {
-            "conditions": []
-          }
-        },
-        {
-          "apiVersion": "broker.amq.io/v2alpha1",
-          "kind": "ActiveMQArtemisScaledown",
-          "metadata": {
-            "name": "ex-aaoscaledown"
-          },
-          "spec": {
-            "localOnly": true
           },
           "status": {
             "conditions": []
@@ -1657,56 +1631,6 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
       version: v2alpha5
-    - description: Provides internal message migration on clustered broker scaledown
-      displayName: ActiveMQ Artemis Scaledown
-      kind: ActiveMQArtemisScaledown
-      name: activemqartemisscaledowns.broker.amq.io
-      resources:
-      - kind: Secret
-        name: ""
-        version: v1
-      specDescriptors:
-      - description: Triggered by main ActiveMQArtemis CRD messageMigration entry
-        displayName: Temporary
-        path: localOnly
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Specifies the minimum/maximum amount of compute resources required/allowed
-        displayName: Resource Requirements
-        path: resources
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
-      statusDescriptors:
-      - description: Current state of the resource Conditions represent the latest
-          available observations of an object's state
-        displayName: Conditions
-        path: conditions
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes.conditions
-      version: v1beta1
-    - description: ActiveMQArtemisScaledown is the Schema for the activemqartemisscaledowns
-        API
-      displayName: Active MQArtemis Scaledown
-      kind: ActiveMQArtemisScaledown
-      name: activemqartemisscaledowns.broker.amq.io
-      resources:
-      - kind: Secret
-        name: ""
-        version: v1
-      specDescriptors:
-      - description: Triggered by main ActiveMQArtemis CRD messageMigration entry
-        displayName: Temporary
-        path: localOnly
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      statusDescriptors:
-      - description: Current state of the resource Conditions represent the latest
-          available observations of an object's state
-        displayName: Conditions
-        path: conditions
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes.conditions
-      version: v2alpha1
     - description: Security configuration for the broker
       displayName: ActiveMQ Artemis Security
       kind: ActiveMQArtemisSecurity
@@ -3047,32 +2971,6 @@ spec:
           - broker.amq.io
           resources:
           - activemqartemises/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - broker.amq.io
-          resources:
-          - activemqartemisscaledowns
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - broker.amq.io
-          resources:
-          - activemqartemisscaledowns/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - broker.amq.io
-          resources:
-          - activemqartemisscaledowns/status
           verbs:
           - get
           - patch

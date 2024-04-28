@@ -115,7 +115,7 @@ type Controller struct {
 	// sts --> ssNames
 	ssNamesMap map[types.NamespacedName]map[string]string
 
-	ssToCrMap map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemisScaledown
+	ssToCrMap map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemis
 
 	ssLabels map[string]string
 
@@ -136,12 +136,13 @@ func NewController(
 	// controller name is the target namespace
 	// or "*" for all namespaces case
 	controllerName string,
+	instance *brokerv1beta1.ActiveMQArtemis,
 	kubeclientset kubernetes.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	namespace string,
 	client client.Client,
-	instance *brokerv1beta1.ActiveMQArtemisScaledown,
-	logger logr.Logger) *Controller {
+	logger logr.Logger,
+	localOnly bool) *Controller {
 
 	// obtain references to shared index informers for the Deployment and Foo
 	// types.
@@ -170,10 +171,10 @@ func NewController(
 		podsSynced:         podInformer.Informer().HasSynced,
 		workqueue:          workqueue.NewNamedRateLimitingQueue(itemExponentialFailureRateLimiter, "StatefulSets"),
 		recorder:           recorder,
-		localOnly:          instance.Spec.LocalOnly,
-		resources:          instance.Spec.Resources,
+		localOnly:          localOnly,
+		resources:          instance.Spec.DeploymentPlan.Resources,
 		ssNamesMap:         make(map[types.NamespacedName]map[string]string),
-		ssToCrMap:          make(map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemisScaledown),
+		ssToCrMap:          make(map[types.NamespacedName]*brokerv1beta1.ActiveMQArtemis),
 
 		ssLabels: instance.Labels,
 		stopCh:   make(chan struct{}),
@@ -213,13 +214,22 @@ func NewController(
 	return controller
 }
 
-func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemisScaledown) {
+func (c *Controller) RemoveInstance(instance *types.NamespacedName) {
 	namespacedName := types.NamespacedName{
-		Namespace: instance.Annotations["CRNAMESPACE"],
-		Name:      namer.CrToSS(instance.Annotations["CRNAME"]),
+		Namespace: instance.Namespace,
+		Name:      namer.CrToSS(instance.Name),
+	}
+	delete(c.ssNamesMap, namespacedName)
+	delete(c.ssToCrMap, namespacedName)
+}
+
+func (c *Controller) AddInstance(instance *brokerv1beta1.ActiveMQArtemis, params map[string]string) {
+	namespacedName := types.NamespacedName{
+		Namespace: params["CRNAMESPACE"],
+		Name:      namer.CrToSS(params["CRNAME"]),
 	}
 	c.log.V(1).Info("adding a new scaledown instance", "key", namespacedName)
-	c.ssNamesMap[namespacedName] = instance.Annotations
+	c.ssNamesMap[namespacedName] = params
 	c.log.V(2).Info("Added new instance", "key", namespacedName, "now values", len(c.ssNamesMap))
 	c.ssToCrMap[namespacedName] = instance
 }
@@ -371,11 +381,6 @@ func (c *Controller) processStatefulSet(sts *appsv1.StatefulSet) error {
 		return nil
 	}
 	c.log.V(2).Info("Statefulset " + sts.Name + " Spec.VolumeClaimTemplates is " + strconv.Itoa((len(sts.Spec.VolumeClaimTemplates))))
-
-	//if sts.Annotations[AnnotationDrainerPodTemplate] == "" {
-	//	log.V(1).Info("Ignoring StatefulSet '%s' because it does not define a drain pod template.", sts.Name)
-	//	return nil
-	//}
 
 	claimsGroupedByOrdinal, err := c.getClaims(sts)
 	if err != nil {

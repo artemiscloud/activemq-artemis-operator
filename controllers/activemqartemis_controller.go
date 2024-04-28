@@ -110,15 +110,17 @@ type ActiveMQArtemisReconciler struct {
 	Scheme        *runtime.Scheme
 	events        chan event.GenericEvent
 	log           logr.Logger
+	MmControl     *ActiveMQArtemisMessageMigrationControl
 	isOnOpenShift bool
 }
 
-func NewActiveMQArtemisReconciler(cluster cluster.Cluster, logger logr.Logger, isOpenShift bool) *ActiveMQArtemisReconciler {
+func NewActiveMQArtemisReconciler(cluster cluster.Cluster, logger logr.Logger, isOpenShift bool, mmControl *ActiveMQArtemisMessageMigrationControl) *ActiveMQArtemisReconciler {
 	return &ActiveMQArtemisReconciler{
 		isOnOpenShift: isOpenShift,
 		Client:        cluster.GetClient(),
 		Scheme:        cluster.GetScheme(),
 		log:           logger,
+		MmControl:     mmControl,
 	}
 }
 
@@ -158,6 +160,7 @@ func (r *ActiveMQArtemisReconciler) Reconcile(ctx context.Context, request ctrl.
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			reqLogger.V(1).Info("ActiveMQArtemis Controller Reconcile encountered a IsNotFound, for request NamespacedName " + request.NamespacedName.String())
+			r.MmControl.Cancel(&request.NamespacedName)
 			return result, nil
 		}
 		reqLogger.Error(err, "unable to retrieve the ActiveMQArtemis")

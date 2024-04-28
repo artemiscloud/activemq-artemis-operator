@@ -12,8 +12,6 @@ resources:
 - broker_activemqartemisaddress_v1beta1_cr.yaml
 - broker_activemqartemissecurity_v1alpha1_cr.yaml
 - broker_activemqartemissecurity_v1beta1_cr.yaml
-- broker_activemqartemisscaledown_v2alpha1_cr.yaml
-- broker_activemqartemisscaledown_v1beta1_cr.yaml
 
 #+kubebuilder:scaffold:manifestskustomizesamples
 

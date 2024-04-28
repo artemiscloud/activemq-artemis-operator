@@ -235,6 +235,13 @@ func main() {
 		setupAccountName(clnt, context.TODO(), oprNamespace, name)
 	}
 
+	messageMigrationControl := controllers.NewActiveMQArtemisMessageMigrationControl(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetConfig(),
+		ctrl.Log.WithName("ActiveMQArtemisMessageMigration"),
+		isLocal)
+
 	isOpenshift, err := common.DetectOpenshiftWith(cfg)
 	if err != nil {
 		setupLog.Error(err, "can't determine api server type")
@@ -244,7 +251,8 @@ func main() {
 	brokerReconciler := controllers.NewActiveMQArtemisReconciler(
 		mgr,
 		ctrl.Log.WithName("ActiveMQArtemisReconciler"),
-		isOpenshift)
+		isOpenshift,
+		messageMigrationControl)
 
 	if err = brokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemis")
@@ -261,16 +269,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	scaledownReconciler := controllers.NewActiveMQArtemisScaledownReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		mgr.GetConfig(),
-		ctrl.Log.WithName("ActiveMQArtemisScaledownReconciler"))
+	/*
+		scaledownReconciler := controllers.NewActiveMQArtemisScaledownReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			mgr.GetConfig(),
+			ctrl.Log.WithName("ActiveMQArtemisScaledownReconciler"))
 
-	if err = scaledownReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
-		os.Exit(1)
-	}
+		if err = scaledownReconciler.SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ActiveMQArtemisScaledown")
+			os.Exit(1)
+		}
+	*/
 
 	securityReconciler := controllers.NewActiveMQArtemisSecurityReconciler(
 		mgr.GetClient(),
