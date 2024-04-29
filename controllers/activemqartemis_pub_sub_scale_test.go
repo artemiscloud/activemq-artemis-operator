@@ -124,14 +124,10 @@ var _ = Describe("pub sub scale", func() {
 				brokerCrd.Spec.Env = []corev1.EnvVar{
 					{
 						Name: "CR_NAME",
-						/*
-							REVISIT: can't get this to work... may need to try annotations
-								ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.labels['" + selectors.LabelResourceKey + "']"},
-									},
-						*/
-						Value: brokerCrd.Name,
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.labels['" + selectors.LabelResourceKey + "']"},
+						},
 					},
 				}
 
@@ -166,12 +162,20 @@ var _ = Describe("pub sub scale", func() {
 					"securityRoles.COMMANDS.control-plane.createDurableQueue=true",
 					"securityRoles.COMMANDS.control-plane.consume=true",
 					"securityRoles.COMMANDS.control-plane.send=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_MIRROR_target.control-plane.createDurableQueue=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_MIRROR_target.control-plane.consume=true",
-					"securityRoles.$ACTIVEMQ_ARTEMIS_MIRROR_target.control-plane.send=true",
+
+					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.createNonDurableQueue=true",
+					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.consume=true",
+					"securityRoles.$ACTIVEMQ_ARTEMIS_FEDERATION.control-plane.send=true",
+
+					// federation uses a dynamic event address that needs a prefix as it has a uuid at the end
+					// to cover that permission, we need the wildcard permisison set for control-plane
+					"securityRoles.#.control-plane.createNonDurableQueue=true",
+					"securityRoles.#.control-plane.createAddress=true",
+					"securityRoles.#.control-plane.consume=true",
+					"securityRoles.#.control-plane.send=true",
 
 					// with properties update - can have this static with dns
-					"# mirror the address, publish on N goes to [0..N]",
+					"# federate the address, publish on N goes to [0..N]",
 					"broker-0.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-1.${CR_NAME}-hdls-svc:61616",
 					"broker-1.AMQPConnections.target.uri=tcp://${CR_NAME}-ss-0.${CR_NAME}-hdls-svc:61616",
 					// how to use TLS and sni here?
@@ -184,12 +188,7 @@ var _ = Describe("pub sub scale", func() {
 					"AMQPConnections.target.password=passwd",
 					"AMQPConnections.target.autostart=true",
 
-					"AMQPConnections.target.connectionElements.mirror.type=MIRROR",
-					"AMQPConnections.target.connectionElements.mirror.messageAcknowledgements=false",
-					"AMQPConnections.target.connectionElements.mirror.queueCreation=false",
-					"AMQPConnections.target.connectionElements.mirror.queueRemoval=false",
-					"AMQPConnections.target.connectionElements.mirror.addressFilter=COMMANDS",
-					"AMQPConnections.target.connectionElements.mirror.durable=true",
+					"AMQPConnections.target.federations.peerN.localAddressPolicies.forCommands.includes.justCommands.addressMatch=COMMANDS",
 
 					"# routing",
 					"connectionRouters.partitionOnRole.keyType=ROLE_NAME",
