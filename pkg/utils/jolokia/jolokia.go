@@ -82,7 +82,7 @@ func (j *Jolokia) getClient() *http.Client {
 		return &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: false,
 					ServerName:         j.ip,
 				},
 			},
