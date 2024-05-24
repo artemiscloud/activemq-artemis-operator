@@ -27,12 +27,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
+	"github.com/artemiscloud/activemq-artemis-operator/pkg/resources/configmaps"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/common"
 	"github.com/artemiscloud/activemq-artemis-operator/version"
 )
@@ -51,14 +53,18 @@ var _ = Describe("jdbc fast failover", func() {
 		It("cr with db store", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 
-				By("deploying db and service")
+				By("deploying db and service to unrestricted  default namespace")
 				dbName := "pdb"
 				var dbPort int32 = 5432
+
 				dbAppLables := map[string]string{"app": dbName}
 				db := appsv1.Deployment{
 
-					TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
-					ObjectMeta: metav1.ObjectMeta{Name: dbName, Namespace: defaultNamespace, Labels: dbAppLables},
+					TypeMeta: metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+					// into unrestricted "default" namespace as requires run as root
+					ObjectMeta: metav1.ObjectMeta{Name: dbName, Namespace: "default",
+						Labels: dbAppLables,
+					},
 					Spec: appsv1.DeploymentSpec{
 						Selector: &metav1.LabelSelector{MatchLabels: dbAppLables},
 						Replicas: common.Int32ToPtr(1),
@@ -79,6 +85,16 @@ var _ = Describe("jdbc fast failover", func() {
 												ContainerPort: dbPort,
 											},
 										},
+										Resources: corev1.ResourceRequirements{
+											Limits: map[corev1.ResourceName]resource.Quantity{
+												corev1.ResourceCPU: {
+													Format: "2",
+												},
+												corev1.ResourceMemory: {
+													Format: "4Gi",
+												},
+											},
+										},
 										ReadinessProbe: &corev1.Probe{
 											ProbeHandler: corev1.ProbeHandler{
 												TCPSocket: &corev1.TCPSocketAction{
@@ -87,8 +103,8 @@ var _ = Describe("jdbc fast failover", func() {
 													},
 												},
 											},
-											InitialDelaySeconds: 15,
-											PeriodSeconds:       10,
+											InitialDelaySeconds: 10,
+											PeriodSeconds:       5,
 										},
 									},
 								},
@@ -99,7 +115,7 @@ var _ = Describe("jdbc fast failover", func() {
 
 				dbService := corev1.Service{
 					TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "core/v1"},
-					ObjectMeta: metav1.ObjectMeta{Name: dbName, Namespace: defaultNamespace},
+					ObjectMeta: metav1.ObjectMeta{Name: dbName, Namespace: "default"},
 					Spec: corev1.ServiceSpec{
 						Selector: dbAppLables,
 						Ports: []corev1.ServicePort{
@@ -128,8 +144,6 @@ var _ = Describe("jdbc fast failover", func() {
 					peerA.Spec.IngressDomain = defaultTestIngressDomain
 				}
 
-				peerA.Spec.Console.Expose = true
-
 				peerA.Spec.DeploymentPlan.PersistenceEnabled = boolFalse
 				peerA.Spec.DeploymentPlan.Clustered = &boolFalse
 
@@ -150,10 +164,10 @@ var _ = Describe("jdbc fast failover", func() {
 					"HAPolicyConfiguration=SHARED_STORE_PRIMARY",
 					"storeConfiguration=DATABASE",
 					"storeConfiguration.jdbcDriverClassName=org.postgresql.Driver",
-					"storeConfiguration.jdbcConnectionUrl=jdbc:postgresql://" + dbName + ":" + fmt.Sprintf("%d", dbPort) + "/postgres?user=postgres&password=postgres",
+					"storeConfiguration.jdbcConnectionUrl=jdbc:postgresql://" + dbName + ".default" + ":" + fmt.Sprintf("%d", dbPort) + "/postgres?user=postgres&password=postgres",
 				}
 
-				By("patching ss to add init container to pull down jdbc jar")
+				By("patching ss to add init container to download jdbc jar")
 
 				kindMatchSs := "StatefulSet"
 				peerA.Spec.ResourceTemplates = []brokerv1beta1.ResourceTemplate{
@@ -191,6 +205,59 @@ var _ = Describe("jdbc fast failover", func() {
 					},
 				}
 
+				By("deploying custom logging to a file so we can check events from a probe for the broker")
+				loggingConfigMapName := peerPrefix + "-probe-logging-config"
+				loggingData := make(map[string]string)
+				loggingData[LoggingConfigKey] = `appender.stdout.name = STDOUT
+			appender.stdout.type = Console
+			rootLogger = info, STDOUT
+
+			# audit logging would also be configured here
+
+			appender.for_startup_probe.name = for_startup_probe
+			appender.for_startup_probe.fileName = ${sys:artemis.instance}/log/startup_probe.log
+			appender.for_startup_probe.type = File
+			appender.for_startup_probe.append = false
+			appender.for_startup_probe.bufferedIO = false
+			appender.for_startup_probe.immediateFlush = true
+			appender.for_startup_probe.createOnDemand = false
+
+			# limit to server logging events
+			logger.startup_prope_messages.name=org.apache.activemq.artemis.core.server
+  			logger.startup_prope_messages.appenderRef.for_startup_probe.ref=for_startup_probe
+			logger.startup_prope_messages.includeLocation=false
+			logger.startup_prope_messages.level=INFO
+
+			appender.for_startup_probe.filter.justTwo.type= RegexFilter
+			# limit to relevant logging events so the file does not grow
+			appender.for_startup_probe.filter.justTwo.regex = .*AMQ(221000|221002|221007).*
+			appender.for_startup_probe.filter.justTwo.onMatch = "ACCEPT"
+			appender.for_startup_probe.filter.justTwo.onMismatch = "DENY"`
+
+				loggingConfigMap := configmaps.MakeConfigMap(defaultNamespace, loggingConfigMapName, loggingData)
+				Expect(k8sClient.Create(ctx, loggingConfigMap)).Should(Succeed())
+				peerA.Spec.DeploymentPlan.ExtraMounts.ConfigMaps = []string{loggingConfigMapName}
+
+				By("Configuring probe to keep Pod alive while waiting to obtain shared jdbc lock")
+
+				peerA.Spec.DeploymentPlan.LivenessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						Exec: &corev1.ExecAction{
+							Command: []string{
+								"/bin/bash", "-x", "-c",
+								// ports ok || look for starting && !stopped (ie: waiting to activate)
+								`/opt/amq/bin/readinessProbe.sh 1 || LOGFILE=/home/jboss/amq-broker/log/startup_probe.log; grep "AMQ221000" $LOGFILE && ! grep "AMQ221002" $LOGFILE`,
+							},
+						},
+					},
+					InitialDelaySeconds: 5,
+					TimeoutSeconds:      5,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    1,
+				}
+
+				By("cloning peer")
 				peerB := &brokerv1beta1.ActiveMQArtemis{}
 
 				// a clone of peerA
@@ -203,29 +270,31 @@ var _ = Describe("jdbc fast failover", func() {
 				By("provisioning the broker peer-b")
 				Expect(k8sClient.Create(ctx, peerB)).Should(Succeed())
 
-				By("verifying one broker ready, it is a race to lock the db")
+				By("verifying one broker ready, other starting; it is a race to lock the db")
+				peerACrd := &brokerv1beta1.ActiveMQArtemis{}
+				peerBCrd := &brokerv1beta1.ActiveMQArtemis{}
 				Eventually(func(g Gomega) {
-
-					createdBrokerCrd := &brokerv1beta1.ActiveMQArtemis{}
 
 					g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 						Name:      peerPrefix + "-peer-a",
-						Namespace: defaultNamespace}, createdBrokerCrd)).Should(Succeed())
-					if verbose {
-						fmt.Printf("\npeer-a CR Status:%v", createdBrokerCrd.Status)
-					}
-					readyPeer := meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)
+						Namespace: defaultNamespace}, peerACrd)).Should(Succeed())
 
-					if !readyPeer {
-						g.Expect(k8sClient.Get(ctx, types.NamespacedName{
-							Name:      peerPrefix + "-peer-b",
-							Namespace: defaultNamespace}, createdBrokerCrd)).Should(Succeed())
-						if verbose {
-							fmt.Printf("\npeer-b CR Status:%v", createdBrokerCrd.Status)
-						}
-						readyPeer = meta.IsStatusConditionTrue(createdBrokerCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Name:      peerPrefix + "-peer-b",
+						Namespace: defaultNamespace}, peerBCrd)).Should(Succeed())
+
+					if verbose {
+						fmt.Printf("\npeer-a CR Status:%v", peerACrd.Status)
+						fmt.Printf("\npeer-b CR Status:%v", peerBCrd.Status)
 					}
-					g.Expect(readyPeer).Should(BeTrue())
+
+					readyPeer := meta.IsStatusConditionTrue(peerACrd.Status.Conditions, brokerv1beta1.ReadyConditionType) ||
+						meta.IsStatusConditionTrue(peerBCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)
+
+					startingPeer := len(peerACrd.Status.PodStatus.Starting) == 1 || len(peerBCrd.Status.PodStatus.Starting) == 1
+
+					// probes keep locking peer in non-ready state
+					g.Expect(readyPeer && startingPeer).Should(BeTrue())
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
@@ -270,13 +339,45 @@ var _ = Describe("jdbc fast failover", func() {
 
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				CleanResource(svc, svc.Name, defaultNamespace)
+				By("validating access to service via exec on either pod, will use peer-b")
+				url := "tcp://" + brokerService + ":62616"
+				podName := peerB.Name + "-ss-0"
+				containerName := peerB.Name + "-container"
+				Eventually(func(g Gomega) {
+					sendCmd := []string{"amq-broker/bin/artemis", "producer", "--user", "Jay", "--password", "activemq", "--url", url, "--message-count", "1", "--destination", "queue://JOBS"}
+					content, err := RunCommandInPod(podName, containerName, sendCmd)
+					g.Expect(err).To(BeNil())
+					g.Expect(*content).Should(ContainSubstring("Produced: 1 messages"))
 
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				By("killing active pod")
+				activePod := &corev1.Pod{}
+				activePod.Namespace = defaultNamespace
+				if len(peerACrd.Status.PodStatus.Ready) == 1 {
+					activePod.Name = peerA.Name + "-ss-0"
+				} else {
+					activePod.Name = peerB.Name + "-ss-0"
+				}
+				Expect(k8sClient.Delete(ctx, activePod)).To(Succeed())
+
+				By("consuming our message, if peer-b is active, it may take a little while to restart")
+				Eventually(func(g Gomega) {
+
+					recvCmd := []string{"amq-broker/bin/artemis", "consumer", "--user", "Jay", "--password", "activemq", "--url", url, "--message-count", "1", "--receive-timeout", "5000", "--break-on-null", "--verbose", "--destination", "queue://JOBS"}
+					content, err := RunCommandInPod(podName, containerName, recvCmd)
+
+					g.Expect(err).To(BeNil())
+					g.Expect(*content).Should(ContainSubstring("JMS Message ID:"))
+
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+
+				CleanResource(svc, svc.Name, defaultNamespace)
 				CleanResource(&peerA, peerA.Name, defaultNamespace)
 				CleanResource(peerB, peerB.Name, defaultNamespace)
-
-				CleanResource(&db, db.Name, defaultNamespace)
-				CleanResource(&dbService, dbService.Name, defaultNamespace)
+				CleanResource(&db, db.Name, "default")
+				CleanResource(&dbService, dbService.Name, "default")
+				CleanResource(loggingConfigMap, loggingConfigMapName, defaultNamespace)
 			}
 		})
 	})
