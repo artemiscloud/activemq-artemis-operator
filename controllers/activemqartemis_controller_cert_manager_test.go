@@ -526,7 +526,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Expect(k8sClient.Create(ctx, &afterIssuerCert)).Should(Succeed())
 
 			beforeIssuerName := activeMQArtemis.Name + "-before-issuer"
-			By("Creating issuer: " + beforeIssuerName)
+			By("Creating before issuer: " + beforeIssuerName)
 			beforeIssuer := cmv1.ClusterIssuer{}
 			if k8sClient.Get(ctx, types.NamespacedName{Name: beforeIssuerName}, &beforeIssuer) == nil {
 				CleanResource(&beforeIssuer, beforeIssuerName, "")
@@ -543,7 +543,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 			Expect(k8sClient.Create(ctx, &beforeIssuer)).Should(Succeed())
 
 			afterIssuerName := activeMQArtemis.Name + "-after-issuer"
-			By("Creating issuer: " + afterIssuerName)
+			By("Creating after issuer: " + afterIssuerName)
 			afterIssuer := cmv1.ClusterIssuer{}
 			if k8sClient.Get(ctx, types.NamespacedName{Name: afterIssuerName}, &afterIssuer) == nil {
 				CleanResource(&afterIssuer, afterIssuerName, "")
@@ -553,7 +553,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 				ObjectMeta: metav1.ObjectMeta{Name: afterIssuerName},
 				Spec: cmv1.IssuerSpec{
 					IssuerConfig: cmv1.IssuerConfig{
-						CA: &cmv1.CAIssuer{SecretName: beforeIssuerCertSecretName},
+						CA: &cmv1.CAIssuer{SecretName: afterIssuerCertSecretName},
 					},
 				},
 			}
