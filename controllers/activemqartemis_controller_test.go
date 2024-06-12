@@ -74,12 +74,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-//Uncomment this and the "test" import if you want to debug this set of tests
-//func TestArtemisController(t *testing.T) {
-//	RegisterFailHandler(Fail)
-//	RunSpecs(t, "Artemis Controller Suite")
-//}
-
 var _ = Describe("artemis controller", func() {
 
 	brokerPropertiesMatchString := "broker.properties"
@@ -98,12 +92,11 @@ var _ = Describe("artemis controller", func() {
 		if verbose {
 			for _, li := range toWatch {
 
-				wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-				if err != nil {
-					fmt.Printf("Err on watch client:  %v\n", err)
+				wc, ok := k8sClient.(client.WithWatch)
+				if !ok {
+					fmt.Printf("k8sClient is not a WithWatch:  %v\n", k8sClient)
 					return
 				}
-
 				// see what changed
 				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
 				if err != nil {

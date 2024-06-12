@@ -686,7 +686,7 @@ func setUpK8sClient() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.NewWithWatch(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 }
