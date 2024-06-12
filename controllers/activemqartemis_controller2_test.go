@@ -58,12 +58,11 @@ var _ = Describe("artemis controller 2", func() {
 		if verbose {
 			for _, li := range toWatch {
 
-				wc, err := client.NewWithWatch(testEnv.Config, client.Options{})
-				if err != nil {
-					fmt.Printf("Err on watch client:  %v\n", err)
+				wc, ok := k8sClient.(client.WithWatch)
+				if !ok {
+					fmt.Printf("k8sClient is not a WithWatch:  %v\n", k8sClient)
 					return
 				}
-
 				// see what changed
 				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
 				if err != nil {
@@ -74,7 +73,6 @@ var _ = Describe("artemis controller 2", func() {
 				go func() {
 					for event := range wi.ResultChan() {
 						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-
 					}
 				}()
 			}
