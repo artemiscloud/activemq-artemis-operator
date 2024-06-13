@@ -62,7 +62,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/watch"
 
 	brokerv1beta1 "github.com/artemiscloud/activemq-artemis-operator/api/v1beta1"
 	"github.com/artemiscloud/activemq-artemis-operator/pkg/utils/cr2jinja2"
@@ -78,46 +77,11 @@ var _ = Describe("artemis controller", func() {
 
 	brokerPropertiesMatchString := "broker.properties"
 
-	// see what has changed from the controllers perspective, what we watch
-	toWatch := []client.ObjectList{&brokerv1beta1.ActiveMQArtemisList{}, &appsv1.StatefulSetList{}, &corev1.PodList{}}
-	wis := list.New()
 	BeforeEach(func() {
-
 		BeforeEachSpec()
-
-		if verbose {
-			fmt.Println("Time with MicroSeconds: ", time.Now().Format("2006-01-02 15:04:05.000000"), " test:", CurrentSpecReport())
-		}
-
-		if verbose {
-			for _, li := range toWatch {
-
-				wc, ok := k8sClient.(client.WithWatch)
-				if !ok {
-					fmt.Printf("k8sClient is not a WithWatch:  %v\n", k8sClient)
-					return
-				}
-				// see what changed
-				wi, err := wc.Watch(ctx, li, &client.ListOptions{})
-				if err != nil {
-					fmt.Printf("Err on watch:  %v\n", err)
-				}
-				wis.PushBack(wi)
-
-				go func() {
-					for event := range wi.ResultChan() {
-						fmt.Printf("%v : Object: %v\n", event.Type, event.Object)
-					}
-				}()
-			}
-		}
 	})
 
 	AfterEach(func() {
-		for e := wis.Front(); e != nil; e = e.Next() {
-			e.Value.(watch.Interface).Stop()
-		}
-
 		AfterEachSpec()
 	})
 
