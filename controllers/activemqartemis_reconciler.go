@@ -108,13 +108,16 @@ type ActiveMQArtemisReconcilerImpl struct {
 	customResource     *brokerv1beta1.ActiveMQArtemis
 	scheme             *runtime.Scheme
 	isOnOpenShift      bool
+	mmControl          *ActiveMQArtemisMessageMigrationControl
 }
 
 func NewActiveMQArtemisReconcilerImpl(customResource *brokerv1beta1.ActiveMQArtemis, parent *ActiveMQArtemisReconciler) *ActiveMQArtemisReconcilerImpl {
+
 	return &ActiveMQArtemisReconcilerImpl{
 		log:                parent.log,
 		customResource:     customResource,
 		scheme:             parent.Scheme,
+		mmControl:          parent.MmControl,
 		requestedResources: make(map[reflect.Type]map[string]rtclient.Object),
 		isOnOpenShift:      parent.isOnOpenShift,
 	}
@@ -363,7 +366,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) ProcessDeploymentPlan(customRes
 	currentStatefulSet.Spec.Replicas = &replicas
 
 	reconciler.log.V(2).Info("Now sync Message migration", "for cr", customResource.Name)
-	reconciler.syncMessageMigration(customResource, namer, client, scheme)
+	reconciler.syncMessageMigration(customResource, namer, scheme)
 
 	if customResource.Spec.DeploymentPlan.PodDisruptionBudget != nil {
 		reconciler.applyPodDisruptionBudget(customResource)
@@ -477,44 +480,7 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) appendSystemPropertiesForConsol
 	environments.CreateOrAppend(currentSS.Spec.Template.Spec.Containers, &consoleProps)
 }
 
-func (reconciler *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, client rtclient.Client, scheme *runtime.Scheme) {
-
-	var err error = nil
-	var retrieveError error = nil
-
-	namespacedName := types.NamespacedName{
-		Name:      customResource.Name,
-		Namespace: customResource.Namespace,
-	}
-
-	ssNames := make(map[string]string)
-	ssNames["CRNAMESPACE"] = customResource.Namespace
-	ssNames["CRNAME"] = customResource.Name
-	ssNames["CLUSTERUSER"] = environments.GLOBAL_AMQ_CLUSTER_USER
-	ssNames["CLUSTERPASS"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
-	ssNames["HEADLESSSVCNAMEVALUE"] = namer.SvcHeadlessNameBuilder.Name()
-	ssNames["PINGSVCNAMEVALUE"] = namer.SvcPingNameBuilder.Name()
-	ssNames["SERVICE_ACCOUNT"] = os.Getenv("SERVICE_ACCOUNT")
-	ssNames["SERVICE_ACCOUNT_NAME"] = os.Getenv("SERVICE_ACCOUNT")
-	ssNames["AMQ_CREDENTIALS_SECRET_NAME"] = namer.SecretsCredentialsNameBuilder.Name()
-
-	scaledown := &brokerv1beta1.ActiveMQArtemisScaledown{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ActiveMQArtemisScaledown",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      namer.LabelBuilder.Labels(),
-			Name:        customResource.Name,
-			Namespace:   customResource.Namespace,
-			Annotations: ssNames,
-		},
-		Spec: brokerv1beta1.ActiveMQArtemisScaledownSpec{
-			LocalOnly: isLocalOnly(),
-			Resources: customResource.Spec.DeploymentPlan.Resources,
-		},
-		Status: brokerv1beta1.ActiveMQArtemisScaledownStatus{},
-	}
+func (reconciler *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, scheme *runtime.Scheme) {
 
 	if nil == customResource.Spec.DeploymentPlan.MessageMigration {
 		customResource.Spec.DeploymentPlan.MessageMigration = &defaultMessageMigration
@@ -523,33 +489,29 @@ func (reconciler *ActiveMQArtemisReconcilerImpl) syncMessageMigration(customReso
 	clustered := isClustered(customResource)
 
 	if *customResource.Spec.DeploymentPlan.MessageMigration && clustered {
+
 		if !customResource.Spec.DeploymentPlan.PersistenceEnabled {
 			reconciler.log.V(2).Info("Won't set up scaledown for non persistent deployment")
 			return
 		}
-		reconciler.log.V(2).Info("we need scaledown for this cr", "crName", customResource.Name, "scheme", scheme)
-		if err = resources.Retrieve(namespacedName, client, scaledown); err != nil {
-			// err means not found so create
-			reconciler.log.V(2).Info("Creating builtin drainer CR ", "scaledown", scaledown)
-			if retrieveError = resources.Create(customResource, client, scheme, scaledown); retrieveError == nil {
-				reconciler.log.V(2).Info("drainer created successfully", "drainer", scaledown)
-			} else {
-				reconciler.log.Error(retrieveError, "we have error retrieving drainer", "drainer", scaledown, "scheme", scheme)
-			}
-		}
-	} else {
-		if err = resources.Retrieve(namespacedName, client, scaledown); err == nil {
-			//	ReleaseController(customResource.Name)
-			// err means not found so delete
-			resources.Delete(client, scaledown)
-		}
-	}
-}
 
-func isLocalOnly() bool {
-	oprNamespace := os.Getenv("OPERATOR_NAMESPACE")
-	watchNamespace := os.Getenv("OPERATOR_WATCH_NAMESPACE")
-	return oprNamespace == watchNamespace
+		ssNames := make(map[string]string)
+		ssNames["CRNAMESPACE"] = customResource.Namespace
+		ssNames["CRNAME"] = customResource.Name
+		ssNames["CLUSTERUSER"] = environments.GLOBAL_AMQ_CLUSTER_USER
+		ssNames["CLUSTERPASS"] = environments.GLOBAL_AMQ_CLUSTER_PASSWORD
+		ssNames["HEADLESSSVCNAMEVALUE"] = namer.SvcHeadlessNameBuilder.Name()
+		ssNames["PINGSVCNAMEVALUE"] = namer.SvcPingNameBuilder.Name()
+		ssNames["SERVICE_ACCOUNT"] = os.Getenv("SERVICE_ACCOUNT")
+		ssNames["SERVICE_ACCOUNT_NAME"] = os.Getenv("SERVICE_ACCOUNT")
+		ssNames["AMQ_CREDENTIALS_SECRET_NAME"] = namer.SecretsCredentialsNameBuilder.Name()
+
+		reconciler.mmControl.Setup(customResource, ssNames)
+
+		reconciler.log.V(2).Info("set up message migration for this cr", "crName", customResource.Name, "scheme", scheme)
+	} else {
+		reconciler.mmControl.Cancel(&types.NamespacedName{Name: customResource.Name, Namespace: customResource.Namespace})
+	}
 }
 
 func (reconciler *ActiveMQArtemisReconcilerImpl) sourceEnvVarFromSecret(customResource *brokerv1beta1.ActiveMQArtemis, namer common.Namers, currentStatefulSet *appsv1.StatefulSet, envVars *map[string]ValueInfo, secretName string, client rtclient.Client) {
