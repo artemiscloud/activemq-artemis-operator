@@ -217,7 +217,7 @@ func setUpNamespace() {
 	}
 
 	err := k8sClient.Create(ctx, &testNamespace)
-	Expect(err == nil || errors.IsConflict(err))
+	Expect(err == nil || errors.IsConflict(err)).To(BeTrue())
 
 	if isOpenshift {
 		Eventually(func(g Gomega) {
@@ -317,7 +317,7 @@ func setUpTestProxy() {
 	}
 
 	err = k8sClient.Create(ctx, &testProxyDeployment)
-	Expect(err != nil || errors.IsConflict(err))
+	Expect(err == nil || errors.IsConflict(err)).To(BeTrue())
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -336,7 +336,7 @@ func setUpTestProxy() {
 	}
 
 	err = k8sClient.Create(ctx, &testProxyService)
-	Expect(err != nil || errors.IsConflict(err))
+	Expect(err == nil || errors.IsConflict(err)).To(BeTrue())
 
 	testProxyIngress := ingresses.NewIngressForCRWithSSL(
 		nil, types.NamespacedName{Name: testProxyName, Namespace: testProxyNamespace},
@@ -344,7 +344,7 @@ func setUpTestProxy() {
 		true, "", testProxyHost, isOpenshift)
 
 	err = k8sClient.Create(ctx, testProxyIngress)
-	Expect(err != nil || errors.IsConflict(err))
+	Expect(err == nil || errors.IsConflict(err)).To(BeTrue())
 
 	proxyUrl, err := url.Parse(fmt.Sprintf("https://%s:%d", testProxyHost, 443))
 	Expect(err).NotTo(HaveOccurred())
@@ -375,7 +375,7 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyDeployment)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
 
 	testProxyService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -385,7 +385,7 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyService)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
 
 	testProxyIngress := netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -395,7 +395,7 @@ func cleanUpTestProxy() {
 	}
 
 	err = k8sClient.Delete(ctx, &testProxyIngress)
-	Expect(err != nil || errors.IsNotFound(err))
+	Expect(err == nil || errors.IsNotFound(err)).To(BeTrue())
 }
 
 func createControllerManagerForSuite() {
