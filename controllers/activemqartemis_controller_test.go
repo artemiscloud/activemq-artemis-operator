@@ -153,21 +153,8 @@ var _ = Describe("artemis controller", func() {
 					}
 				})
 
-				ssKey := types.NamespacedName{
-					Name:      namer.CrToSS(brokerCr.Name),
-					Namespace: defaultNamespace,
-				}
-
 				By("verify pod is up")
-				currentSS := &appsv1.StatefulSet{}
-				podKey := types.NamespacedName{Name: namer.CrToSS(brokerCr.Name) + "-0", Namespace: defaultNamespace}
-				pod := &corev1.Pod{}
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, ssKey, currentSS)).Should(Succeed())
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).ShouldNot(BeNil())
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(brokerCr.Name)
 
 				By("checking service is created for console")
 				serviceName := brokerCr.Name + "-amqp-ssl-0-svc"
@@ -1844,6 +1831,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(k8sClient.Get(ctx, brokerKey, deployedCrd)).Should(Succeed())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+				WaitForPod(crd.Name)
 				ssKey := types.NamespacedName{
 					Name:      namer.CrToSS(crd.Name),
 					Namespace: defaultNamespace,
@@ -1854,13 +1842,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(pod.Status.ContainerStatuses).Should(HaveLen(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				var host string
 
@@ -2013,13 +1995,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(pod.Status.ContainerStatuses).Should(HaveLen(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				if isOpenshift {
 					By("check console acceptor is created")
@@ -2195,13 +2171,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify pod is up")
-				podKey := types.NamespacedName{Name: namer.CrToSS(crd.Name) + "-0", Namespace: defaultNamespace}
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 
 				if isOpenshift {
 					By("check route is created")
@@ -2898,14 +2868,7 @@ var _ = Describe("artemis controller", func() {
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 				By("verify ready status of pod with correct image")
-				Eventually(func(g Gomega) {
-					pod := &corev1.Pod{}
-					g.Expect(k8sClient.Get(ctx, podKey, pod)).Should(Succeed())
-
-					By("verify running status of pod")
-					g.Expect(len(pod.Status.ContainerStatuses)).Should(Equal(1))
-					g.Expect(pod.Status.ContainerStatuses[0].State.Running).Should(Not(BeNil()))
-				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+				WaitForPod(crd.Name)
 			}
 
 			Expect(k8sClient.Delete(ctx, &crd)).Should(Succeed())
