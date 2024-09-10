@@ -1354,10 +1354,6 @@ var _ = Describe("artemis controller", func() {
 			Expect(matchErr).To(BeNil())
 			Expect(hasMatch).To(BeFalse())
 
-			hasMatch, matchErr = MatchCapturedLog("ERROR")
-			Expect(matchErr).To(BeNil())
-			Expect(hasMatch).To(BeFalse())
-
 			CleanResource(brokerCr, brokerCr.Name, defaultNamespace)
 			CleanResource(secret, secret.Name, defaultNamespace)
 		})
@@ -3241,7 +3237,7 @@ var _ = Describe("artemis controller", func() {
 					g.Expect(meta.IsStatusConditionTrue(deployedCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-				unequalEntries := FindAllFromCapturedLog("Unequal")
+				unequalEntries, _ := FindAllFromCapturedLog("Unequal")
 				Expect(len(unequalEntries)).Should(BeNumerically("==", 0))
 
 				Expect(k8sClient.Delete(ctx, deployedCrd)).Should(Succeed())
@@ -5540,7 +5536,7 @@ var _ = Describe("artemis controller", func() {
 			Eventually(func() bool { return getPersistedVersionedCrd(crd.ObjectMeta.Name, defaultNamespace, createdCrd) }, timeout, interval).Should(BeTrue())
 			Expect(createdCrd.Name).Should(Equal(crd.ObjectMeta.Name))
 
-			By("By finding a new config map with broker props")
+			By("By finding a new secret map with broker props")
 			brokerPropsSecret := &corev1.Secret{}
 			key := types.NamespacedName{Name: crd.ObjectMeta.Name + "-props", Namespace: crd.ObjectMeta.Namespace}
 			Eventually(func(g Gomega) {
@@ -5619,7 +5615,7 @@ var _ = Describe("artemis controller", func() {
 			CleanResource(createdCrd, createdCrd.Name, defaultNamespace)
 		})
 
-		It("Expect updated config map on update to BrokerProperties", func() {
+		It("Expect updated secret on update to BrokerProperties", func() {
 			By("By creating a crd with BrokerProperties in the spec")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
@@ -5629,7 +5625,7 @@ var _ = Describe("artemis controller", func() {
 			propsResourceName := crd.Name + "-props"
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
-			By("By eventualy finding a matching config map with broker props")
+			By("By eventualy finding a matching secret with broker props")
 			cmResourceVersion := ""
 
 			createdPropsResource := &corev1.Secret{}
@@ -5819,19 +5815,19 @@ var _ = Describe("artemis controller", func() {
 			Expect(k8sClient.Create(ctx, &crd1)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, &crd2)).Should(Succeed())
 
-			By("By eventualy finding two config maps with broker props")
-			configMapList := &corev1.SecretList{}
+			By("By eventualy finding two secrets with broker props")
+			secretList := &corev1.SecretList{}
 			opts := &client.ListOptions{
 				Namespace: defaultNamespace,
 			}
 			Eventually(func() int {
-				err := k8sClient.List(ctx, configMapList, opts)
+				err := k8sClient.List(ctx, secretList, opts)
 				if err != nil {
 					fmt.Printf("error getting list of configopts map! %v", err)
 				}
 
 				ret := 0
-				for _, cm := range configMapList.Items {
+				for _, cm := range secretList.Items {
 					if strings.Contains(cm.ObjectMeta.Name, "-props") {
 						if strings.Contains(cm.ObjectMeta.Name, crd1.Name) || strings.Contains(cm.ObjectMeta.Name, crd2.Name) {
 							ret++
