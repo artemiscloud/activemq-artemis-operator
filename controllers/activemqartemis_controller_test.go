@@ -3574,11 +3574,10 @@ var _ = Describe("artemis controller", func() {
 
 					g.Expect(k8sClient.Get(ctx, brokerKey, createdCrd)).Should(Succeed())
 					g.Expect(len(createdCrd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
-					g.Expect(common.IsConditionPresentAndEqual(createdCrd.Status.Conditions, metav1.Condition{
-						Type:    brokerv1beta1.DeployedConditionType,
-						Status:  metav1.ConditionFalse,
-						Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
-						Message: "0/1 pods ready",
+					g.Expect(common.IsConditionPresentAndEqualIgnoringMessage(createdCrd.Status.Conditions, metav1.Condition{
+						Type:   brokerv1beta1.DeployedConditionType,
+						Status: metav1.ConditionFalse,
+						Reason: brokerv1beta1.DeployedConditionNotReadyReason,
 					})).Should(BeTrue())
 					g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
@@ -7805,10 +7804,6 @@ var _ = Describe("artemis controller", func() {
 
 		It("Checking storageClassName is configured", func() {
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-				By("By not requesting PVC that cannot be bound, seems to prevent minkube auto pv allocation")
-				return
-			}
 			By("By creating a new crd")
 			ctx := context.Background()
 			crd := generateArtemisSpec(defaultNamespace)
@@ -7823,8 +7818,8 @@ var _ = Describe("artemis controller", func() {
 
 			Expect(k8sClient.Create(ctx, &crd)).Should(Succeed())
 
+			key := types.NamespacedName{Name: crd.Name, Namespace: defaultNamespace}
 			Eventually(func() bool {
-				key := types.NamespacedName{Name: crd.Name, Namespace: defaultNamespace}
 				err := k8sClient.Get(ctx, key, &crd)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
@@ -7841,6 +7836,31 @@ var _ = Describe("artemis controller", func() {
 
 			storageClassName := volumeTemplates[0].Spec.StorageClassName
 			Expect(*storageClassName).To(Equal("some-storage-class"))
+
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+
+				By("verifying not yet ready status - has pod status digest with reference to pvc")
+				Eventually(func(g Gomega) {
+
+					g.Expect(k8sClient.Get(ctx, key, &crd)).Should(Succeed())
+					By("verify starting status" + fmt.Sprintf("%v", crd.Status.PodStatus))
+					g.Expect(len(crd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
+
+					g.Expect(common.IsConditionPresentAndEqualIgnoringMessage(crd.Status.Conditions, metav1.Condition{
+						Type:   brokerv1beta1.DeployedConditionType,
+						Status: metav1.ConditionFalse,
+						Reason: brokerv1beta1.DeployedConditionNotReadyReason,
+					})).Should(BeTrue())
+
+					condition := meta.FindStatusCondition(crd.Status.Conditions, brokerv1beta1.DeployedConditionType)
+					g.Expect(condition).NotTo(BeNil())
+
+					By("checking message" + fmt.Sprintf("%v", condition.Message))
+					// not a chance!
+					//g.Expect(condition.Message).To(ContainSubstring(*storageClassName))
+					g.Expect(condition.Message).To(ContainSubstring("PersistentVolumeClaims"))
+				}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
+			}
 
 			CleanResource(&crd, crd.Name, defaultNamespace)
 		})
@@ -8126,11 +8146,10 @@ var _ = Describe("artemis controller", func() {
 				By("verify starting status" + fmt.Sprintf("%v", createdCrd.Status.PodStatus))
 				g.Expect(len(createdCrd.Status.PodStatus.Starting)).Should(BeEquivalentTo(1))
 
-				g.Expect(common.IsConditionPresentAndEqual(createdCrd.Status.Conditions, metav1.Condition{
-					Type:    brokerv1beta1.DeployedConditionType,
-					Status:  metav1.ConditionFalse,
-					Reason:  brokerv1beta1.DeployedConditionNotReadyReason,
-					Message: "0/1 pods ready",
+				g.Expect(common.IsConditionPresentAndEqualIgnoringMessage(createdCrd.Status.Conditions, metav1.Condition{
+					Type:   brokerv1beta1.DeployedConditionType,
+					Status: metav1.ConditionFalse,
+					Reason: brokerv1beta1.DeployedConditionNotReadyReason,
 				})).Should(BeTrue())
 				g.Expect(meta.IsStatusConditionFalse(createdCrd.Status.Conditions, brokerv1beta1.ReadyConditionType)).Should(BeTrue())
 
