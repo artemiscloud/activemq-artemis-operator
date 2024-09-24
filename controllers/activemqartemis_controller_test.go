@@ -3636,7 +3636,7 @@ var _ = Describe("artemis controller", func() {
 			crd.Spec.Console.Expose = true
 			crd.Spec.Console.SSLEnabled = true
 
-			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, brokerReconciler.MmControl)
 			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
 
 			defaultConsoleSecretName := crd.Name + "-console-secret"
@@ -3729,7 +3729,7 @@ var _ = Describe("artemis controller", func() {
 				g.Expect(createdCrd.ResourceVersion).ShouldNot(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 
-			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, brokerReconciler.MmControl)
 			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
 
 			namer := MakeNamers(&crd)
@@ -3834,8 +3834,9 @@ var _ = Describe("artemis controller", func() {
 
 			}, timeout, interval).Should(Succeed())
 
-			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift)
+			outer := NewActiveMQArtemisReconciler(k8Manager, ctrl.Log, isOpenshift, brokerReconciler.MmControl)
 			reconcilerImpl := NewActiveMQArtemisReconcilerImpl(&crd, outer)
+
 			reconcilerImpl.deployed = make(map[reflect.Type][]client.Object)
 
 			namer := MakeNamers(&crd)

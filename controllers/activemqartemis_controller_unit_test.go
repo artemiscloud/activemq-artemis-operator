@@ -41,7 +41,7 @@ func TestValidate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
@@ -69,7 +69,7 @@ func TestValidateBrokerPropsDuplicate(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
@@ -97,7 +97,7 @@ func TestValidateBrokerPropsDuplicateOnFirstEquals(t *testing.T) {
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)
@@ -125,7 +125,7 @@ func TestValidateBrokerPropsDuplicateOnFirstEqualsIncorrectButUnrealisticForOurB
 
 	namer := MakeNamers(cr)
 
-	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift)
+	r := NewActiveMQArtemisReconciler(&NillCluster{}, ctrl.Log, isOpenshift, nil)
 	ri := NewActiveMQArtemisReconcilerImpl(cr, r)
 
 	valid, retry := ri.validate(cr, k8sClient, *namer)

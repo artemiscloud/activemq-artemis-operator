@@ -57,9 +57,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemises().Informer()}, nil
 	case v2alpha1.GroupVersion.WithResource("activemqartemisaddresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisAddresses().Informer()}, nil
-	case v2alpha1.GroupVersion.WithResource("activemqartemisscaledowns"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Broker().V2alpha1().ActiveMQArtemisScaledowns().Informer()}, nil
-
 	}
 
 	return nil, fmt.Errorf("no informer found for %v", resource)
