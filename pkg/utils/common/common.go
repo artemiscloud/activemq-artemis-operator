@@ -846,6 +846,24 @@ func GetOperatorSecret(client rtclient.Client, secretName string) (*corev1.Secre
 	return &secret, nil
 }
 
+var operatorHasCertAndTrustBundle *bool
+
+func OperatorHasCertAndTrustBundle(client rtclient.Client) bool {
+	if operatorHasCertAndTrustBundle == nil {
+		var ok bool = false
+
+		var secret *corev1.Secret
+		var err error
+		if secret, err = GetOperatorCASecret(client); secret != nil && err == nil {
+			if secret, err = GetOperatorClientCertSecret(client); secret != nil && err == nil {
+				ok = true
+			}
+		}
+		operatorHasCertAndTrustBundle = &ok
+	}
+	return *operatorHasCertAndTrustBundle
+}
+
 func GetOperatorClientCertificate(client rtclient.Client, info *tls.CertificateRequestInfo) (cert *tls.Certificate, err error) {
 
 	var secret *corev1.Secret
