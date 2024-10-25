@@ -53,11 +53,12 @@ const (
 )
 
 var (
-	serverCert   = "server-cert"
-	rootIssuer   = &cmv1.ClusterIssuer{}
-	rootCert     = &cmv1.Certificate{}
-	caIssuer     = &cmv1.ClusterIssuer{}
-	caBundleName = "operator-ca"
+	serverCert       = "server-cert"
+	rootIssuer       = &cmv1.ClusterIssuer{}
+	rootCert         = &cmv1.Certificate{}
+	caIssuer         = &cmv1.ClusterIssuer{}
+	caBundleName     = "operator-ca"
+	operatorCertName = "operator-cert"
 )
 
 type ConnectorConfig struct {
@@ -234,9 +235,12 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 
 	Context("tls exposure with cert manager", func() {
 		BeforeEach(func() {
+
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
 				InstallCert(serverCert, defaultNamespace, func(candidate *cmv1.Certificate) {
-					candidate.Spec.DNSNames = []string{brokerCrNameBase + "0-ss-0", brokerCrNameBase + "1-ss-0", brokerCrNameBase + "2-ss-0"}
+					candidate.Spec.DNSNames = []string{brokerCrNameBase + "0-ss-0", brokerCrNameBase + "1-ss-0", brokerCrNameBase + "2-ss-0",
+						// verifyhost in presence of operator cert and bundle requires a valid cert hostname
+						common.OrdinalFQDNS(brokerCrNameBase+"0", defaultNamespace, 0), common.OrdinalFQDNS(brokerCrNameBase+"1", defaultNamespace, 0)}
 					candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
 						Name: caIssuer.Name,
 						Kind: "ClusterIssuer",
@@ -1125,21 +1129,6 @@ func CheckAcceptorStarted(podName string, crName string, acceptorName string, g 
 	g.Expect(rootMapValue).Should(BeTrue())
 }
 
-func checkReadPodStatus(podName string, crName string, g Gomega) {
-	curlUrl := "https://" + podName + ":8161/console/jolokia/read/org.apache.activemq.artemis:broker=\"amq-broker\"/Status"
-	command := []string{"curl", "-k", "-s", "-u", "testuser:testpassword", curlUrl}
-
-	result := ExecOnPod(podName, crName, defaultNamespace, command, g)
-	var rootMap map[string]any
-	g.Expect(json.Unmarshal([]byte(result), &rootMap)).To(Succeed())
-	value := rootMap["value"].(string)
-	var valueMap map[string]any
-	g.Expect(json.Unmarshal([]byte(value), &valueMap)).To(Succeed())
-	serverInfo := valueMap["server"].(map[string]any)
-	serverState := serverInfo["state"].(string)
-	g.Expect(serverState).To(Equal("STARTED"))
-}
-
 func checkMessagingInPodWithJavaStore(podName string, crName string, portNumber string, trustStoreLoc string, trustStorePassword string, keyStoreLoc *string, keyStorePassword *string, g Gomega) {
 	tcpUrl := "tcp://" + podName + ":" + portNumber + "?sslEnabled=true&trustStorePath=" + trustStoreLoc + "&trustStorePassword=" + trustStorePassword
 	if keyStoreLoc != nil {
@@ -1164,6 +1153,16 @@ func checkMessagingInPod(podName string, crName string, portNumber string, trust
 }
 
 func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
+	// UseClientAuth needs an operator-cert
+	operatorCert := InstallCert(common.DefaultOperatorCertSecretName, defaultNamespace, func(candidate *cmv1.Certificate) {
+		candidate.Spec.IssuerRef = cmmetav1.ObjectReference{
+			Name: caIssuer.Name,
+			Kind: "ClusterIssuer",
+		}
+		candidate.Spec.SecretName = common.DefaultOperatorCertSecretName
+	})
+	Expect(operatorCert).ShouldNot(BeNil())
+
 	// it should use PEM store type
 	By("Deploying the broker cr")
 	brokerCrName := brokerCrNameBase + "0"
@@ -1179,7 +1178,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		}
 		candidate.Spec.Console.Expose = true
 		candidate.Spec.Console.SSLEnabled = true
-		candidate.Spec.Console.UseClientAuth = false
+		candidate.Spec.Console.UseClientAuth = true
 		candidate.Spec.Console.SSLSecret = certSecret
 		candidate.Spec.Console.TrustSecret = &caSecret
 		candidate.Spec.IngressDomain = defaultTestIngressDomain
@@ -1196,9 +1195,14 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		condition := meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.DeployedConditionType)
 		g.Expect(condition).NotTo(BeNil())
 		g.Expect(condition.Status).Should(Equal(metav1.ConditionTrue))
-		checkReadPodStatus(pod0Name, createdBrokerCr.Name, g)
+
+		condition = meta.FindStatusCondition(createdBrokerCr.Status.Conditions, brokerv1beta1.ConfigAppliedConditionType)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).Should(Equal(metav1.ConditionTrue))
+
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
+	UninstallCert(operatorCertName, defaultNamespace)
 	CleanResource(createdBrokerCr, brokerCr.Name, createdBrokerCr.Namespace)
 
 	By("Deploying the broker cr exposing acceptor ssl and connector ssl")
