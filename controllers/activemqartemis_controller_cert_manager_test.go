@@ -53,12 +53,10 @@ const (
 )
 
 var (
-	serverCert       = "server-cert"
-	rootIssuer       = &cmv1.ClusterIssuer{}
-	rootCert         = &cmv1.Certificate{}
-	caIssuer         = &cmv1.ClusterIssuer{}
-	caBundleName     = "operator-ca"
-	operatorCertName = "operator-cert"
+	serverCert = "server-cert"
+	rootIssuer = &cmv1.ClusterIssuer{}
+	rootCert   = &cmv1.Certificate{}
+	caIssuer   = &cmv1.ClusterIssuer{}
 )
 
 type ConnectorConfig struct {
@@ -96,13 +94,13 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 					SecretName: rootCertSecretName,
 				}
 			})
-			InstallCaBundle(caBundleName, rootCertSecretName, caPemTrustStoreName)
+			InstallCaBundle(common.DefaultOperatorCASecretName, rootCertSecretName, caPemTrustStoreName)
 		}
 	})
 
 	AfterEach(func() {
 		if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-			UnInstallCaBundle(caBundleName)
+			UnInstallCaBundle(common.DefaultOperatorCASecretName)
 			UninstallClusteredIssuer(caIssuerName)
 			UninstallCert(rootCert.Name, rootCert.Namespace)
 			UninstallClusteredIssuer(rootIssuerName)
@@ -255,7 +253,7 @@ var _ = Describe("artemis controller with cert manager test", Label("controller-
 		})
 		It("test configured with cert and ca bundle", func() {
 			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-				testConfiguredWithCertAndBundle(serverCert+"-secret", caBundleName)
+				testConfiguredWithCertAndBundle(serverCert+"-secret", common.DefaultOperatorCASecretName)
 			}
 		})
 		It("test console cert broker status access", Label("console-tls-broker-status-access"), func() {
@@ -1202,7 +1200,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
-	UninstallCert(operatorCertName, defaultNamespace)
+	UninstallCert(common.DefaultOperatorCertSecretName, defaultNamespace)
 	CleanResource(createdBrokerCr, brokerCr.Name, createdBrokerCr.Namespace)
 
 	By("Deploying the broker cr exposing acceptor ssl and connector ssl")
@@ -1256,7 +1254,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 	By("checking the broker message send and receive")
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, crdRef, createdBrokerCr)).Should(Succeed())
-		checkMessagingInPod(pod0Name, createdBrokerCr.Name, "62666", "/etc/"+caBundleName+"-volume/"+caPemTrustStoreName, g)
+		checkMessagingInPod(pod0Name, createdBrokerCr.Name, "62666", "/etc/"+common.DefaultOperatorCASecretName+"-volume/"+caPemTrustStoreName, g)
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
 
 	By("checking connector parameters")
@@ -1267,7 +1265,7 @@ func testConfiguredWithCertAndBundle(certSecret string, caSecret string) {
 		g.Expect(connectorCfg["port"]).To(Equal("62666"))
 		g.Expect(connectorCfg["sslEnabled"]).To(Equal("true"))
 		g.Expect(connectorCfg["host"]).To(Equal(pod0Name))
-		g.Expect(connectorCfg["trustStorePath"]).To(Equal("/etc/" + caBundleName + "-volume/" + caPemTrustStoreName))
+		g.Expect(connectorCfg["trustStorePath"]).To(Equal("/etc/" + common.DefaultOperatorCASecretName + "-volume/" + caPemTrustStoreName))
 		g.Expect(connectorCfg["trustStoreType"]).To(Equal("PEMCA"))
 		g.Expect(connectorCfg["keyStorePath"]).To(Equal("/etc/secret-server-cert-secret-pemcfg/" + certSecret + ".pemcfg"))
 	}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
