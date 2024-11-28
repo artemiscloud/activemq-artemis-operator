@@ -1055,6 +1055,10 @@ var _ = Describe("Address controller tests", func() {
 
 	Context("Address CR migration test", Label("address-migration-test"), func() {
 		It("Migrate to broker properties when configDelete is FORCE", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			addressName := "TEST-ADDRESS"
 			queueName := "TEST-QUEUE"
 			routingType := "anycast"
@@ -1125,6 +1129,10 @@ var _ = Describe("Address controller tests", func() {
 		})
 
 		It("Migrate to broker properties when RemoveFromBrokerOnDelete is false", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			addressName := "TEST-ADDRESS"
 			queueName := "TEST-QUEUE"
 			routingType := "anycast"
@@ -1180,6 +1188,10 @@ var _ = Describe("Address controller tests", func() {
 		})
 
 		It("Migrate to broker properties when RemoveFromBrokerOnDelete is true", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != "true" {
+				Skip("Existing cluster required")
+			}
+
 			addressName := "TEST-ADDRESS"
 			queueName := "TEST-QUEUE"
 			routingType := "anycast"
