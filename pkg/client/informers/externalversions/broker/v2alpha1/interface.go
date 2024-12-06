@@ -28,8 +28,6 @@ type Interface interface {
 	ActiveMQArtemises() ActiveMQArtemisInformer
 	// ActiveMQArtemisAddresses returns a ActiveMQArtemisAddressInformer.
 	ActiveMQArtemisAddresses() ActiveMQArtemisAddressInformer
-	// ActiveMQArtemisScaledowns returns a ActiveMQArtemisScaledownInformer.
-	ActiveMQArtemisScaledowns() ActiveMQArtemisScaledownInformer
 }
 
 type version struct {
@@ -51,9 +49,4 @@ func (v *version) ActiveMQArtemises() ActiveMQArtemisInformer {
 // ActiveMQArtemisAddresses returns a ActiveMQArtemisAddressInformer.
 func (v *version) ActiveMQArtemisAddresses() ActiveMQArtemisAddressInformer {
 	return &activeMQArtemisAddressInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// ActiveMQArtemisScaledowns returns a ActiveMQArtemisScaledownInformer.
-func (v *version) ActiveMQArtemisScaledowns() ActiveMQArtemisScaledownInformer {
-	return &activeMQArtemisScaledownInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
