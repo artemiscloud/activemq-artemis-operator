@@ -1091,8 +1091,10 @@ var _ = Describe("Address controller tests", func() {
 				createdBrokerCr.Spec.BrokerProperties = []string{
 					"addressSettings.#.configDeleteAddresses=FORCE",
 					"addressSettings.#.configDeleteQueues=FORCE",
+					"addressConfigurations.TEST-ADDRESS.routingTypes=ANYCAST",
 					"addressConfigurations.TEST-ADDRESS.queueConfigs.TEST-QUEUE.routingType=ANYCAST",
 					"addressConfigurations.TEST-ADDRESS.queueConfigs.TEST-QUEUE.durable=true",
+					"addressConfigurations.TEST-ADDRESS.queueConfigs.TEST-QUEUE.address=TEST-ADDRESS",
 				}
 				g.Expect(k8sClient.Update(ctx, createdBrokerCr)).Should(Succeed())
 			}, existingClusterTimeout, existingClusterInterval).Should(Succeed())
